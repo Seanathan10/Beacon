@@ -8,6 +8,7 @@ import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
+import DetailedPinModal from "@/components/DetailedPinModal";
 
 const layerStyle: CircleLayerSpecification = {
   id: 'point',
@@ -106,6 +107,8 @@ interface PinData {
 }
 
 interface SelectedPoint {
+  id?: number;
+  creatorID?: number;
   longitude: number;
   latitude: number;
   message: string;
@@ -118,6 +121,7 @@ function HomePage() {
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [pinData, setPinData] = useState<PinData | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+  const [showDetailedModal, setShowDetailedModal] = useState<boolean>(false);
   const [allPins, setAllPins] = useState<{
     type: string;
     features: Array<{
@@ -141,7 +145,7 @@ function HomePage() {
   });
   const [cursor, setCursor] = useState<string>('auto');
   const [userEmail, setUserEmail] = useState<string>(() => {
-    const email = localStorage.getItem("username");
+    const email = localStorage.getItem("userEmail");
     console.log("Initial userEmail from localStorage:", email);
     return email || "";
   });
@@ -213,18 +217,18 @@ function HomePage() {
 
     if (features && features.length > 0) {
       const feature = features[0];
-      if (feature.geometry.type === 'Point') {
-        const coords = feature.geometry.coordinates;
-        setSelectedPoint({
-          longitude: coords[0],
-          latitude: coords[1],
-          message: feature.properties?.message || 'No message',
-          image: feature.properties?.image || '',
-          color: feature.properties?.color || '#007cbf'
-        });
-        setPinData(null); // Close any existing pin
-        return;
-      }
+      const coords = feature.geometry.coordinates;
+      setSelectedPoint({
+        id: feature.properties?.id,
+        creatorID: feature.properties?.creatorID,
+        longitude: coords[0],
+        latitude: coords[1],
+        message: feature.properties?.message || 'No message',
+        image: feature.properties?.image || '',
+        color: feature.properties?.color || '#007cbf'
+      });
+      setPinData(null); // Close any existing pin
+      return;
     }
 
     // Otherwise, handle as a new pin creation
@@ -316,7 +320,6 @@ function HomePage() {
           latitude: 37.8,
           zoom: 9,
         }}
-        minZoom={3}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         onClick={handleMapClick}
         onMouseEnter={onMouseEnter}
@@ -376,7 +379,18 @@ function HomePage() {
         )}
 
         {selectedPoint && (
-          <LocationPin selectedPoint={selectedPoint} setSelectedPoint={setSelectedPoint} />
+          <LocationPin 
+            selectedPoint={selectedPoint} 
+            setSelectedPoint={setSelectedPoint}
+            onShowDetails={() => setShowDetailedModal(true)}
+          />
+        )}
+
+        {showDetailedModal && selectedPoint && (
+          <DetailedPinModal 
+            selectedPoint={selectedPoint} 
+            onClose={() => setShowDetailedModal(false)}
+          />
         )}
 
         <Source id="my-data" type="geojson" data={allPins}>

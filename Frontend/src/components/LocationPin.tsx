@@ -7,11 +7,13 @@ interface LocationPinProps {
 		longitude: number;
 		image: string;
 		message: string;
+		color?: string;
 	};
 	setSelectedPoint: (a: any) => void;
+	onShowDetails: () => void;
 }
 
-export default function LocationPin({ selectedPoint, setSelectedPoint }: LocationPinProps) {
+export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails }: LocationPinProps) {
 	return (
 		<Popup
 			longitude={selectedPoint.longitude}
@@ -37,7 +39,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint }: Locatio
 					/>
 				)}
 				<p style={{ 
-					margin: '0 4px 4px 4px', 
+					margin: '0 4px 8px 4px', 
 					fontWeight: '600', 
 					color: '#1a1a1a',
 					fontSize: '15px',
@@ -45,6 +47,25 @@ export default function LocationPin({ selectedPoint, setSelectedPoint }: Locatio
 				}}>
 					{selectedPoint.message}
 				</p>
+				<button 
+					onClick={onShowDetails}
+					style={{
+						width: '100%',
+						padding: '8px 12px',
+						backgroundColor: selectedPoint.color || '#007cbf',
+						color: 'white',
+						border: 'none',
+						borderRadius: '8px',
+						fontWeight: '500',
+						fontSize: '14px',
+						cursor: 'pointer',
+						transition: 'opacity 0.2s ease'
+					}}
+					onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+					onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+				>
+					Additional Information
+				</button>
 			</div>
 		</Popup>
 	)
