@@ -29,6 +29,7 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 		const timeout = setTimeout(async () => {
 			setIsSearching(true);
 			try {
+				if (!mapRef.current) return;
 				const center = mapRef.current.getCenter();
 				const proximity = `${center.lng},${center.lat}`;
 				const url = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(
