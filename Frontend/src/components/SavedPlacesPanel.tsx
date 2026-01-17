@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./styles/SavedPlacesPanel.css";
-import { PIN_COLOR } from "constants";
+import { PIN_COLOR } from "../../constants";
 
 interface SavedPlace {
     id: number;

@@ -15,7 +15,7 @@ import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { NavLink, useNavigate } from "react-router";
 import AuthHook from "./AuthHook";
-import { BASE_API_URL, PIN_COLOR, USER_PIN_COLOR } from '../../constants.ts';
+import { BASE_API_URL, PIN_COLOR, USER_PIN_COLOR } from '../../constants';
 
 const layerStyle: CircleLayerSpecification = {
     id: "point",

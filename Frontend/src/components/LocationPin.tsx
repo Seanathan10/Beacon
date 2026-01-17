@@ -1,6 +1,6 @@
 import { Popup } from "react-map-gl/mapbox";
 import "./styles/LocationPin.css";
-import { PIN_COLOR } from "constants";
+import { PIN_COLOR } from "../../constants";
 
 interface LocationPinProps {
     selectedPoint: {
