@@ -7,6 +7,7 @@ import Map, { GeolocateControl, NavigationControl, Popup } from "react-map-gl/ma
 import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
+import LocationPin from "@/components/LocationPin";
 
 const layerStyle: CircleLayerSpecification = {
   id: 'point',
@@ -16,6 +17,8 @@ const layerStyle: CircleLayerSpecification = {
     'circle-radius': 10,
     'circle-color': '#007cbf'
   },
+  maxzoom: 9,
+  minzoom: 5,
 };
 
 const heatmapLayerStyle = {
@@ -23,6 +26,7 @@ const heatmapLayerStyle = {
   type: 'heatmap',
   source: 'my-data',
   maxzoom: 9,
+  minzoom: 5,
   paint: {
     'heatmap-weight': [
       'interpolate',
@@ -114,7 +118,21 @@ function HomePage() {
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [pinData, setPinData] = useState<PinData | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
-  const [allPins, setAllPins] = useState({
+  const [allPins, setAllPins] = useState<{
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: {
+        type: string;
+        coordinates: [number, number];
+      };
+      properties: {
+        message: string;
+        image: string;
+        color: string;
+      };
+    }>;
+  }>({
     type: 'FeatureCollection',
     features: []
   });
@@ -261,7 +279,6 @@ function HomePage() {
           latitude: 37.8,
           zoom: 9,
         }}
-        minZoom={3}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         onClick={handleMapClick}
         onMouseEnter={onMouseEnter}
@@ -296,35 +313,32 @@ function HomePage() {
             isLoading={pinData.isLoading}
             onClose={() => setPinData(null)}
             onDetails={() => console.log("Details clicked")}
+            onPinCreated={(data) => {
+              setAllPins(prev => ({
+                ...prev,
+                features: [
+                  ...prev.features,
+                  {
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [pinData.lng, pinData.lat]
+                    },
+                    properties: {
+                      message: data.message,
+                      image: data.image || '',
+                      color: data.color || '#007cbf'
+                    }
+                  }
+                ]
+              }));
+              setPinData(null);
+            }}
           />
         )}
 
         {selectedPoint && (
-          <Popup
-            longitude={selectedPoint.longitude}
-            latitude={selectedPoint.latitude}
-            anchor="bottom"
-            closeButton={true}
-            closeOnClick={false}
-            onClose={() => setSelectedPoint(null)}
-          >
-            <div style={{ maxWidth: '200px' }}>
-              {selectedPoint.image && (
-                <img 
-                  src={selectedPoint.image} 
-                  alt="Pin image"
-                  style={{ 
-                    width: '100%', 
-                    height: '120px', 
-                    objectFit: 'cover', 
-                    borderRadius: '8px',
-                    marginBottom: '8px'
-                  }}
-                />
-              )}
-              <p style={{ margin: 0, fontWeight: 'bold', color: '#1a1a1a' }}>{selectedPoint.message}</p>
-            </div>
-          </Popup>
+          <Location selectedPoint={selectedPoint} />
         )}
 
         <Source id="my-data" type="geojson" data={allPins}>
