@@ -82,7 +82,7 @@ function Landing() {
   }, []);
 
   const handleMapPreviewClick = () => {
-    navigate("/home", { viewTransition: true });
+    navigate("/home");
   };
 
   return (
