@@ -8,6 +8,7 @@
 .map-container {
   width: 100%;
   height: 100%;
+  view-transition-name: beacon-map;
 }
 
 .map-container .mapboxgl-ctrl-logo,
@@ -53,11 +54,26 @@
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.4s ease;
+  view-transition-name: auth-modal-overlay;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* View transition animation for modal overlay */
+::view-transition-old(auth-modal-overlay) {
+  display: none;
+}
+
+::view-transition-new(auth-modal-overlay) {
+  animation: fadeIn 0.4s ease;
 }
 
 /* Auth Modal */
@@ -71,6 +87,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: modalSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid #e5e3df;
+  view-transition-name: auth-modal;
 }
 
 @keyframes modalSlideIn {
@@ -78,10 +95,20 @@
     opacity: 0;
     transform: translateY(20px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* View transition animation for modal content */
+::view-transition-old(auth-modal) {
+  display: none;
+}
+
+::view-transition-new(auth-modal) {
+  animation: modalSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .auth-modal-header {
@@ -103,7 +130,7 @@
 }
 
 .auth-brand-name {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Helvetica', Georgia, serif;
   font-size: 1.5rem;
   font-weight: 600;
   color: #1a1a1a;
@@ -112,8 +139,8 @@
 
 .auth-modal-header h2 {
   margin: 0 0 8px 0;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.75rem;
+  font-family: 'Helvetica', Georgia, serif;
+  font-size: 2.2rem;
   font-weight: 600;
   color: #1a1a1a;
 }
