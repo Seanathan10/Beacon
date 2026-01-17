@@ -47,16 +47,25 @@ export default function NewPostModal({ onClose, onSubmit }: NewPostModalProps) {
     };
 
     const uploadImage = async (file: File): Promise<string> => {
-        const response = await fetch(
-            `/api/upload?filename=${encodeURIComponent(file.name)}`,
-            {
-                method: "POST",
-                body: file,
-            },
-        );
-        if (!response.ok) throw new Error("Upload failed");
-        const blob = await response.json();
-        return blob.url;
+        // Try Vercel Blob upload first (for production)
+        try {
+            const response = await fetch(
+                `/api/upload?filename=${encodeURIComponent(file.name)}`,
+                {
+                    method: "POST",
+                    body: file,
+                },
+            );
+            if (response.ok) {
+                const blob = await response.json();
+                return blob.url;
+            }
+        } catch {
+            // Upload endpoint not available, fall through to use data URL
+        }
+        
+        // Fallback: return the base64 data URL (already set in state)
+        return image;
     };
 
     const handleSubmit = async () => {
