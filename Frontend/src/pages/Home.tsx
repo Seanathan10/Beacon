@@ -3,7 +3,7 @@ import type { MapRef } from "react-map-gl/mapbox";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
-import Map from "react-map-gl/mapbox";
+import Map, { GeolocateControl } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 
 function HomePage() {
@@ -61,7 +61,14 @@ function HomePage() {
                     console.log(e.lngLat);
                     setClickedCoords(e.lngLat);
                 }}
+                interactive={true}
+                doubleClickZoom={true}
             >
+                <GeolocateControl
+                    position="bottom-right"
+                    trackUserLocation
+                    showUserHeading
+                />
                 {clickedCoords && (
                     <Pin
                         name={clickedCoords.name ?? "GEM ALARM"}
