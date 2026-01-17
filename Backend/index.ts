@@ -1,5 +1,8 @@
 import express from "express";
-import * as pinRoutes from './routes/pins.ts';
+import 'dotenv/config';
+
+import * as pins from './routes/pins.ts';
+import * as auth from './routes/auth.ts';
 
 const app = express();
 const PORT = 3000;
@@ -14,12 +17,9 @@ app.get("/heartbeat", (req, res) => {
   });
 });
 
-
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Hello from Express!" });
-});
-app.get("/api/pins", pinRoutes.getAllPins);
-app.get("/api/pins/:id", pinRoutes.getPin);
+app.post("/api/login", auth.login);
+app.get("/api/pins", pins.getAllPins);
+app.get("/api/pins/:id", pins.getPin);
 
 app.listen(PORT, () => {
   console.log(`Backend listening on http://localhost:${PORT}`);
