@@ -12,7 +12,7 @@ CREATE TABLE pin (
 	creatorID INTEGER,
 	latitude INTEGER,
 	longitude INTEGER,
-	message VARCHAR(20),
+	message VARCHAR(200),
 	image VARCHAR(2000),
 	color VARCHAR(10) DEFAULT "#0000FF",
 
