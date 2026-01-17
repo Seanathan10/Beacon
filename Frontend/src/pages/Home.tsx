@@ -5,20 +5,23 @@ import "./Home.css";
 
 type AuthMode = "login" | "register";
 
+const API_BASE_URL = "http://localhost:3000";
+
 function HomePage() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem("isLoggedIn") === "true";
+    return !!localStorage.getItem("accessToken");
   });
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [credentials, setCredentials] = useState({
-    username: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     // Check if token exists
@@ -53,47 +56,64 @@ function HomePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
-    setError("");
+    if (error) setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!credentials.username.trim() || !credentials.password.trim()) {
+    if (!credentials.email.trim() || !credentials.password.trim()) {
       setError("Please fill in all fields");
       return;
     }
 
-    if (authMode === "register") {
-      // Handle registration logic
-      console.log("Registering as:", credentials);
-      // On successful registration, log them in
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", credentials.username);
-      setIsLoggedIn(true);
-    } else {
-      // Handle login logic
-      console.log("Logging in with:", credentials);
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", credentials.username);
-      setIsLoggedIn(true);
-    }
+    setIsLoading(true);
 
-    // Reset form
-    setCredentials({ username: "", password: "" });
+    try {
+      if (authMode === "register") {
+        // Registration endpoint not implemented yet
+        setError("Registration is not available yet. Please use login.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Store the token
+      localStorage.setItem("accessToken", data.accessToken);
+      setIsLoggedIn(true);
+      setCredentials({ email: "", password: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("username");
+    localStorage.removeItem("accessToken");
     setIsLoggedIn(false);
   };
 
   const switchAuthMode = () => {
     setAuthMode(authMode === "login" ? "register" : "login");
     setError("");
-    setCredentials({ username: "", password: "" });
+    setCredentials({ email: "", password: "" });
   };
 
   return (
@@ -132,15 +152,16 @@ function HomePage() {
               {error && <div className="auth-error">{error}</div>}
 
               <div className="form-group">
-                <label htmlFor="username">Username</label>
+                <label htmlFor="email">Email</label>
                 <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={credentials.username}
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={credentials.email}
                   onChange={handleChange}
-                  placeholder="Enter your username"
-                  autoComplete="username"
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                  disabled={isLoading}
                 />
               </div>
 
@@ -154,11 +175,12 @@ function HomePage() {
                   onChange={handleChange}
                   placeholder="Enter your password"
                   autoComplete={authMode === "login" ? "current-password" : "new-password"}
+                  disabled={isLoading}
                 />
               </div>
 
-              <button type="submit" className="auth-submit-btn">
-                {authMode === "login" ? "Sign In" : "Create Account"}
+              <button type="submit" className="auth-submit-btn" disabled={isLoading}>
+                {isLoading ? "Please wait..." : authMode === "login" ? "Sign In" : "Create Account"}
               </button>
             </form>
 

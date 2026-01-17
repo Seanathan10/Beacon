@@ -30,3 +30,37 @@ export async function login(req: Request, res: Response) {
 
     res.status(200).json({ accessToken: accessToken });
 }
+
+export async function register(req: Request, res: Response) {
+    const { email, password, name } = req.body;
+
+    // Check if user already exists
+    const existingUser = db.query(
+        `SELECT id FROM account WHERE email = ?`,
+        [email]
+    )[0];
+
+    if (existingUser) {
+        return res.status(409).json({ message: 'Email already registered' });
+    }
+
+    try {
+        const result = db.run(
+            `INSERT INTO account (email, password, name) VALUES (?, ?, ?)`,
+            [email, password, name || null]
+        );
+
+        const accessToken = jwt.sign(
+            { id: result.lastInsertRowid },
+            process.env.SECRET as string,
+            {
+                expiresIn: '1h',
+                algorithm: 'HS256',
+            }
+        );
+
+        res.status(201).json({ accessToken: accessToken });
+    } catch (err) {
+        res.status(500).json({ message: 'Registration failed' });
+    }
+}

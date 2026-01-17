@@ -40,6 +40,7 @@ app.get("/heartbeat", (req, res) => {
 });
 
 app.post("/api/login", auth.login);
+app.post("/api/register", auth.register);
 
 app.get("/api/pins", pins.getAllPins);
 app.get("/api/pins/:id", pins.getPin);

@@ -167,6 +167,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/register:
+    post:
+      summary: User registration
+      description: Creates a new user account and returns a JWT token
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  description: The user's email
+                  format: email
+                  example: "newuser@example.com"
+                password:
+                  type: string
+                  description: The user's password
+                  example: "securepassword"
+                name:
+                  type: string
+                  description: The user's display name
+                  maxLength: 20
+                  example: "John Doe"
+      responses:
+        '201':
+          description: Account created successfully with JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '409':
+          description: Conflict - email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     delete:
       summary: Delete a specific pin by ID
       description: Delete a single pin by its ID
