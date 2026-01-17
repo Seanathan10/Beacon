@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import "./NewPinModal.css";
+import "./styles/NewPinModal.css";
 
 interface NewPinModalProps {
     onClose: () => void;

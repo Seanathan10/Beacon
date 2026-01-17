@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Popup } from "react-map-gl/mapbox";
 import NewPinModal from "./NewPinModal";
-import "./Pin.css";
+import "./styles/Pin.css";
 
 interface PinProps {
     name: string;

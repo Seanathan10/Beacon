@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import "./SavedPlacesPanel.css";
+import "./styles/SavedPlacesPanel.css";
 
 interface SavedPlace {
     id: number;

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Post } from "./Post";
-import "./NewPostModal.css";
+import "./styles/NewPostModal.css";
 
 interface NewPostModalProps {
     onClose: () => void;

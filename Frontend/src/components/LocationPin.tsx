@@ -1,5 +1,5 @@
 import { Popup } from "react-map-gl/mapbox";
-import "./LocationPin.css";
+import "./styles/LocationPin.css";
 
 interface LocationPinProps {
     selectedPoint: {
