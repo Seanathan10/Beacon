@@ -7,6 +7,7 @@ import Map, { GeolocateControl, NavigationControl, Popup } from "react-map-gl/ma
 import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
+import LocationPin from "@/components/LocationPin";
 
 const layerStyle: CircleLayerSpecification = {
   id: 'point',
@@ -16,6 +17,8 @@ const layerStyle: CircleLayerSpecification = {
     'circle-radius': 10,
     'circle-color': '#007cbf'
   },
+  maxzoom: 9,
+  minzoom: 5,
 };
 
 const heatmapLayerStyle = {
@@ -23,6 +26,7 @@ const heatmapLayerStyle = {
   type: 'heatmap',
   source: 'my-data',
   maxzoom: 9,
+  minzoom: 5,
   paint: {
     'heatmap-weight': [
       'interpolate',
@@ -262,7 +266,6 @@ function HomePage() {
           latitude: 37.8,
           zoom: 9,
         }}
-        minZoom={3}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         onClick={handleMapClick}
         onMouseEnter={onMouseEnter}
@@ -322,31 +325,7 @@ function HomePage() {
         )}
 
         {selectedPoint && (
-          <Popup
-            longitude={selectedPoint.longitude}
-            latitude={selectedPoint.latitude}
-            anchor="bottom"
-            closeButton={true}
-            closeOnClick={false}
-            onClose={() => setSelectedPoint(null)}
-          >
-            <div style={{ maxWidth: '200px' }}>
-              {selectedPoint.image && (
-                <img 
-                  src={selectedPoint.image} 
-                  alt="Pin image"
-                  style={{ 
-                    width: '100%', 
-                    height: '120px', 
-                    objectFit: 'cover', 
-                    borderRadius: '8px',
-                    marginBottom: '8px'
-                  }}
-                />
-              )}
-              <p style={{ margin: 0, fontWeight: 'bold', color: '#1a1a1a' }}>{selectedPoint.message}</p>
-            </div>
-          </Popup>
+          <Location selectedPoint={selectedPoint} />
         )}
 
         <Source id="my-data" type="geojson" data={allPins}>
