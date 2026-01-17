@@ -8,29 +8,25 @@ export interface User {
 }
 
 export async function login(req: Request, res: Response) {
-    try {
-        const { email, password } = req.body;
+    const { email, password } = req.body;
 
-        const user: User = db.query(
-            `SELECT id, email, name FROM account WHERE email = ? AND password = ?`,
-            [email, password]
-        )[0];
+    const user: User = db.query(
+        `SELECT id, email, name FROM account WHERE email = ? AND password = ?`,
+        [email, password]
+    )[0];
 
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const accessToken = jwt.sign(
-            { id: user.id },
-            process.env.SECRET as string,
-            {
-                expiresIn: '1h',
-                algorithm: 'HS256',
-            }
-        );
-
-        res.status(200).json({ accessToken: accessToken });
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    const accessToken = jwt.sign(
+        { id: user.id },
+        process.env.SECRET as string,
+        {
+            expiresIn: '1h',
+            algorithm: 'HS256',
+        }
+    );
+
+    res.status(200).json({ accessToken: accessToken });
 }

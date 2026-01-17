@@ -125,6 +125,47 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Pin'
+  /api/login:
+    post:
+      summary: User login
+      description: Authenticates a user and returns a JWT token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: The user's email
+                  format: email
+                  example: "user123"
+                password:
+                  type: string
+                  description: The user's password
+                  example: "securepassword"
+      responses:
+        '200':
+          description: Successful login with JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+
+        '401':
+          description: Unauthorized - invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete a specific pin by ID
@@ -187,3 +228,11 @@ components:
           type: string
           description: Additional error details
           example: "FOREIGN KEY constraint failed"
+
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token for authenticated user
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."

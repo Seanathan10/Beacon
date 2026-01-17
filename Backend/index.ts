@@ -1,13 +1,13 @@
-import express from "express";
 import 'dotenv/config';
 
+import express from "express";
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import cors from 'cors';
 import * as OpenApiValidator from 'express-openapi-validator';
 
-import * as pins from './routes/pins.ts';
 import * as auth from './routes/auth.ts';
+import * as pins from './routes/pins.ts';
 
 const app = express();
 const PORT = 3000;
@@ -16,6 +16,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const apiSpec = path.join(__dirname, './openapi.yml');
+
+app.use(express.json());
 app.use(cors(
     {origin: ['http://localhost:3000', 'http://localhost:4173', 'http://localhost:5173']}
 ));
