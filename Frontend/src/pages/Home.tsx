@@ -121,7 +121,6 @@ function HomePage() {
     })
       .then(res => res.json())
       .then(res => {
-        console.log(res)
         const geojson = {
           type: 'FeatureCollection',
           features: res.map(p => {
@@ -139,7 +138,6 @@ function HomePage() {
             }
           })
         };
-        console.log(geojson);
         setAllPins(geojson)
       })
   }, []);
@@ -153,12 +151,6 @@ function HomePage() {
     setIsLoggedIn(true);
   };
 
-  useEffect(() => {
-    if (pinData && !pinData.isLoading) {
-      console.log("forst useeffet -> pindata = ", pinData);
-    }
-  }, [pinData]);
-
   const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
     const { lat, lng } = e.lngLat;
     setPinData({
@@ -169,9 +161,6 @@ function HomePage() {
     });
 
     try {
-      console.log(lat);
-      console.log(lng);
-      console.log("TRANSLATING... 🔄🔄🔄");
       const result = await reverseGeocode(lat, lng);
 
       setPinData({
@@ -180,10 +169,7 @@ function HomePage() {
         name: result.name,
         isLoading: false,
       });
-
-      console.log("TRANSLATION COMPLETE -> pindata = ", pinData);
     } catch (error) {
-      console.error("Reverse geocoding failed:", error);
       setPinData({
         lat,
         lng,
