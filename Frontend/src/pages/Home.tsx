@@ -9,7 +9,6 @@ import Map, {
     Popup,
 } from "react-map-gl/mapbox";
 import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
-import { FeatureCollection } from "geojson";
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
@@ -22,7 +21,7 @@ const layerStyle: CircleLayerSpecification = {
     source: "my-data",
     paint: {
         "circle-radius": 10,
-        "circle-color": "#007cbf",
+        "circle-color": ["get", "color"],
     },
     maxzoom: 22,
     minzoom: 5,
@@ -57,22 +56,6 @@ const heatmapLayerStyle = {
         "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 2, 9, 20],
         "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 7, 1, 9, 0],
     },
-};
-
-const geojson: FeatureCollection = {
-    type: "FeatureCollection",
-    features: [
-        {
-            type: "Feature",
-            geometry: {
-                type: "Point",
-                coordinates: [-122.4, 37.8],
-            },
-            properties: {
-                title: "915 Front Street, San Francisco, California",
-            },
-        },
-    ],
 };
 
 interface PinData {
@@ -183,6 +166,7 @@ function HomePage() {
                         },
                     })),
                 };
+                console.log(geojson);
                 setAllPins(geojson);
             } catch (error) {
                 console.error("Error fetching pins:", error);
