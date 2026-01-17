@@ -83,7 +83,7 @@ export async function reverseGeocode(lat: number, lon: number): Promise<ReverseG
 
   if (!data.features || data.features.length === 0) {
     return {
-      name: 'Unknown Location',
+      name: 'Gem Alarm',
       fullAddress: '',
       featureType: 'unknown',
       details: {},
