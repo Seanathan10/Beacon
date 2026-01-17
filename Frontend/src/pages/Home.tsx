@@ -9,7 +9,7 @@ import Pin from "@/components/Pin";
 function HomePage() {
   const mapRef = useRef<MapRef | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const [clickedCoords, setClickedCoords] = useState(null);
+  const [clickedCoords, setClickedCoords] = useState<{lat: number, lng: number} | null>(null);
 
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -52,10 +52,12 @@ function HomePage() {
         onClick={(e) => {console.log(e.lngLat); setClickedCoords(e.lngLat)}}
       >
         {clickedCoords && <Pin
-          content={"GEM ALARM"}
+          name={"STORE"}
           latitude={clickedCoords.lat}
           longitude={clickedCoords.lng}
           onClose={() => setClickedCoords(null)}
+          onAdd={() => console.log('Add clicked')}
+          onDetails={() => console.log('Details clicked')}
         />}
       </Map>
     </div>
