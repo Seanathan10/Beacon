@@ -16,8 +16,6 @@ const layerStyle: CircleLayerSpecification = {
     'circle-radius': 10,
     'circle-color': '#007cbf'
   },
-  maxzoom: 9,
-  minzoom: 5,
 };
 
 const heatmapLayerStyle = {
@@ -25,7 +23,6 @@ const heatmapLayerStyle = {
   type: 'heatmap',
   source: 'my-data',
   maxzoom: 9,
-  minzoom: 5,
   paint: {
     'heatmap-weight': [
       'interpolate',
@@ -251,6 +248,7 @@ function HomePage() {
           latitude: 37.8,
           zoom: 9,
         }}
+        minZoom={3}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         onClick={handleMapClick}
         onMouseEnter={onMouseEnter}
