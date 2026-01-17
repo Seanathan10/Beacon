@@ -118,6 +118,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/pins/user:
+    get:
+      summary: Get all pins created by the logged-in user
+      description: Retrieves all pins created by the authenticated user
+      operationId: getUserPins
+      responses:
+        200:
+          description: Successful response with array of user's pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pin'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/pins/{id}:
     get:
       summary: Get a specific pin by ID

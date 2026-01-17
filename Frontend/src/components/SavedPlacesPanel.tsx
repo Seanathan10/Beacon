@@ -23,7 +23,7 @@ function SavedPlacesPanel() {
                     return;
                 }
 
-                const res = await fetch("/api/pins", {
+                const res = await fetch("/api/pins/user", {
                     headers: {
                         "Authorization": `Bearer ${token}`
                     }

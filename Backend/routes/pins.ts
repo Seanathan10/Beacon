@@ -1,8 +1,14 @@
 import { Request, Response } from 'express';
-import * as db from '../database/db.ts';
+import * as db from '../database/db';
 
 export function getAllPins(req: Request, res: Response) {
 	const results = db.query(`SELECT * FROM pin;`);
+	res.json(results);
+}
+
+export function getUserPins(req: Request, res: Response) {
+	const userID = req.user.id;
+	const results = db.query(`SELECT * FROM pin WHERE creatorID = ?;`, [userID]);
 	res.json(results);
 }
 
@@ -14,11 +20,13 @@ export function getPin(req: Request, res: Response) {
 
 export function createPin(req: Request, res: Response) {
 	const results = db.query(`
-		INSERT INTO pin(creatorID, message, image, color)
-		VALUES(?, ?, ?, ?)
+		INSERT INTO pin(creatorID, latitude, longitude, message, image, color)
+		VALUES(?, ?, ?, ?, ?, ?)
 		RETURNING id;
 	`, [
 		req.user.id,
+		req.body.latitude,
+		req.body.longitude,
 		req.body.message ?? null,
 		req.body.image ?? null,
 		req.body.color ?? null
