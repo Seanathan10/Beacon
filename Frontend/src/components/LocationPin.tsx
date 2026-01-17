@@ -1,14 +1,17 @@
 import { Popup } from "react-map-gl/mapbox";
+import "./LocationPin.css";
 
 interface LocationPinProps {
-	latitude: number;
-	longitude: number;
-	image: string;
-	message: string;
+	selectedPoint: {
+		latitude: number;
+		longitude: number;
+		image: string;
+		message: string;
+	};
 	setSelectedPoint: (a: any) => void;
 }
 
-export default function LocationPin(selectedPoint: LocationPinProps) {
+export default function LocationPin({ selectedPoint, setSelectedPoint }: LocationPinProps) {
 	return (
 		<Popup
 			longitude={selectedPoint.longitude}
@@ -16,23 +19,32 @@ export default function LocationPin(selectedPoint: LocationPinProps) {
 			anchor="bottom"
 			closeButton={true}
 			closeOnClick={false}
-			onClose={() => selectedPoint.setSelectedPoint(null)}
+			onClose={() => setSelectedPoint(null)}
+			className="location-pin-popup"
 		>
-			<div style={{ maxWidth: '200px' }}>
+			<div style={{ maxWidth: '220px' }}>
 				{selectedPoint.image && (
 					<img
 						src={selectedPoint.image}
 						alt="Pin image"
 						style={{
 							width: '100%',
-							height: '120px',
+							height: '140px',
 							objectFit: 'cover',
-							borderRadius: '8px',
-							marginBottom: '8px'
+							borderRadius: '14px',
+							marginBottom: '10px'
 						}}
 					/>
 				)}
-				<p style={{ margin: 0, fontWeight: 'bold' }}>{selectedPoint.message}</p>
+				<p style={{ 
+					margin: '0 4px 4px 4px', 
+					fontWeight: '600', 
+					color: '#1a1a1a',
+					fontSize: '15px',
+					lineHeight: '1.4'
+				}}>
+					{selectedPoint.message}
+				</p>
 			</div>
 		</Popup>
 	)
