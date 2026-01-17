@@ -43,6 +43,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Pin'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     
     post:
       summary: Create a new pin
@@ -232,6 +238,28 @@ paths:
           description: Successfully deleted pin
         404:
           description: Pin not found
+  /api/check:
+    get:
+      summary: Check token validity
+      description: Validates the provided JWT token
+      operationId: checkToken
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+        '401':
+          description: Unauthorized - invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
 components:

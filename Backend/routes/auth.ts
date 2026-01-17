@@ -66,3 +66,21 @@ export async function register(req: Request, res: Response) {
         res.status(500).json({ message: 'Registration failed' });
     }
 }
+
+export function check(req: Request, res: Response, next: Function) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.SECRET as string, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+        req.user = decoded;
+        next();
+    });
+}
+    

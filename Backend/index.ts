@@ -42,10 +42,10 @@ app.get("/heartbeat", (req, res) => {
 app.post("/api/login", auth.login);
 app.post("/api/register", auth.register);
 
-app.get("/api/pins", pins.getAllPins);
-app.get("/api/pins/:id", pins.getPin);
-app.post("/api/pins", pins.createPin);
-app.put("/api/pins", pins.deletePin);
+app.get("/api/pins", auth.check, pins.getAllPins);
+app.get("/api/pins/:id", auth.check, pins.getPin);
+app.post("/api/pins", auth.check, pins.createPin);
+app.put("/api/pins", auth.check, pins.deletePin);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend listening on http://localhost:${PORT}`);
