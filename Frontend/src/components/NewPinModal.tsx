@@ -31,6 +31,7 @@ export default function NewPinModal({
     longitude,
     locationName,
 }: NewPinModalProps) {
+    const [title, setTitle] = useState(locationName && locationName.toLowerCase() !== "unknown" ? locationName : "");
     const [message, setMessage] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -139,6 +140,7 @@ export default function NewPinModal({
                 body: JSON.stringify({
                     latitude: latitude,
                     longitude: longitude,
+                    title: title,
                     message: message,
                     image: imageUrl,
                     color: color,
@@ -147,6 +149,7 @@ export default function NewPinModal({
 
             if (response.ok) {
                 onSubmit({ message, image: imageUrl || undefined, color });
+                setTitle("");
                 setMessage("");
                 setImageFile(null);
                 setImagePreview(null);
@@ -239,6 +242,24 @@ export default function NewPinModal({
                 </header>
 
                 <form onSubmit={handleSubmit} className="pin-modal__form">
+                    <div className="pin-modal__field">
+                        <label htmlFor="title" className="pin-modal__label">
+                            Title
+                            <span className="pin-modal__label-hint">
+                                *required
+                            </span>
+                        </label>
+                        <input
+                            id="title"
+                            type="text"
+                            className="pin-modal__input"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="Name of this spot"
+                            required
+                        />
+                    </div>
+
                     <div className="pin-modal__field">
                         <label htmlFor="message" className="pin-modal__label">
                             What's here?
