@@ -27,16 +27,13 @@ function HomePage() {
 
   return (
     <div className="home-container">
-      {/* Search Bar - top-left overlay */}
       <SearchBar mapRef={mapRef} searchMarkerRef={searchMarkerRef} />
 
-      {/* Auth Modal - shown when not logged in */}
       <AuthModal
         isOpen={!isLoggedIn}
         onAuthSuccess={handleAuthSuccess}
       />
 
-      {/* Logout button - only shown when logged in */}
       {isLoggedIn && (
         <button onClick={handleLogout} className="logout-button">
           Log Out
