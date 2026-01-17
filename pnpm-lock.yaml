@@ -107,6 +107,67 @@ importers:
         specifier: ^7.2.4
         version: 7.3.1(@types/node@25.0.9)(jiti@1.21.7)(tsx@4.21.0)(yaml@2.8.2)
 
+  frontend:
+    dependencies:
+      '@mapbox/mapbox-gl-draw':
+        specifier: ^1.5.1
+        version: 1.5.1
+      mapbox-gl:
+        specifier: ^3.18.0
+        version: 3.18.0
+      react:
+        specifier: ^19.2.0
+        version: 19.2.3
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.3(react@19.2.3)
+      react-map-gl:
+        specifier: ^8.1.0
+        version: 8.1.0(mapbox-gl@3.18.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react-router:
+        specifier: ^7.12.0
+        version: 7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.1
+        version: 9.39.2
+      '@types/mapbox-gl':
+        specifier: ^3.4.1
+        version: 3.4.1
+      '@types/node':
+        specifier: ^25.0.9
+        version: 25.0.9
+      '@types/react':
+        specifier: ^19.2.8
+        version: 19.2.8
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.8)
+      '@vitejs/plugin-react':
+        specifier: ^5.1.1
+        version: 5.1.2(vite@7.3.1(@types/node@25.0.9)(jiti@1.21.7)(tsx@4.21.0)(yaml@2.8.2))
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.2(jiti@1.21.7)
+      eslint-plugin-react-hooks:
+        specifier: ^7.0.1
+        version: 7.0.1(eslint@9.39.2(jiti@1.21.7))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.24
+        version: 0.4.26(eslint@9.39.2(jiti@1.21.7))
+      globals:
+        specifier: ^16.5.0
+        version: 16.5.0
+      lucide-react:
+        specifier: ^0.562.0
+        version: 0.562.0(react@19.2.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.2.4
+        version: 7.3.1(@types/node@25.0.9)(jiti@1.21.7)(tsx@4.21.0)(yaml@2.8.2)
+
 packages:
 
   '@apidevtools/json-schema-ref-parser@14.2.1':
@@ -427,9 +488,20 @@ packages:
   '@jsdevtools/ono@7.1.3':
     resolution: {integrity: sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg==}
 
+  '@mapbox/geojson-area@0.2.2':
+    resolution: {integrity: sha512-bBqqFn1kIbLBfn7Yq1PzzwVkPYQr9lVUeT8Dhd0NL5n76PBuXzOcuLV7GOSbEB1ia8qWxH4COCvFpziEu/yReA==}
+
+  '@mapbox/geojson-normalize@0.0.1':
+    resolution: {integrity: sha512-82V7YHcle8lhgIGqEWwtXYN5cy0QM/OHq3ypGhQTbvHR57DF0vMHMjjVSQKFfVXBe/yWCBZTyOuzvK7DFFnx5Q==}
+    hasBin: true
+
   '@mapbox/jsonlint-lines-primitives@2.0.2':
     resolution: {integrity: sha512-rY0o9A5ECsTQRVhv7tL/OyDpGAoUB4tTvLiW1DSzQGq4bvTPhNw1VpSNjDJc5GFZ2XuyOtSWSVN05qOtcD71qQ==}
     engines: {node: '>= 0.6'}
+
+  '@mapbox/mapbox-gl-draw@1.5.1':
+    resolution: {integrity: sha512-DnR/oarZVoIrVHssAn+mtpuGzYH+ebORoPjow46zTBNPod/HQnvIZGtL6hIb5BVWxxH49RC9D20ipxiO9WDRxA==}
+    engines: {node: ^18.0.0 || >=20.0.0}
 
   '@mapbox/mapbox-gl-supported@3.0.0':
     resolution: {integrity: sha512-2XghOwu16ZwPJLOFVuIOaLbN0iKMn867evzXFyf0P22dqugezfJwLmdanAgU25ITvz1TvOfVP4jsDImlDJzcWg==}
@@ -581,6 +653,18 @@ packages:
     resolution: {integrity: sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw==}
     cpu: [x64]
     os: [win32]
+
+  '@turf/clone@7.3.2':
+    resolution: {integrity: sha512-ET6EqfEbDq4EsvyhC5Fwyg5hkkRGcHUM7v63sqbLtz4bY2cSAZ1gGcgmBQdztSXQyKqSsFkIXpp1amfrLATNOQ==}
+
+  '@turf/helpers@7.3.2':
+    resolution: {integrity: sha512-5HFN42rgWjSobdTMxbuq+ZdXPcqp1IbMgFYULTLCplEQM3dXhsyRFe7DCss4Eiw12iW3q6Z5UeTNVfITsE5lgA==}
+
+  '@turf/meta@7.3.2':
+    resolution: {integrity: sha512-FIcIY+ZsAe9QV4fHciTXeuRz2TKIVaEjivkl4vMFCibdj7FUkWDofqOncbIre1xPrgktQeh20ZrmD+p0kf3n4Q==}
+
+  '@turf/projection@7.3.2':
+    resolution: {integrity: sha512-9DQRW2aqcfa0RoeFmkkhP6FgLZzc94owa2no6ORvvY4uOXFArOWYuDQWIAmPpHrnMJ2MbwiRsRkduyaVEuUcpw==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1339,6 +1423,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@5.1.6:
+    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -1631,6 +1720,9 @@ packages:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
 
+  tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+
   tsx@4.21.0:
     resolution: {integrity: sha512-5C1sg4USs1lfG0GFb2RLXsdpXqBSEhAaA/0kPL01wxzpMqLILNxIxIOKiILz+cdg/pLnOUxFYOR5yhHU666wbw==}
     engines: {node: '>=18.0.0'}
@@ -1728,6 +1820,9 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  wgs84@0.0.0:
+    resolution: {integrity: sha512-ANHlY4Rb5kHw40D0NJ6moaVfOCMrp9Gpd1R/AIQYg2ko4/jzcJ+TVXYYF6kXJqQwITvEZP4yEthjM7U6rYlljQ==}
 
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
@@ -2041,7 +2136,22 @@ snapshots:
 
   '@jsdevtools/ono@7.1.3': {}
 
+  '@mapbox/geojson-area@0.2.2':
+    dependencies:
+      wgs84: 0.0.0
+
+  '@mapbox/geojson-normalize@0.0.1': {}
+
   '@mapbox/jsonlint-lines-primitives@2.0.2': {}
+
+  '@mapbox/mapbox-gl-draw@1.5.1':
+    dependencies:
+      '@mapbox/geojson-area': 0.2.2
+      '@mapbox/geojson-normalize': 0.0.1
+      '@mapbox/point-geometry': 1.1.0
+      '@turf/projection': 7.3.2
+      fast-deep-equal: 3.1.3
+      nanoid: 5.1.6
 
   '@mapbox/mapbox-gl-supported@3.0.0': {}
 
@@ -2144,6 +2254,31 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.55.1':
     optional: true
+
+  '@turf/clone@7.3.2':
+    dependencies:
+      '@turf/helpers': 7.3.2
+      '@types/geojson': 7946.0.16
+      tslib: 2.8.1
+
+  '@turf/helpers@7.3.2':
+    dependencies:
+      '@types/geojson': 7946.0.16
+      tslib: 2.8.1
+
+  '@turf/meta@7.3.2':
+    dependencies:
+      '@turf/helpers': 7.3.2
+      '@types/geojson': 7946.0.16
+      tslib: 2.8.1
+
+  '@turf/projection@7.3.2':
+    dependencies:
+      '@turf/clone': 7.3.2
+      '@turf/helpers': 7.3.2
+      '@turf/meta': 7.3.2
+      '@types/geojson': 7946.0.16
+      tslib: 2.8.1
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -2975,6 +3110,8 @@ snapshots:
 
   nanoid@3.3.11: {}
 
+  nanoid@5.1.6: {}
+
   natural-compare@1.4.0: {}
 
   negotiator@1.0.0: {}
@@ -3283,6 +3420,8 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
+  tslib@2.8.1: {}
+
   tsx@4.21.0:
     dependencies:
       esbuild: 0.27.2
@@ -3354,6 +3493,8 @@ snapshots:
       jiti: 1.21.7
       tsx: 4.21.0
       yaml: 2.8.2
+
+  wgs84@0.0.0: {}
 
   which@2.0.2:
     dependencies:

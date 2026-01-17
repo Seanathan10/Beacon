@@ -3,8 +3,19 @@ import type { MapRef } from "react-map-gl/mapbox";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
-import Map, { GeolocateControl } from "react-map-gl/mapbox";
+import Map, { GeolocateControl, NavigationControl } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import {useControl} from 'react-map-gl/mapbox';
+
+
+function DrawControl(props: DrawControlProps) {
+  useControl(() => new MapboxDraw(props), {
+    position: props.position
+  });
+
+  return null;
+}
 
 function HomePage() {
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -34,7 +45,11 @@ function HomePage() {
                 mapRef={mapRef}
                 searchMarkerRef={searchMarkerRef}
                 onSelectPlace={(place) =>
-                    setClickedCoords({ lat: place.lat, lng: place.lng, name: place.name })
+                    setClickedCoords({
+                        lat: place.lat,
+                        lng: place.lng,
+                        name: place.name,
+                    })
                 }
             />
 
@@ -63,12 +78,31 @@ function HomePage() {
                 }}
                 interactive={true}
                 doubleClickZoom={true}
+                dragRotate={true}
+                touchZoomRotate={true}
             >
                 <GeolocateControl
                     position="bottom-right"
                     trackUserLocation
                     showUserHeading
+                    showAccuracyCircle
+                    showButton
                 />
+                <NavigationControl 
+                    position="bottom-right"
+                    showCompass={true}
+                    showZoom={true}
+                    visualizePitch={true}
+                />
+
+                {/* <DrawControl
+                    position="bottom-right"
+                    displayControlsDefault={false}
+                    controls={{
+                        polygon: true,
+                        trash: true
+                    }}
+                /> */}
                 {clickedCoords && (
                     <Pin
                         name={clickedCoords.name ?? "GEM ALARM"}
