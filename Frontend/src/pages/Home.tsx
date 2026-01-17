@@ -8,7 +8,7 @@ import Map, {
     NavigationControl,
     Popup,
 } from "react-map-gl/mapbox";
-import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
+import { Source, Layer, CircleLayerSpecification, HeatmapLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 import { reverseGeocode, ReverseGeocodeResult } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
@@ -198,6 +198,7 @@ function HomePage() {
             lng,
             address: result || "Unknown Location",
             isLoading: false,
+            email: userEmail || "",
         });
     };
 
@@ -220,6 +221,7 @@ function HomePage() {
                             lng: place.lng,
                             address: place.address,
                             isLoading: false,
+                            email: userEmail || "",
                         })
                     }
                 />
@@ -392,7 +394,7 @@ function HomePage() {
 
                 <Source id="my-data" type="geojson" data={allPins}>
                     <Layer {...PIN_LAYER_STYLE} />
-                    <Layer {...HEATMAP_LAYER_STYLE} />
+                    <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
                 </Source>
             </Map>
         </div>
