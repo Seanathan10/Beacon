@@ -13,6 +13,7 @@ CREATE TABLE pin (
 	latitude REAL,
 	longitude REAL,
 	title VARCHAR(200),
+	location VARCHAR(200),
 	message VARCHAR(500),
 	image VARCHAR(2000),
 	
