@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import * as db from "../database/db.ts";
+import * as db from "../database/db";
 
 export interface User {
     id: string;
