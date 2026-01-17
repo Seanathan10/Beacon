@@ -5,6 +5,7 @@ import App from './App'
 import HomePage from "./pages/Home";
 import Landing from "./pages/Landing";
 import { LoginPage } from "./pages/Login";
+import { RegistrationPage } from "./pages/Registration";
 
 import { BrowserRouter } from "react-router";
 import { Routes } from "react-router";
@@ -22,6 +23,7 @@ ReactDOM.createRoot(root).render(
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/home" element={<HomePage />} />
+      <Route path="/register" element={<RegistrationPage />} />
     </Routes>
   </BrowserRouter>,
 );
