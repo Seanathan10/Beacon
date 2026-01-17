@@ -1,8 +1,7 @@
 import { useState } from "react";
+import { BASE_API_URL } from '../../constants.ts';
 
 type AuthMode = "login" | "register";
-const API_BASE_URL = "http://localhost:3000";
-
 interface AuthModalProps {
     isOpen: boolean;
     onClose?: () => void;
@@ -43,7 +42,7 @@ export default function AuthModal({
             const endpoint =
                 authMode === "register" ? "/api/register" : "/api/login";
 
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const response = await fetch(`${BASE_API_URL}${endpoint}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

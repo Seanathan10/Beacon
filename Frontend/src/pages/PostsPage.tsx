@@ -3,8 +3,7 @@ import { useNavigate } from "react-router";
 import { PostCard, Post } from "@/components/Post";
 import NewPostModal from "@/components/NewPostModal";
 import "./PostsPage.css";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { BASE_API_URL } from '../../constants.ts';
 
 export function PostsPage() {
     const navigate = useNavigate();
@@ -20,7 +19,7 @@ export function PostsPage() {
         setError(null);
         try {
             const token = getAuthToken();
-            const response = await fetch(`${API_BASE}/api/posts`, {
+            const response = await fetch(`${BASE_API_URL}/api/posts`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -59,7 +58,7 @@ export function PostsPage() {
     const handleAddPost = async (newPostData: Omit<Post, "id" | "upvotes" | "comments">) => {
         try {
             const token = getAuthToken();
-            const response = await fetch(`${API_BASE}/api/posts`, {
+            const response = await fetch(`${BASE_API_URL}/api/posts`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -88,7 +87,7 @@ export function PostsPage() {
     const removePost = async (id: number) => {
         try {
             const token = getAuthToken();
-            const response = await fetch(`${API_BASE}/api/posts/${id}`, {
+            const response = await fetch(`${BASE_API_URL}/api/posts/${id}`, {
                 method: "DELETE",
                 headers: {
                     Authorization: `Bearer ${token}`,

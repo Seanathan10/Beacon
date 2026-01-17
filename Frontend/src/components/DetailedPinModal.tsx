@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import "./styles/DetailedPinModal.css";
+import { BASE_API_URL } from '../../constants.ts';
 
 interface DetailedPinModalProps {
     selectedPoint: {
@@ -106,7 +107,7 @@ export default function DetailedPinModal({
             }
 
             const response = await fetch(
-                `http://localhost:3000/api/pins/${selectedPoint.id}`,
+                `${BASE_API_URL}/api/pins/${selectedPoint.id}`,
                 {
                     method: "PUT",
                     headers: {

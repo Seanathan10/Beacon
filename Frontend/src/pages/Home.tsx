@@ -15,6 +15,7 @@ import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { NavLink, useNavigate } from "react-router";
 import AuthHook from "./AuthHook";
+import { BASE_API_URL } from '../../constants.ts';
 
 const layerStyle: CircleLayerSpecification = {
     id: "point",
@@ -79,8 +80,6 @@ interface SelectedPoint {
 }
 
 function HomePage() {
-    console.log("HomePage")
-
      useEffect(() => {
         const heartbeat = async () => {
             try {
@@ -144,7 +143,7 @@ function HomePage() {
     useEffect(() => {
         const fetchPins = async () => {
             try {
-                const res = await fetch("http://localhost:3000/api/pins", {
+                const res = await fetch(`${BASE_API_URL}/api/pins`, {
                   headers: {
                     Authorization: `Bearer ${localStorage.getItem("accessToken")}`
                   }

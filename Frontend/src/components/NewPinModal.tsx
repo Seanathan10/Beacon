@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import "./styles/NewPinModal.css";
+import { BASE_API_URL } from '../../constants.ts';
 
 interface NewPinModalProps {
     onClose: () => void;
@@ -137,7 +138,7 @@ export default function NewPinModal({
                 imageUrl = await uploadImage(imageFile);
             }
 
-            const response = await fetch("http://localhost:3000/api/pins", {
+            const response = await fetch(`${BASE_API_URL}/api/pins`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
