@@ -1,11 +1,7 @@
 {
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "frontend/dist" }
-    }
-  ],
+  "installCommand": "pnpm -C frontend install",
+  "buildCommand": "pnpm -C frontend build",
+  "outputDirectory": "frontend/dist",
   "routes": [
     {
       "src": "/(.*)",
