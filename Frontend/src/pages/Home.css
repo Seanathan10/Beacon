@@ -51,23 +51,25 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0.75rem 1.25rem;
-    background-color: #ffffff;
+    padding: 0 20px;
+    background-color: #faf9f7;
     color: #1a1a1a;
     border: 1px solid #e5e3df;
-    border-radius: 999px;
+    border-radius: 16px;
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    height: 48px;
+    box-sizing: border-box;
 }
 
 .user-menu-toggle:hover {
     background-color: #f4f2ef;
     border-color: #d1cfc9;
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .user-email {
@@ -90,9 +92,9 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    background-color: #ffffff;
+    background-color: #faf9f7;
     border: 1px solid #e5e3df;
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     min-width: 160px;
     overflow: hidden;
@@ -408,12 +410,20 @@
     background: #faf9f7;
     border: 1px solid #e5e3df;
     border-radius: 16px;
-    padding: 10px 14px;
+    padding: 4px 4px 4px 20px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
+    height: 48px;
+    box-sizing: border-box;
+}
+
+.search-form:hover {
+    background-color: #f4f2ef;
+    border-color: #d1cfc9;
 }
 
 .search-form:focus-within {
+    background-color: #faf9f7;
     border-color: #2d6a4f;
     box-shadow: 0 4px 20px rgba(45, 106, 79, 0.15);
 }
@@ -436,8 +446,8 @@
     border: none;
     background: #2d6a4f;
     color: #fff;
-    border-radius: 10px;
-    padding: 8px 10px;
+    border-radius: 12px;
+    padding: 0;
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s ease;
@@ -445,6 +455,7 @@
     align-items: center;
     justify-content: center;
     min-width: 40px;
+    height: 40px;
 }
 
 .search-button:hover {
@@ -527,7 +538,7 @@
     background: #faf9f7;
     border: 1px solid #e5e3df;
     border-radius: 16px;
-    padding: 12px 24px;
+    padding: 0 20px;
     color: #1a1a1a;
     font-size: 0.95rem;
     font-weight: 500;
@@ -536,6 +547,8 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     white-space: nowrap;
     font-family: inherit;
+    height: 48px;
+    box-sizing: border-box;
 }
 
 .discover-button:hover {
