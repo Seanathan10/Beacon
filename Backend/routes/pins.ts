@@ -14,11 +14,13 @@ export function getPin(req: Request, res: Response) {
 
 export function createPin(req: Request, res: Response) {
 	const results = db.query(`
-		INSERT INTO pin(creatorID, message, image, color)
-		VALUES(?, ?, ?, ?)
+		INSERT INTO pin(creatorID, latitude, longitude, message, image, color)
+		VALUES(?, ?, ?, ?, ?, ?)
 		RETURNING id;
 	`, [
 		req.user.id,
+		req.body.latitude,
+		req.body.longitude,
 		req.body.message ?? null,
 		req.body.image ?? null,
 		req.body.color ?? null
