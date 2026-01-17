@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import "./styles/NewPinModal.css";
-import { BASE_API_URL } from '../../constants.ts';
+import { BASE_API_URL } from '../../constants';
 
 interface NewPinModalProps {
     onClose: () => void;

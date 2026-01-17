@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import "./styles/DetailedPinModal.css";
-import { BASE_API_URL } from '../../constants.ts';
+import { BASE_API_URL,PIN_COLOR } from '../../constants';
 import {ReverseGeocodeResult} from "@/utils/geocoding";
 
 interface DetailedPinModalProps {
@@ -12,7 +12,6 @@ interface DetailedPinModalProps {
         title?: string;
         message: string;
         image: string;
-        color?: string;
         email?: string;
         address?: ReverseGeocodeResult;
     };
@@ -39,7 +38,6 @@ export default function DetailedPinModal({
 }: DetailedPinModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [message, setMessage] = useState(selectedPoint.message);
-    const [color, setColor] = useState(selectedPoint.color || "#007cbf");
     const [image, setImage] = useState(selectedPoint.image);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
@@ -119,7 +117,6 @@ export default function DetailedPinModal({
                     body: JSON.stringify({
                         message,
                         image: finalImageUrl,
-                        color,
                     }),
                 },
             );
@@ -130,7 +127,7 @@ export default function DetailedPinModal({
                     id: selectedPoint.id,
                     message: updatedPin.message || message,
                     image: updatedPin.image || finalImageUrl,
-                    color: updatedPin.color || color,
+                    color: PIN_COLOR,
                 });
                 setIsEditing(false);
             } else {
