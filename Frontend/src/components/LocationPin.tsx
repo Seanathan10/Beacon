@@ -8,6 +8,7 @@ interface LocationPinProps {
 		image: string;
 		message: string;
 		color?: string;
+		email?: string;
 	};
 	setSelectedPoint: (a: any) => void;
 	onShowDetails: () => void;

@@ -9,6 +9,7 @@ interface DetailedPinModalProps {
 		message: string;
 		image: string;
 		color?: string;
+		email?: string;
 	};
 	onClose: () => void;
 }
@@ -53,6 +54,13 @@ export default function DetailedPinModal({ selectedPoint, onClose }: DetailedPin
 						<h3>Description</h3>
 						<p className="detailed-message">{selectedPoint.message}</p>
 					</div>
+
+					{selectedPoint.email && (
+						<div className="detailed-info-section">
+							<h3>Uploaded by</h3>
+							<p className="detailed-message">{selectedPoint.email}</p>
+						</div>
+					)}
 
 					<div className="detailed-info-section">
 						<h3>Location</h3>

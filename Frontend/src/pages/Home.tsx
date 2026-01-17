@@ -183,7 +183,8 @@ function HomePage() {
             properties: {
               message: p.message,
               image: p.image,
-              color: p.color
+              color: p.color,
+              email: p.email
             }
           }))
         };
@@ -225,7 +226,8 @@ function HomePage() {
         latitude: coords[1],
         message: feature.properties?.message || 'No message',
         image: feature.properties?.image || '',
-        color: feature.properties?.color || '#007cbf'
+        color: feature.properties?.color || '#007cbf',
+        email: feature.properties?.email || ''
       });
       setPinData(null); // Close any existing pin
       return;
