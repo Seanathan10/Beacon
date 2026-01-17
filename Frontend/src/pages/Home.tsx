@@ -5,6 +5,7 @@ import SearchBar from "@/components/SearchBar";
 import SavedPlacesPanel from "@/components/SavedPlacesPanel";
 import Map, { GeolocateControl, NavigationControl, Popup } from "react-map-gl/mapbox";
 import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
+import { FeatureCollection } from 'geojson';
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
@@ -114,6 +115,7 @@ interface SelectedPoint {
   message: string;
   image: string;
   color: string;
+  email?: string;
 }
 
 function HomePage() {
@@ -131,9 +133,12 @@ function HomePage() {
         coordinates: [number, number];
       };
       properties: {
+        id?: number;
+        creatorID?: number;
         message: string;
         image: string;
         color: string;
+        email?: string;
       };
     }>;
   }>({
@@ -148,6 +153,10 @@ function HomePage() {
     const email = localStorage.getItem("userEmail");
     console.log("Initial userEmail from localStorage:", email);
     return email || "";
+  });
+  const [userId, setUserId] = useState<number | null>(() => {
+    const id = localStorage.getItem("userId");
+    return id ? parseInt(id) : null;
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
@@ -181,6 +190,8 @@ function HomePage() {
               coordinates: [p.longitude, p.latitude]
             },
             properties: {
+              id: p.id,
+              creatorID: p.creatorID,
               message: p.message,
               image: p.image,
               color: p.color,
@@ -200,14 +211,18 @@ function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("userEmail");
+    localStorage.removeItem("userId");
     setIsLoggedIn(false);
     setUserEmail("");
+    setUserId(null);
     setIsDropdownOpen(false);
   };
 
   const handleAuthSuccess = () => {
     setIsLoggedIn(true);
     setUserEmail(localStorage.getItem("userEmail") || "");
+    const storedId = localStorage.getItem("userId");
+    if (storedId) setUserId(parseInt(storedId));
   };
 
   const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
@@ -218,7 +233,7 @@ function HomePage() {
 
     if (features && features.length > 0) {
       const feature = features[0];
-      const coords = feature.geometry.coordinates;
+      const coords = (feature.geometry as any).coordinates;
       setSelectedPoint({
         id: feature.properties?.id,
         creatorID: feature.properties?.creatorID,
@@ -392,7 +407,29 @@ function HomePage() {
         {showDetailedModal && selectedPoint && (
           <DetailedPinModal 
             selectedPoint={selectedPoint} 
+            currentUserId={userId}
+            currentUserEmail={localStorage.getItem("userEmail")}
             onClose={() => setShowDetailedModal(false)}
+            onUpdate={(updatedPoint) => {
+               setAllPins(prev => ({
+                 type: 'FeatureCollection',
+                 features: prev.features.map(f => {
+                    if (f.properties.id === updatedPoint.id) {
+                        return {
+                            ...f,
+                            properties: {
+                                ...f.properties,
+                                message: updatedPoint.message,
+                                image: updatedPoint.image,
+                                color: updatedPoint.color || f.properties.color
+                            }
+                        };
+                    }
+                    return f;
+                 })
+               }));
+               setSelectedPoint(prev => prev ? ({ ...prev, ...updatedPoint, color: updatedPoint.color || prev.color }) : null);
+            }}
           />
         )}
 

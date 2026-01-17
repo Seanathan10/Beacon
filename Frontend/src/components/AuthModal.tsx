@@ -58,6 +58,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
 			// Store the token and user email
 			localStorage.setItem("accessToken", data.accessToken);
 			localStorage.setItem("userEmail", credentials.email);
+			if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 			setCredentials({ email: "", password: "" });
 			onAuthSuccess();
 		} catch (err) {

@@ -161,6 +161,59 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Pin'
+    
+    put:
+      summary: Update a specific pin by ID
+      description: Updates message/image/color for a pin (owner only)
+      operationId: updatePin
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin to update
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                image:
+                  type: string
+                  maxLength: 2000
+                  nullable: true
+                color:
+                  type: string
+                  maxLength: 10
+                  nullable: true
+
+      responses:
+        200:
+          description: Pin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pin'
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
 
   /api/login:
     post:

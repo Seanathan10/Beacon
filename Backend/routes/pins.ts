@@ -40,6 +40,48 @@ export function createPin(req: Request, res: Response) {
 	res.json(results[0]);
 }
 
+export function updatePin(req: Request, res: Response) {
+	const pinID = req.params.id;
+	const userID = req.user.id;
+	const { message, image, color } = req.body;
+
+	const pin = db.query('SELECT creatorID FROM pin WHERE id = ?', [pinID])[0];
+	if (!pin) {
+		res.status(404).json({ message: 'Pin not found' });
+		return;
+	}
+	if (pin.creatorID !== userID) {
+		res.status(403).json({ message: 'Unauthorized' });
+		return;
+	}
+
+	const updates: string[] = [];
+	const params: any[] = [];
+
+	if (message !== undefined) {
+		updates.push('message = ?');
+		params.push(message);
+	}
+	if (image !== undefined) {
+		updates.push('image = ?');
+		params.push(image);
+	}
+	if (color !== undefined) {
+		updates.push('color = ?');
+		params.push(color);
+	}
+
+	if (updates.length > 0) {
+		params.push(pinID);
+		const sql = `UPDATE pin SET ${updates.join(', ')} WHERE id = ?`;
+		db.query(sql, params);
+	}
+
+	// Return the updated pin
+	const updatedPin = db.query('SELECT * FROM pin WHERE id = ?', [pinID])[0];
+	res.json(updatedPin);
+}
+
 export function deletePin(req: Request, res: Response) {
 	const pinID = req.params.id;
 	const result = db.query('DELETE FROM pin WHERE id = ?', [pinID]);

@@ -45,6 +45,7 @@ app.post("/api/register", auth.register);
 app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
 app.get("/api/pins/:id", auth.check, pins.getPin);
+app.put("/api/pins/:id", auth.check, pins.updatePin);
 app.post("/api/pins", auth.check, pins.createPin);
 app.put("/api/pins", auth.check, pins.deletePin);
 

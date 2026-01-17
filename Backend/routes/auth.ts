@@ -28,7 +28,10 @@ export async function login(req: Request, res: Response) {
         }
     );
 
-    res.status(200).json({ accessToken: accessToken });
+    res.status(200).json({ 
+        accessToken: accessToken,
+        user: { id: user.id, name: user.name, email: user.email }
+    });
 }
 
 export async function register(req: Request, res: Response) {
@@ -61,7 +64,10 @@ export async function register(req: Request, res: Response) {
             }
         );
 
-        res.status(201).json({ accessToken: accessToken });
+        res.status(201).json({ 
+            accessToken: accessToken,
+            user: { id, name: name || null, email }
+        });
     } catch (err) {
         res.status(500).json({ message: 'Registration failed' });
     }
