@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
@@ -8,7 +9,7 @@ import Pin from "@/components/Pin";
 
 
 function HomePage() {
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [clickedCoords, setClickedCoords] = useState({ lat: 0, lng: 0 });
 
@@ -42,6 +43,7 @@ function HomePage() {
       )}
 
       <Map
+        ref={mapRef}
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
         initialViewState={{
           longitude: -122.4,

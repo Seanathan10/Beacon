@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
+import type { MapRef } from "react-map-gl/mapbox";
 
 interface SearchBarProps {
-	mapRef: React.MutableRefObject<mapboxgl.Map | null>;
-	searchMarkerRef: React.MutableRefObject<mapboxgl.Marker | null>;
+	mapRef: React.RefObject<MapRef | null>;
+	searchMarkerRef: React.RefObject<mapboxgl.Marker | null>;
 }
 
 export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
@@ -19,7 +20,8 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 	// Debounced search-as-you-type using Search Box API
 	useEffect(() => {
 		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-		if (!token || !mapRef.current) return;
+		const map = mapRef.current?.getMap();
+		if (!token || !map) return;
 		if (!searchQuery.trim()) {
 			setSearchResults([]);
 			return;
@@ -29,7 +31,7 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 		const timeout = setTimeout(async () => {
 			setIsSearching(true);
 			try {
-				const center = mapRef.current.getCenter();
+				const center = map.getCenter();
 				const proximity = `${center.lng},${center.lat}`;
 				const url = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(
 					searchQuery
@@ -53,7 +55,8 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 	}, [searchQuery, mapRef, sessionToken]);
 
 	const handleSelectResult = async (suggestion: any) => {
-		if (!suggestion?.mapbox_id || !mapRef.current) return;
+		const map = mapRef.current?.getMap();
+		if (!suggestion?.mapbox_id || !map) return;
 		
 		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 		if (!token) return;
@@ -72,9 +75,9 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 			if (!searchMarkerRef.current) {
 				searchMarkerRef.current = new mapboxgl.Marker({ color: "#1a1a1a" });
 			}
-			searchMarkerRef.current.setLngLat([lng, lat]).addTo(mapRef.current);
+			searchMarkerRef.current.setLngLat([lng, lat]).addTo(map);
 
-			mapRef.current.flyTo({ center: [lng, lat], zoom: 12, essential: true });
+			map.flyTo({ center: [lng, lat], zoom: 12, essential: true });
 			setSearchQuery(suggestion.name || suggestion.full_address || "");
 			setSearchResults([]);
 		} catch (err) {
@@ -84,7 +87,7 @@ export default function SearchBar({ mapRef, searchMarkerRef }: SearchBarProps) {
 
 	const handleSearchSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!searchQuery.trim() || !mapRef.current) return;
+		if (!searchQuery.trim() || !mapRef.current?.getMap()) return;
 		// If we already have results, pick the first
 		if (searchResults[0]) {
 			await handleSelectResult(searchResults[0]);
