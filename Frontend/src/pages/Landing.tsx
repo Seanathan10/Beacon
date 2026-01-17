@@ -14,8 +14,11 @@ function Landing() {
           <a href="#impact">Impact</a>
           <a href="#community">Community</a>
           <a href="#guide">Guides</a>
+          <NavLink to="/login" className="button button--ghost">
+            Sign Up
+          </NavLink>
           <NavLink to="/login" className="button button--primary">
-            Get started free
+            Log In
           </NavLink>
         </nav>
       </header>
@@ -23,24 +26,23 @@ function Landing() {
       <main>
         <section className="hero">
           <div className="hero__content">
-            <img
-              className="hero__mark"
-              src="https://www.opennote.com/img/hero-illustration.svg"
-              alt="Illustration of a traveler mapping a journey"
-            />
-            <h1>Map the world’s most sustainable local gems.</h1>
+            <svg className="hero__mark" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="40" cy="40" r="36" stroke="#2d6a4f" strokeWidth="2" fill="#e9f5e9"/>
+              <path d="M40 20C32 20 26 28 26 36C26 48 40 60 40 60C40 60 54 48 54 36C54 28 48 20 40 20Z" fill="#2d6a4f"/>
+              <circle cx="40" cy="35" r="6" fill="#faf9f7"/>
+            </svg>
+            <h1>Map the world’s local gems.</h1>
             <p>
               Beacon is a sustainability-first travel assistant. Drop pins on hidden
-              spots, attach a photo and story, and let AI tag the most eco-friendly
-              places that aren’t part of the corporate rat race.
+              spots, attach a photo and story, and tag places that aren’t part of the corporate rat race.
             </p>
             <div className="hero__actions">
-              <NavLink to="/login" className="button button--primary">
-                Try for free
+              <NavLink to="/login" className="button button--ghost">
+                Sign Up
               </NavLink>
-              <button className="button button--ghost" type="button">
-                Watch the walkthrough
-              </button>
+              <NavLink to="/login" className="button button--primary">
+                Log In
+              </NavLink>
             </div>
             <div className="hero__meta">
               <span>Map-first trips</span>
@@ -65,10 +67,14 @@ function Landing() {
                   </ul>
                 </aside>
                 <div className="hero__map">
-                  <img
-                    src="https://illustrations.popsy.co/gray/map.svg"
-                    alt="Illustrated world map with pins"
-                  />
+                  <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width: '100%', maxHeight: '160px', opacity: 0.5}}>
+                    <ellipse cx="100" cy="60" rx="85" ry="50" fill="#d8f3dc" fillOpacity="0.5"/>
+                    <path d="M30 55C40 40 70 35 100 40C130 45 160 55 175 65" stroke="#2d6a4f" strokeWidth="2" strokeOpacity="0.3" fill="none"/>
+                    <path d="M25 70C45 80 80 85 110 80C140 75 165 65 180 55" stroke="#2d6a4f" strokeWidth="2" strokeOpacity="0.2" fill="none"/>
+                    <circle cx="50" cy="50" r="8" fill="#2d6a4f" fillOpacity="0.2"/>
+                    <circle cx="120" cy="45" r="12" fill="#2d6a4f" fillOpacity="0.15"/>
+                    <circle cx="160" cy="70" r="6" fill="#2d6a4f" fillOpacity="0.25"/>
+                  </svg>
                   <div className="hero__pin hero__pin--one" />
                   <div className="hero__pin hero__pin--two" />
                   <div className="hero__pin hero__pin--three" />
@@ -221,9 +227,14 @@ function Landing() {
             Start mapping, tagging, and sharing the places that keep communities
             thriving.
           </p>
-          <NavLink to="/login" className="button button--primary">
-            Try Beacon free
-          </NavLink>
+          <div className="cta__actions">
+            <NavLink to="/login" className="button button--ghost">
+              Sign Up
+            </NavLink>
+            <NavLink to="/login" className="button button--primary">
+              Log In
+            </NavLink>
+          </div>
         </section>
       </main>
 
