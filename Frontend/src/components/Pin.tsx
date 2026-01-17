@@ -10,6 +10,7 @@ interface PinProps {
     isLoading?: boolean;
     onClose: () => void;
     onDetails?: () => void;
+    onPinCreated?: (data: { message: string; image?: string; color?: string }) => void;
 }
 
 export default function Pin({
@@ -19,6 +20,7 @@ export default function Pin({
     isLoading,
     onClose,
     onDetails,
+    onPinCreated,
 }: PinProps) {
     // console.log("[Pin.tsx]   " + latitude);
     // console.log("[Pin.tsx]   " + longitude);
@@ -129,7 +131,10 @@ export default function Pin({
                     longitude={longitude}
                     locationName={name}
                     onClose={() => setModalOpen(false)}
-                    onSubmit={() => console.log("submit")}
+                    onSubmit={(data) => {
+                        onPinCreated?.(data);
+                        setModalOpen(false);
+                    }}
                 />
             )}
         </>

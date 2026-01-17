@@ -114,7 +114,21 @@ function HomePage() {
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [pinData, setPinData] = useState<PinData | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
-  const [allPins, setAllPins] = useState({
+  const [allPins, setAllPins] = useState<{
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: {
+        type: string;
+        coordinates: [number, number];
+      };
+      properties: {
+        message: string;
+        image: string;
+        color: string;
+      };
+    }>;
+  }>({
     type: 'FeatureCollection',
     features: []
   });
@@ -283,6 +297,27 @@ function HomePage() {
             isLoading={pinData.isLoading}
             onClose={() => setPinData(null)}
             onDetails={() => console.log("Details clicked")}
+            onPinCreated={(data) => {
+              setAllPins(prev => ({
+                ...prev,
+                features: [
+                  ...prev.features,
+                  {
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [pinData.lng, pinData.lat]
+                    },
+                    properties: {
+                      message: data.message,
+                      image: data.image || '',
+                      color: data.color || '#007cbf'
+                    }
+                  }
+                ]
+              }));
+              setPinData(null);
+            }}
           />
         )}
 
