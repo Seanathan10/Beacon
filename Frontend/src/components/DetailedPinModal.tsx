@@ -7,6 +7,7 @@ interface DetailedPinModalProps {
         creatorID?: number;
         latitude: number;
         longitude: number;
+        title?: string;
         message: string;
         image: string;
         color?: string;
@@ -49,6 +50,13 @@ export default function DetailedPinModal({
 
     const isOwner =
         currentUserEmail != null && selectedPoint.email == currentUserEmail;
+
+    const titleText =
+        selectedPoint.title?.trim() ||
+        selectedPoint.message?.trim() ||
+        "Untitled Pin";
+    const messageText = selectedPoint.message?.trim() || "";
+    const showMessage = messageText && messageText !== titleText;
 
     // console.log( isOwner )
     // console.log( currentUserEmail )
@@ -207,27 +215,6 @@ export default function DetailedPinModal({
                                     className="edit-textarea"
                                 />
                             </div>
-
-                            <div className="form-group">
-                                <label>Color</label>
-                                <div className="color-picker">
-                                    {[
-                                        "#2d6a4f",
-                                        "#1a1a1a",
-                                        "#e07a5f",
-                                        "#3d5a80",
-                                        "#9c6644",
-                                        "#007cbf",
-                                    ].map((c) => (
-                                        <div
-                                            key={c}
-                                            className={`color-option ${color === c ? "selected" : ""}`}
-                                            style={{ backgroundColor: c }}
-                                            onClick={() => setColor(c)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
                         </div>
                     ) : (
                         <>
@@ -240,11 +227,20 @@ export default function DetailedPinModal({
                             )}
 
                             <div className="detailed-info-section">
-                                <h3>Description</h3>
+                                <h3>Title</h3>
                                 <p className="detailed-message">
-                                    {selectedPoint.message}
+                                    {titleText}
                                 </p>
                             </div>
+
+                            {showMessage && (
+                                <div className="detailed-info-section">
+                                    <h3>Description</h3>
+                                    <p className="detailed-message">
+                                        {messageText}
+                                    </p>
+                                </div>
+                            )}
 
                             {selectedPoint.email && (
                                 <div className="detailed-info-section">
@@ -276,24 +272,6 @@ export default function DetailedPinModal({
                                     </div>
                                 </div>
                             </div>
-
-                            {selectedPoint.color && (
-                                <div className="detailed-info-section">
-                                    <h3>Pin Color</h3>
-                                    <div className="color-display">
-                                        <div
-                                            className="color-swatch"
-                                            style={{
-                                                backgroundColor:
-                                                    selectedPoint.color,
-                                            }}
-                                        />
-                                        <span className="color-code">
-                                            {selectedPoint.color}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
                         </>
                     )}
 

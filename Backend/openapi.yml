@@ -72,6 +72,11 @@ paths:
                   type: number
                   description: Longitude coordinate of the pin
                   example: -74.0060
+                title:
+                  type: string
+                  maxLength: 200
+                  description: Title of the pin
+                  example: "Golden Gate Overlook"
                 message:
                   type: string
                   maxLength: 200
@@ -82,12 +87,7 @@ paths:
                   maxLength: 2000
                   description: URL of the image
                   nullable: true
-                color:
-                  type: string
-                  maxLength: 10
-                  description: Color code for the pin
-                  example: "#FF6B6B"
-                  nullable: true
+
       responses:
         200:
           description: Pin created successfully
@@ -164,7 +164,7 @@ paths:
     
     put:
       summary: Update a specific pin by ID
-      description: Updates message/image/color for a pin (owner only)
+      description: Updates title/message/image/color for a pin (owner only)
       operationId: updatePin
       parameters:
         - in: path
@@ -181,6 +181,10 @@ paths:
             schema:
               type: object
               properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  nullable: true
                 message:
                   type: string
                   maxLength: 200
@@ -188,10 +192,6 @@ paths:
                 image:
                   type: string
                   maxLength: 2000
-                  nullable: true
-                color:
-                  type: string
-                  maxLength: 10
                   nullable: true
 
       responses:
@@ -610,6 +610,12 @@ components:
         longitude:
           type: number
           description: self explanatory
+        title:
+          type: string
+          maxLength: 200
+          description: Title of the pin
+          example: "Golden Gate Overlook"
+          nullable: true
         message:
           type: string
           maxLength: 200
@@ -621,12 +627,6 @@ components:
           maxLength: 2000
           description: URL of the image
           example: "https://images.unsplash.com/photo-1516192518150-0d8fee5425e3"
-          nullable: true
-        color:
-          type: string
-          maxLength: 10
-          description: Color code for the pin
-          example: "#FF6B6B"
           nullable: true
     
     Error:

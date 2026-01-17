@@ -4,6 +4,7 @@ import "./styles/NewPinModal.css";
 interface NewPinModalProps {
     onClose: () => void;
     onSubmit: (data: {
+        title: string;
         message: string;
         image?: string;
         color?: string;
@@ -23,6 +24,8 @@ const COLOR_PRESETS = [
 
 const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit for Vercel Blob
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_TITLE_LENGTH = 200;
+const MAX_MESSAGE_LENGTH = 500;
 
 export default function NewPinModal({
     onClose,
@@ -38,6 +41,8 @@ export default function NewPinModal({
     const [color, setColor] = useState("#2d6a4f");
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [titleError, setTitleError] = useState<string | null>(null);
+    const [messageError, setMessageError] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,6 +125,17 @@ export default function NewPinModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (title.length > MAX_TITLE_LENGTH) {
+            setTitleError(`Title cannot exceed ${MAX_TITLE_LENGTH} characters`);
+            return;
+        }
+        
+        if (message.length > MAX_MESSAGE_LENGTH) {
+            setMessageError(`Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`);
+            return;
+        }
+        
         setIsUploading(true);
         setUploadError(null);
 
@@ -148,7 +164,12 @@ export default function NewPinModal({
             });
 
             if (response.ok) {
-                onSubmit({ message, image: imageUrl || undefined, color });
+                onSubmit({
+                    title,
+                    message,
+                    image: imageUrl || undefined,
+                    color,
+                });
                 setTitle("");
                 setMessage("");
                 setImageFile(null);
@@ -252,12 +273,28 @@ export default function NewPinModal({
                         <input
                             id="title"
                             type="text"
-                            className="pin-modal__input"
+                            className={`pin-modal__input ${titleError ? "pin-modal__input--error" : ""}`}
                             value={title}
-                            onChange={(e) => setTitle(e.target.value)}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setTitle(value);
+                                if (value.length > MAX_TITLE_LENGTH) {
+                                    setTitleError(`Title cannot exceed ${MAX_TITLE_LENGTH} characters`);
+                                } else {
+                                    setTitleError(null);
+                                }
+                            }}
                             placeholder="Name of this spot"
                             required
                         />
+                        <div className="pin-modal__input-footer">
+                            {titleError && (
+                                <span className="pin-modal__error">{titleError}</span>
+                            )}
+                            <span className={`pin-modal__char-count ${title.length > MAX_TITLE_LENGTH ? "pin-modal__char-count--error" : ""}`}>
+                                {title.length}/{MAX_TITLE_LENGTH}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="pin-modal__field">
@@ -269,13 +306,29 @@ export default function NewPinModal({
                         </label>
                         <textarea
                             id="message"
-                            className="pin-modal__textarea"
+                            className={`pin-modal__textarea ${messageError ? "pin-modal__textarea--error" : ""}`}
                             value={message}
-                            onChange={(e) => setMessage(e.target.value)}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setMessage(value);
+                                if (value.length > MAX_MESSAGE_LENGTH) {
+                                    setMessageError(`Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`);
+                                } else {
+                                    setMessageError(null);
+                                }
+                            }}
                             placeholder="Describe this spot... A hidden cafe, scenic viewpoint, local market?"
                             required
                             rows={4}
                         />
+                        <div className="pin-modal__textarea-footer">
+                            {messageError && (
+                                <span className="pin-modal__error">{messageError}</span>
+                            )}
+                            <span className={`pin-modal__char-count ${message.length > MAX_MESSAGE_LENGTH ? "pin-modal__char-count--error" : ""}`}>
+                                {message.length}/{MAX_MESSAGE_LENGTH}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="pin-modal__field">

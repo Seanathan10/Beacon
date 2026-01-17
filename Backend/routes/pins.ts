@@ -2,7 +2,17 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 
 export function getAllPins(req: Request, res: Response) {
-    const results = db.query(`SELECT * FROM pin;`);
+    const results = db.query(`
+		SELECT
+			p.id,
+			a.email,
+			p.latitude,
+			p.longitude, 
+			p.message,
+			p.image
+		FROM pin p
+		JOIN account a ON a.id = p.creatorID;
+	`);
     res.json(results);
 }
 
@@ -29,14 +39,15 @@ export function createPin(req: Request, res: Response) {
 
     const results = db.query(
         `
-		INSERT INTO pin(creatorID, latitude, longitude, message, image, color, email)
-		VALUES(?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO pin(creatorID, latitude, longitude, title, message, image, color, email)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id;
 	`,
         [
             req.user.id,
             req.body.latitude,
             req.body.longitude,
+            req.body.title ?? null,
             req.body.message ?? null,
             req.body.image ?? null,
             req.body.color ?? null,
@@ -50,7 +61,7 @@ export function createPin(req: Request, res: Response) {
 export function updatePin(req: Request, res: Response) {
     const pinID = req.params.id;
     const userID = req.user.id;
-    const { message, image, color } = req.body;
+    const { title, message, image, color } = req.body;
 
     const pin = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID])[0];
     if (!pin) {
@@ -65,17 +76,17 @@ export function updatePin(req: Request, res: Response) {
     const updates: string[] = [];
     const params: any[] = [];
 
-    if (message !== undefined) {
+    if (message) {
         updates.push("message = ?");
         params.push(message);
     }
-    if (image !== undefined) {
+    if (title) {
+        updates.push("title = ?");
+        params.push(title);
+    }
+    if (image) {
         updates.push("image = ?");
         params.push(image);
-    }
-    if (color !== undefined) {
-        updates.push("color = ?");
-        params.push(color);
     }
 
     if (updates.length > 0) {

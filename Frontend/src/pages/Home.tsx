@@ -9,12 +9,12 @@ import Map, {
     Popup,
 } from "react-map-gl/mapbox";
 import { Source, Layer, CircleLayerSpecification } from "react-map-gl/mapbox";
-import { FeatureCollection } from "geojson";
 import Pin from "@/components/Pin";
 import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { NavLink, useNavigate } from "react-router";
+import AuthHook from "./AuthHook";
 
 const layerStyle: CircleLayerSpecification = {
     id: "point",
@@ -22,7 +22,7 @@ const layerStyle: CircleLayerSpecification = {
     source: "my-data",
     paint: {
         "circle-radius": 10,
-        "circle-color": "#007cbf",
+        "circle-color": ["get", "color"],
     },
     maxzoom: 22,
     minzoom: 5,
@@ -59,22 +59,6 @@ const heatmapLayerStyle = {
     },
 };
 
-const geojson: FeatureCollection = {
-    type: "FeatureCollection",
-    features: [
-        {
-            type: "Feature",
-            geometry: {
-                type: "Point",
-                coordinates: [-122.4, 37.8],
-            },
-            properties: {
-                title: "915 Front Street, San Francisco, California",
-            },
-        },
-    ],
-};
-
 interface PinData {
     lat: number;
     lng: number;
@@ -87,6 +71,7 @@ interface SelectedPoint {
     creatorID?: number;
     longitude: number;
     latitude: number;
+    title?: string;
     message: string;
     image: string;
     color: string;
@@ -135,6 +120,7 @@ function HomePage() {
             properties: {
                 id?: number;
                 creatorID?: number;
+                title?: string;
                 message: string;
                 image: string;
                 color: string;
@@ -145,19 +131,9 @@ function HomePage() {
         type: "FeatureCollection",
         features: [],
     });
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-        return !!localStorage.getItem("accessToken");
-    });
+
     const [cursor, setCursor] = useState<string>("auto");
-    const [userEmail, setUserEmail] = useState<string>(() => {
-        const email = localStorage.getItem("userEmail");
-        console.log("Initial userEmail from localStorage:", email);
-        return email || "";
-    });
-    const [userId, setUserId] = useState<number | null>(() => {
-        const id = localStorage.getItem("userId");
-        return id ? parseInt(id) : null;
-    });
+    const [userEmail, userId, isLoggedIn, logout, authSuccess] = AuthHook();
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
     const onMouseEnter = useCallback(() => setCursor("pointer"), []);
@@ -168,16 +144,16 @@ function HomePage() {
     useEffect(() => {
         const fetchPins = async () => {
             try {
-                const token = localStorage.getItem("accessToken");
-                const headers: HeadersInit = {};
-
-                if (token) {
-                    headers.Authorization = `Bearer ${token}`;
-                }
-
                 const res = await fetch("http://localhost:3000/api/pins", {
-                    headers,
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`
+                  }
                 });
+
+                if (res.status == 401) {
+                    handleLogout();
+                    return;
+                }
 
                 if (!res.ok) {
                     console.error("Failed to fetch pins:", res.status);
@@ -195,11 +171,11 @@ function HomePage() {
                         },
                         properties: {
                             id: p.id,
-                            creatorID: p.creatorID,
+                            email: p.email,
+                            title: p.title,
                             message: p.message,
                             image: p.image,
-                            color: p.color,
-                            email: p.email,
+                            color: localStorage.getItem("userEmail") == p.email ? "#FFD700" : "#007cbf",
                         },
                     })),
                 };
@@ -213,20 +189,8 @@ function HomePage() {
     }, [isLoggedIn]);
 
     const handleLogout = () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("userId");
-        setIsLoggedIn(false);
-        setUserEmail("");
-        setUserId(null);
+        logout();
         setIsDropdownOpen(false);
-    };
-
-    const handleAuthSuccess = () => {
-        setIsLoggedIn(true);
-        setUserEmail(localStorage.getItem("userEmail") || "");
-        const storedId = localStorage.getItem("userId");
-        if (storedId) setUserId(parseInt(storedId));
     };
 
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
@@ -243,6 +207,7 @@ function HomePage() {
                 creatorID: feature.properties?.creatorID,
                 longitude: coords[0],
                 latitude: coords[1],
+                title: feature.properties?.title || "",
                 message: feature.properties?.message || "No message",
                 image: feature.properties?.image || "",
                 color: feature.properties?.color || "#007cbf",
@@ -281,7 +246,7 @@ function HomePage() {
         }
     };
 
-    
+
 
     const handleDiscoverClick = () => {
         // console.log('Discover button clicked');
@@ -310,7 +275,7 @@ function HomePage() {
 
             <SavedPlacesPanel />
 
-            <AuthModal isOpen={!isLoggedIn} onAuthSuccess={handleAuthSuccess} />
+            <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
 
             {isLoggedIn && (
                 <div className="user-menu">
@@ -407,6 +372,7 @@ function HomePage() {
                                             ],
                                         },
                                         properties: {
+                                            title: data.title,
                                             message: data.message,
                                             image: data.image || "",
                                             color: data.color || "#007cbf",
@@ -457,11 +423,11 @@ function HomePage() {
                             setSelectedPoint((prev) =>
                                 prev
                                     ? {
-                                          ...prev,
-                                          ...updatedPoint,
-                                          color:
-                                              updatedPoint.color || prev.color,
-                                      }
+                                        ...prev,
+                                        ...updatedPoint,
+                                        color:
+                                            updatedPoint.color || prev.color,
+                                    }
                                     : null,
                             );
                         }}
