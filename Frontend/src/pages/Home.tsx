@@ -179,7 +179,7 @@ function HomePage() {
       {/* Logout button - only shown when logged in */}
       {isLoggedIn && (
         <button onClick={handleLogout} className="logout-button">
-          Logout
+          Log Out
         </button>
       )}
 
