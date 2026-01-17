@@ -1,127 +1,339 @@
-.modal-overlay {
+/* ===== Pin Modal Design System ===== */
+.pin-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(26, 26, 26, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: overlayFadeIn 0.3s ease;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  max-width: 500px;
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pin-modal {
+  background: #faf9f7;
+  border-radius: 24px;
+  max-width: 480px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 0 40px rgba(45, 106, 79, 0.08);
+  border: 1px solid #e5e3df;
+  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
-.modal-header {
+/* ===== Modal Header ===== */
+.pin-modal__header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 1.5rem;
+  padding: 2rem 2rem 1.5rem;
+  background: linear-gradient(180deg, #e9f5e9 0%, #faf9f7 100%);
+  border-bottom: 1px solid #e5e3df;
+  position: relative;
 }
 
-.modal-header h2 {
-  margin: 0;
+.pin-modal__logo {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.75rem;
+}
+
+.pin-modal__title {
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: 1.5rem;
-  color: #333;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  letter-spacing: -0.02em;
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 2rem;
+.pin-modal__subtitle {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.875rem;
+  color: #5c5c5c;
+  margin-top: 0.25rem;
+}
+
+.pin-modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e5e3df;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: #666;
+  transition: all 0.2s ease;
+  color: #5c5c5c;
+  font-size: 1.25rem;
   line-height: 1;
   padding: 0;
-  width: 30px;
-  height: 30px;
 }
 
-.modal-close:hover {
-  color: #333;
+.pin-modal__close:hover {
+  background: #ffffff;
+  border-color: #1a1a1a;
+  color: #1a1a1a;
+  transform: rotate(90deg);
 }
 
-.modal-form {
+/* ===== Modal Form ===== */
+.pin-modal__form {
+  padding: 1.5rem 2rem 2rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.form-group {
+.pin-modal__field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group label {
+.pin-modal__label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 600;
-  color: #333;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.form-group input,
-.form-group textarea {
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-family: inherit;
-  transition: border-color 0.2s;
+.pin-modal__label-hint {
+  font-weight: 400;
+  color: #8a8a8a;
+  font-size: 0.8rem;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
+.pin-modal__input,
+.pin-modal__textarea {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 0.875rem 1rem;
+  border: 1.5px solid #e5e3df;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: #ffffff;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
+}
+
+.pin-modal__input::placeholder,
+.pin-modal__textarea::placeholder {
+  color: #8a8a8a;
+}
+
+.pin-modal__input:hover,
+.pin-modal__textarea:hover {
+  border-color: #c5c3bf;
+}
+
+.pin-modal__input:focus,
+.pin-modal__textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
-.form-group textarea {
+.pin-modal__textarea {
   resize: vertical;
   min-height: 100px;
+  line-height: 1.5;
 }
 
-.modal-actions {
+/* ===== Color Picker Field ===== */
+.pin-modal__color-field {
   display: flex;
+  align-items: center;
   gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1rem;
 }
 
-.btn-primary,
-.btn-secondary {
-  padding: 0.75rem 1.5rem;
+.pin-modal__color-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 48px;
+  height: 48px;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  padding: 0;
+  background: transparent;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.pin-modal__color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
 }
 
-.btn-primary:hover {
+.pin-modal__color-input::-webkit-color-swatch {
+  border: 2px solid #e5e3df;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.pin-modal__color-input:hover::-webkit-color-swatch {
+  border-color: #1a1a1a;
+  transform: scale(1.05);
+}
+
+.pin-modal__color-input::-moz-color-swatch {
+  border: 2px solid #e5e3df;
+  border-radius: 10px;
+}
+
+.pin-modal__color-presets {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pin-modal__color-preset {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.pin-modal__color-preset:hover {
+  transform: scale(1.1);
+}
+
+.pin-modal__color-preset--active {
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.2);
+}
+
+/* ===== Modal Actions ===== */
+.pin-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e3df;
+}
+
+.pin-modal__btn {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  border-radius: 999px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.pin-modal__btn--secondary {
+  background: transparent;
+  border: 1.5px solid #e5e3df;
+  color: #1a1a1a;
+}
+
+.pin-modal__btn--secondary:hover {
+  border-color: #1a1a1a;
+  background: #f4f2ef;
+}
+
+.pin-modal__btn--primary {
+  background: #1a1a1a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pin-modal__btn--primary:hover {
+  background: #333333;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.btn-secondary {
-  background: #f0f0f0;
-  color: #333;
+.pin-modal__btn--primary:active {
+  transform: translateY(0);
 }
 
-.btn-secondary:hover {
-  background: #e0e0e0;
+/* ===== Location Badge ===== */
+.pin-modal__location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: #e9f5e9;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: #2d6a4f;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.pin-modal__location svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 600px) {
+  .pin-modal {
+    width: 95%;
+    max-width: none;
+    margin: 1rem;
+    border-radius: 20px;
+  }
+
+  .pin-modal__header {
+    padding: 1.5rem 1.5rem 1.25rem;
+  }
+
+  .pin-modal__form {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .pin-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .pin-modal__btn {
+    width: 100%;
+  }
 }
