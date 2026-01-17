@@ -1,21 +1,21 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import type { MapRef } from "react-map-gl/mapbox";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
 import Map, { GeolocateControl, NavigationControl } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import {useControl} from 'react-map-gl/mapbox';
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import { useControl } from "react-map-gl/mapbox";
 
 import { reverseGeocode } from "@/utils/geocoding";
 
 function DrawControl(props: DrawControlProps) {
-  useControl(() => new MapboxDraw(props), {
-    position: props.position
-  });
+    useControl(() => new MapboxDraw(props), {
+        position: props.position,
+    });
 
-  return null;
+    return null;
 }
 
 interface PinData {
@@ -43,31 +43,41 @@ function HomePage() {
         setIsLoggedIn(true);
     };
 
+    useEffect(() => {
+        if (pinData && !pinData.isLoading) {
+            console.log("TRANSLATION COMPLETE -> pindata = ", pinData);
+        }
+    }, [pinData]);
+
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
         const { lat, lng } = e.lngLat;
-
-        // Set initial pin with loading state
         setPinData({
             lat,
             lng,
-            name: 'Loading...',
+            name: "Loading...",
             isLoading: true,
         });
 
         try {
+            console.log(lat);
+            console.log(lng);
+            console.log("TRANSLATING... 🔄🔄🔄");
             const result = await reverseGeocode(lat, lng);
+
             setPinData({
                 lat,
                 lng,
                 name: result.name,
                 isLoading: false,
             });
+
+            console.log("TRANSLATION COMPLETE -> pindata = " + pinData);
         } catch (error) {
-            console.error('Reverse geocoding failed:', error);
+            console.error("Reverse geocoding failed:", error);
             setPinData({
                 lat,
                 lng,
-                name: 'Unknown Location',
+                name: "Unknown Location",
                 isLoading: false,
             });
         }
@@ -79,7 +89,12 @@ function HomePage() {
                 mapRef={mapRef}
                 searchMarkerRef={searchMarkerRef}
                 onSelectPlace={(place) =>
-                    setPinData({ lat: place.lat, lng: place.lng, name: place.name ?? 'Unknown Location', isLoading: false })
+                    setPinData({
+                        lat: place.lat,
+                        lng: place.lng,
+                        name: place.name ?? "Unknown Location",
+                        isLoading: false,
+                    })
                 }
             />
 
@@ -115,13 +130,13 @@ function HomePage() {
                     showAccuracyCircle
                     showButton
                 />
-                <NavigationControl 
+                <NavigationControl
                     position="bottom-right"
                     showCompass={true}
                     showZoom={true}
                     visualizePitch={true}
                 />
-                
+
                 {pinData && (
                     <Pin
                         name={pinData.name}

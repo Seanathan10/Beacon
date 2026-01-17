@@ -13,6 +13,9 @@ export default function NewPinModal({ onClose, onSubmit, latitude, longitude }: 
 	const [image, setImage] = useState("");
 	const [color, setColor] = useState("#667eea");
 
+	console.log(latitude)
+	console.log(longitude)
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
