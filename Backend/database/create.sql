@@ -1,0 +1,18 @@
+DROP TABLE IF EXISTS account;
+CREATE TABLE account (
+	id INTEGER PRIMARY KEY,
+	name VARCHAR(20),
+	email VARCHAR(20) UNIQUE,
+	password VARCHAR(20)
+);
+
+DROP TABLE IF EXISTS pin;
+CREATE TABLE pin (
+	id INTEGER PRIMARY KEY,
+	creatorID INTEGER,
+	message VARCHAR(20),
+	image VARCHAR(2000),
+	color VARCHAR(10),
+
+	FOREIGN KEY (creatorID) REFERENCES account(id)
+);
