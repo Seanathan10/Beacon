@@ -213,16 +213,18 @@ function HomePage() {
 
     if (features && features.length > 0) {
       const feature = features[0];
-      const coords = feature.geometry.coordinates;
-      setSelectedPoint({
-        longitude: coords[0],
-        latitude: coords[1],
-        message: feature.properties?.message || 'No message',
-        image: feature.properties?.image || '',
-        color: feature.properties?.color || '#007cbf'
-      });
-      setPinData(null); // Close any existing pin
-      return;
+      if (feature.geometry.type === 'Point') {
+        const coords = feature.geometry.coordinates;
+        setSelectedPoint({
+          longitude: coords[0],
+          latitude: coords[1],
+          message: feature.properties?.message || 'No message',
+          image: feature.properties?.image || '',
+          color: feature.properties?.color || '#007cbf'
+        });
+        setPinData(null); // Close any existing pin
+        return;
+      }
     }
 
     // Otherwise, handle as a new pin creation
@@ -314,6 +316,7 @@ function HomePage() {
           latitude: 37.8,
           zoom: 9,
         }}
+        minZoom={3}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         onClick={handleMapClick}
         onMouseEnter={onMouseEnter}
@@ -373,7 +376,7 @@ function HomePage() {
         )}
 
         {selectedPoint && (
-          <Location selectedPoint={selectedPoint} />
+          <LocationPin selectedPoint={selectedPoint} setSelectedPoint={setSelectedPoint} />
         )}
 
         <Source id="my-data" type="geojson" data={allPins}>
