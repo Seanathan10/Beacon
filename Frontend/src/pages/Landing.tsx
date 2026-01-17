@@ -14,7 +14,7 @@ function Landing() {
           <a href="#impact">Impact</a>
           <a href="#community">Community</a>
           <a href="#guide">Guides</a>
-          <NavLink to="/login" className="button button--ghost">
+          <NavLink to="/register" className="button button--ghost">
             Sign Up
           </NavLink>
           <NavLink to="/login" className="button button--primary">
@@ -31,7 +31,7 @@ function Landing() {
               <path d="M40 20C32 20 26 28 26 36C26 48 40 60 40 60C40 60 54 48 54 36C54 28 48 20 40 20Z" fill="#2d6a4f"/>
               <circle cx="40" cy="35" r="6" fill="#faf9f7"/>
             </svg>
-            <h1>Map the world’s local gems.</h1>
+            <h1>Map the world's local gems.</h1>
             <p>
               Beacon is a sustainability-first travel assistant. Drop pins on hidden
               spots, attach a photo and story, and tag places that aren’t part of the corporate rat race.
@@ -228,7 +228,7 @@ function Landing() {
             thriving.
           </p>
           <div className="cta__actions">
-            <NavLink to="/login" className="button button--ghost">
+            <NavLink to="/register" className="button button--ghost">
               Sign Up
             </NavLink>
             <NavLink to="/login" className="button button--primary">
