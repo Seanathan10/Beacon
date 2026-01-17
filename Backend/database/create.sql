@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS account;
 CREATE TABLE account (
 	id INTEGER PRIMARY KEY,
 	name VARCHAR(20),
-	email VARCHAR(20) UNIQUE,
+	email VARCHAR(20) UNIQUE NOT NULL,
 	password VARCHAR(20)
 );
 
@@ -13,7 +13,6 @@ CREATE TABLE pin (
 	latitude REAL,
 	longitude REAL,
 	message VARCHAR(200),
-	email VARCHAR(32),
 	image VARCHAR(2000),
 	color VARCHAR(10) DEFAULT "#0000FF",
 

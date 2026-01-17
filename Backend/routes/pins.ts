@@ -2,7 +2,18 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 
 export function getAllPins(req: Request, res: Response) {
-    const results = db.query(`SELECT * FROM pin;`);
+    const results = db.query(`
+		SELECT
+			p.id,
+			a.email,
+			p.latitude,
+			p.longitude, 
+			p.message,
+			p.image,
+			p.color
+		FROM pin p
+		JOIN account a ON a.id = p.creatorID;
+	`);
     res.json(results);
 }
 
