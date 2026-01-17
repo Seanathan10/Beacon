@@ -79,7 +79,9 @@ export function PostCard({ content }: PostProps) {
         >
             {/* Header */}
             <div style={{ marginBottom: 8 }}>
-                <h2 style={{ margin: 0, fontSize: 20, color: "#1a1a1a" }}>{content.title}</h2>
+                <h2 style={{ margin: 0, fontSize: 20, color: "#1a1a1a" }}>
+                    {content.title}
+                </h2>
 
                 <div
                     style={{
@@ -90,7 +92,9 @@ export function PostCard({ content }: PostProps) {
                         flexWrap: "wrap",
                     }}
                 >
-                    {content.category && <CategoryBadge category={content.category} />}
+                    {content.category && (
+                        <CategoryBadge category={content.category} />
+                    )}
                     <div
                         style={{
                             color: "#64748b",
@@ -104,9 +108,18 @@ export function PostCard({ content }: PostProps) {
                             fontWeight: 500,
                         }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 21C15.5 17.4 19 14.1764 19 10.2C19 6.22355 15.866 3 12 3C8.13401 3 5 6.22355 5 10.2C5 14.1764 8.5 17.4 12 21Z" fill="#64748b"/>
-                            <circle cx="12" cy="10" r="2" fill="#ffffff"/>
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M12 21C15.5 17.4 19 14.1764 19 10.2C19 6.22355 15.866 3 12 3C8.13401 3 5 6.22355 5 10.2C5 14.1764 8.5 17.4 12 21Z"
+                                fill="#64748b"
+                            />
+                            <circle cx="12" cy="10" r="2" fill="#ffffff" />
                         </svg>
                         {content.location}
                     </div>
@@ -116,7 +129,7 @@ export function PostCard({ content }: PostProps) {
             {/* Tags */}
             {content.tags.length > 0 && (
                 <div style={{ marginBottom: 12 }}>
-                    {content.tags.map(tag => (
+                    {content.tags.map((tag) => (
                         <span
                             key={tag}
                             style={{
@@ -176,7 +189,7 @@ export function PostCard({ content }: PostProps) {
             {/* Comments */}
             {content.comments.length > 0 && (
                 <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 12 }}>
-                    {content.comments.map(comment => (
+                    {content.comments.map((comment) => (
                         <div
                             key={comment.id}
                             style={{

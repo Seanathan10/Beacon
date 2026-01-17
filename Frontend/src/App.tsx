@@ -1,43 +1,43 @@
 import { useEffect, useState } from "react";
 
 type HelloResponse = {
-  message: string;
+    message: string;
 };
 
 function App() {
-  const [message, setMessage] = useState<string>("");
+    const [message, setMessage] = useState<string>("");
 
-  useEffect(() => {
-    const heartbeat = async () => {
-      try {
-        const res = await fetch("/heartbeat");
-        const data = await res.json();
-        console.log("[Client-side] Server reachable:", data);
-      } catch (err) {
-        console.error("[Client-side] Server unreachable:", err);
-      }
-    };
+    useEffect(() => {
+        const heartbeat = async () => {
+            try {
+                const res = await fetch("/heartbeat");
+                const data = await res.json();
+                console.log("[Client-side] Server reachable:", data);
+            } catch (err) {
+                console.error("[Client-side] Server unreachable:", err);
+            }
+        };
 
-    heartbeat();
-  }, []);
+        heartbeat();
+    }, []);
 
-  useEffect(() => {
-    fetch("/api/hello")
-      .then((res) => res.json())
-      .then((data: HelloResponse) => {
-        setMessage(data.message);
-      })
-      .catch(() => {
-        setMessage("Failed to reach backend");
-      });
-  }, []);
+    useEffect(() => {
+        fetch("/api/hello")
+            .then((res) => res.json())
+            .then((data: HelloResponse) => {
+                setMessage(data.message);
+            })
+            .catch(() => {
+                setMessage("Failed to reach backend");
+            });
+    }, []);
 
-  return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Vite + React + Express</h1>
-      <p>{message || "Loading..."}</p>
-    </div>
-  );
+    return (
+        <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+            <h1>Vite + React + Express</h1>
+            <p>{message || "Loading..."}</p>
+        </div>
+    );
 }
 
 export default App;

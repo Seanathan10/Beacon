@@ -1,12 +1,11 @@
-
 export type SessionUser = {
-  id: string
-}
+    id: string;
+};
 
 declare global {
-  namespace Express {
-    export interface Request {
-      user: SessionUser
+    namespace Express {
+        export interface Request {
+            user: SessionUser;
+        }
     }
-  }
 }

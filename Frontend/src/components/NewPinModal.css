@@ -1,465 +1,500 @@
 /* ===== Pin Modal Design System ===== */
 .pin-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(26, 26, 26, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: overlayFadeIn 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(26, 26, 26, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: overlayFadeIn 0.3s ease;
 }
 
 @keyframes overlayFadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(8px);
-  }
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
 }
 
 @keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .pin-modal {
-  background: #faf9f7;
-  border-radius: 24px;
-  max-width: 480px;
-  width: 90%;
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.15),
-    0 0 40px rgba(45, 106, 79, 0.08);
-  border: 1px solid #e5e3df;
-  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
+    background: #faf9f7;
+    border-radius: 24px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 0 40px rgba(45, 106, 79, 0.08);
+    border: 1px solid #e5e3df;
+    animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
 }
 
 /* ===== Modal Header ===== */
 .pin-modal__header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 2rem 1.5rem;
-  background: linear-gradient(180deg, #e9f5e9 0%, #faf9f7 100%);
-  border-bottom: 1px solid #e5e3df;
-  position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 2rem 1.5rem;
+    background: linear-gradient(180deg, #e9f5e9 0%, #faf9f7 100%);
+    border-bottom: 1px solid #e5e3df;
+    position: relative;
 }
 
 .pin-modal__logo {
-  width: 56px;
-  height: 56px;
-  margin-bottom: 0.75rem;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 0.75rem;
 }
 
 .pin-modal__title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
-  letter-spacing: -0.02em;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+    letter-spacing: -0.02em;
 }
 
 .pin-modal__subtitle {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.875rem;
-  color: #5c5c5c;
-  margin-top: 0.25rem;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 0.875rem;
+    color: #5c5c5c;
+    margin-top: 0.25rem;
 }
 
 .pin-modal__close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid #e5e3df;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #5c5c5c;
-  padding: 0;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #e5e3df;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #5c5c5c;
+    padding: 0;
 }
 
 .pin-modal__close:hover {
-  background: #ffffff;
-  border-color: #1a1a1a;
-  color: #1a1a1a;
+    background: #ffffff;
+    border-color: #1a1a1a;
+    color: #1a1a1a;
 }
 
 /* ===== Modal Form ===== */
 .pin-modal__form {
-  padding: 1.5rem 2rem 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+    padding: 1.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
 .pin-modal__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .pin-modal__label {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .pin-modal__label-hint {
-  font-weight: 400;
-  color: #8a8a8a;
-  font-size: 0.8rem;
+    font-weight: 400;
+    color: #8a8a8a;
+    font-size: 0.8rem;
 }
 
 .pin-modal__input,
 .pin-modal__textarea {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  padding: 0.875rem 1rem;
-  border: 1.5px solid #e5e3df;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  background: #ffffff;
-  color: #1a1a1a;
-  transition: all 0.2s ease;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    padding: 0.875rem 1rem;
+    border: 1.5px solid #e5e3df;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    background: #ffffff;
+    color: #1a1a1a;
+    transition: all 0.2s ease;
 }
 
 .pin-modal__input::placeholder,
 .pin-modal__textarea::placeholder {
-  color: #8a8a8a;
+    color: #8a8a8a;
 }
 
 .pin-modal__input:hover,
 .pin-modal__textarea:hover {
-  border-color: #c5c3bf;
+    border-color: #c5c3bf;
 }
 
 .pin-modal__input:focus,
 .pin-modal__textarea:focus {
-  outline: none;
-  border-color: #2d6a4f;
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+    outline: none;
+    border-color: #2d6a4f;
+    box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
 .pin-modal__textarea {
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.5;
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
 }
 
 /* ===== Color Picker Field ===== */
 .pin-modal__color-field {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .pin-modal__color-input {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  padding: 0;
-  background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
 }
 
 .pin-modal__color-input::-webkit-color-swatch-wrapper {
-  padding: 0;
+    padding: 0;
 }
 
 .pin-modal__color-input::-webkit-color-swatch {
-  border: 2px solid #e5e3df;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+    border: 2px solid #e5e3df;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
 }
 
 .pin-modal__color-input:hover::-webkit-color-swatch {
-  border-color: #1a1a1a;
-  transform: scale(1.05);
+    border-color: #1a1a1a;
+    transform: scale(1.05);
 }
 
 .pin-modal__color-input::-moz-color-swatch {
-  border: 2px solid #e5e3df;
-  border-radius: 10px;
+    border: 2px solid #e5e3df;
+    border-radius: 10px;
 }
 
 .pin-modal__color-presets {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .pin-modal__color-preset {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
 }
 
 .pin-modal__color-preset:hover {
-  transform: scale(1.1);
+    transform: scale(1.1);
 }
 
 .pin-modal__color-preset--active {
-  border-color: #1a1a1a;
-  box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.2);
+    border-color: #1a1a1a;
+    box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.2);
 }
 
 /* ===== Modal Actions ===== */
 .pin-modal__actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e3df;
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e3df;
 }
 
 .pin-modal__btn {
-  flex: 1;
-  padding: 0.875rem 1.5rem;
-  border-radius: 999px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border-radius: 999px;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .pin-modal__btn--secondary {
-  background: transparent;
-  border: 1.5px solid #e5e3df;
-  color: #1a1a1a;
+    background: transparent;
+    border: 1.5px solid #e5e3df;
+    color: #1a1a1a;
 }
 
 .pin-modal__btn--secondary:hover {
-  border-color: #1a1a1a;
-  background: #f4f2ef;
+    border-color: #1a1a1a;
+    background: #f4f2ef;
 }
 
 .pin-modal__btn--primary {
-  background: #1a1a1a;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #1a1a1a;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .pin-modal__btn--primary:hover {
-  background: #333333;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    background: #333333;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .pin-modal__btn--primary:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 /* ===== Location Badge ===== */
 .pin-modal__location {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  background: #e9f5e9;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  color: #2d6a4f;
-  font-weight: 500;
-  margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: #e9f5e9;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: #2d6a4f;
+    font-weight: 500;
+    margin-top: 0.5rem;
 }
 
 .pin-modal__location svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 /* ===== Upload Area ===== */
 .pin-modal__upload-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-  border: 2px dashed #e5e3df;
-  border-radius: 12px;
-  background: #fafafa;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    border: 2px dashed #e5e3df;
+    border-radius: 12px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 0.5rem;
 }
 
 .pin-modal__upload-area:hover {
-  border-color: #2d6a4f;
-  background: #f5faf7;
+    border-color: #2d6a4f;
+    background: #f5faf7;
 }
 
 .pin-modal__upload-area--dragging {
-  border-color: #2d6a4f;
-  background: #e9f5e9;
-  border-style: solid;
+    border-color: #2d6a4f;
+    background: #e9f5e9;
+    border-style: solid;
 }
 
 .pin-modal__file-input {
-  display: none;
+    display: none;
 }
 
 .pin-modal__upload-icon {
-  width: 32px;
-  height: 32px;
-  color: #8a8a8a;
-  margin-bottom: 0.25rem;
+    width: 32px;
+    height: 32px;
+    color: #8a8a8a;
+    margin-bottom: 0.25rem;
 }
 
 .pin-modal__upload-area:hover .pin-modal__upload-icon,
 .pin-modal__upload-area--dragging .pin-modal__upload-icon {
-  color: #2d6a4f;
+    color: #2d6a4f;
 }
 
 .pin-modal__upload-text {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.9rem;
-  color: #5c5c5c;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 0.9rem;
+    color: #5c5c5c;
 }
 
 .pin-modal__upload-text strong {
-  color: #2d6a4f;
+    color: #2d6a4f;
 }
 
 .pin-modal__upload-hint {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.75rem;
-  color: #8a8a8a;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 0.75rem;
+    color: #8a8a8a;
 }
 
 /* ===== Image Preview ===== */
 .pin-modal__image-preview {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f0f0f0;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f0f0f0;
 }
 
 .pin-modal__image-preview img {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  display: block;
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    display: block;
 }
 
 .pin-modal__image-remove {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .pin-modal__image-remove:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
 }
 
 /* ===== Error Message ===== */
 .pin-modal__error {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.8rem;
-  color: #dc3545;
-  margin-top: 0.25rem;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 0.8rem;
+    color: #dc3545;
+    margin-top: 0.25rem;
 }
 
 /* ===== Loading Spinner ===== */
 .pin-modal__spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .pin-modal__btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .pin-modal__btn--primary:disabled:hover {
-  transform: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== Responsive ===== */
 @media (max-width: 600px) {
-  .pin-modal {
-    width: 95%;
-    max-width: none;
-    margin: 1rem;
-    border-radius: 20px;
-  }
+    .pin-modal {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        border-radius: 20px;
+    }
 
-  .pin-modal__header {
-    padding: 1.5rem 1.5rem 1.25rem;
-  }
+    .pin-modal__header {
+        padding: 1.5rem 1.5rem 1.25rem;
+    }
 
-  .pin-modal__form {
-    padding: 1.25rem 1.5rem 1.5rem;
-  }
+    .pin-modal__form {
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
 
-  .pin-modal__actions {
-    flex-direction: column-reverse;
-  }
+    .pin-modal__actions {
+        flex-direction: column-reverse;
+    }
 
-  .pin-modal__btn {
-    width: 100%;
-  }
+    .pin-modal__btn {
+        width: 100%;
+    }
 }

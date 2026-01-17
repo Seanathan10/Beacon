@@ -13,7 +13,7 @@ interface DetailedPinModalProps {
         email?: string;
     };
     currentUserId: number | null;
-	currentUserEmail: string | null;
+    currentUserEmail: string | null;
     onClose: () => void;
     onUpdate?: (data: {
         id: number;
@@ -29,7 +29,7 @@ const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit
 export default function DetailedPinModal({
     selectedPoint,
     currentUserId,
-	currentUserEmail,
+    currentUserEmail,
     onClose,
     onUpdate,
 }: DetailedPinModalProps) {
@@ -42,18 +42,18 @@ export default function DetailedPinModal({
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-
     // const isOwner =
     //     currentUserId != null &&
     //     selectedPoint.creatorID != null &&
     //     Number(currentUserId) === Number(selectedPoint.creatorID);
 
-	const isOwner = currentUserEmail != null && selectedPoint.email == currentUserEmail;
+    const isOwner =
+        currentUserEmail != null && selectedPoint.email == currentUserEmail;
 
-	// console.log( isOwner )
-	// console.log( currentUserEmail )
-	// console.log( currentUserId )
-	// console.log (selectedPoint.email )
+    // console.log( isOwner )
+    // console.log( currentUserEmail )
+    // console.log( currentUserId )
+    // console.log (selectedPoint.email )
 
     const handleFileSelect = (file: File) => {
         setUploadError(null);

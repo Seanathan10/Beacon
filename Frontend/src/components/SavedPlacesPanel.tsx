@@ -27,15 +27,19 @@ function SavedPlacesPanel() {
 
                 const res = await fetch("/api/pins/user", {
                     headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 });
-                
+
                 if (res.ok) {
                     const data = await res.json();
                     setSavedPlaces(data);
                 } else {
-                    console.error("Failed to fetch saved places - Status:", res.status, res.statusText);
+                    console.error(
+                        "Failed to fetch saved places - Status:",
+                        res.status,
+                        res.statusText,
+                    );
                     const errorData = await res.text();
                     console.error("Error response:", errorData);
                 }
@@ -54,9 +58,11 @@ function SavedPlacesPanel() {
     }
 
     return (
-        <div className={`saved-places-panel ${isExpanded ? "expanded" : "collapsed"}`}>
-            <button 
-                className="panel-toggle" 
+        <div
+            className={`saved-places-panel ${isExpanded ? "expanded" : "collapsed"}`}
+        >
+            <button
+                className="panel-toggle"
                 onClick={() => setIsExpanded(!isExpanded)}
                 title="Toggle Saved Places"
             >
@@ -66,7 +72,7 @@ function SavedPlacesPanel() {
             {isExpanded && (
                 <div className="panel-content">
                     <h3>Your Saved Places</h3>
-                    
+
                     {isLoading ? (
                         <p className="loading">Loading...</p>
                     ) : savedPlaces.length === 0 ? (
@@ -74,29 +80,40 @@ function SavedPlacesPanel() {
                     ) : (
                         <ul className="places-list">
                             {savedPlaces.map((place) => (
-                                <li 
-                                    key={place.id} 
+                                <li
+                                    key={place.id}
                                     className="place-item"
                                     onClick={() => {
                                         // Navigate to the pin location if map interaction is needed
-                                        console.log(`Navigate to pin at ${place.latitude}, ${place.longitude}`);
+                                        console.log(
+                                            `Navigate to pin at ${place.latitude}, ${place.longitude}`,
+                                        );
                                     }}
                                 >
                                     <div className="place-header">
-                                        <span 
-                                            className="place-color-indicator" 
-                                            style={{ backgroundColor: place.color || '#007cbf' }}
+                                        <span
+                                            className="place-color-indicator"
+                                            style={{
+                                                backgroundColor:
+                                                    place.color || "#007cbf",
+                                            }}
                                         />
                                         <span className="place-coords">
-                                            {place.latitude.toFixed(4)}°, {place.longitude.toFixed(4)}°
+                                            {place.latitude.toFixed(4)}°,{" "}
+                                            {place.longitude.toFixed(4)}°
                                         </span>
                                     </div>
                                     {place.message && (
-                                        <span className="place-message">{place.message}</span>
+                                        <span className="place-message">
+                                            {place.message}
+                                        </span>
                                     )}
                                     {place.image && (
                                         <div className="place-image-preview">
-                                            <img src={place.image} alt="Pin location" />
+                                            <img
+                                                src={place.image}
+                                                alt="Pin location"
+                                            />
                                         </div>
                                     )}
                                 </li>

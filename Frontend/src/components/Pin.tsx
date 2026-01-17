@@ -10,7 +10,11 @@ interface PinProps {
     isLoading?: boolean;
     onClose: () => void;
     onDetails?: () => void;
-    onPinCreated?: (data: { message: string; image?: string; color?: string }) => void;
+    onPinCreated?: (data: {
+        message: string;
+        image?: string;
+        color?: string;
+    }) => void;
 }
 
 export default function Pin({
