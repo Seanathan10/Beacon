@@ -8,6 +8,7 @@ import * as OpenApiValidator from "express-openapi-validator";
 
 import * as auth from "./routes/auth";
 import * as pins from "./routes/pins";
+import * as posts from "./routes/posts";
 
 const app = express();
 const PORT = 3000;
@@ -53,6 +54,14 @@ app.get("/api/pins/:id", auth.check, pins.getPin);
 app.put("/api/pins/:id", auth.check, pins.updatePin);
 app.post("/api/pins", auth.check, pins.createPin);
 app.put("/api/pins", auth.check, pins.deletePin);
+
+// Posts routes
+app.get("/api/posts", auth.check, posts.getAllPosts);
+app.get("/api/posts/:id", auth.check, posts.getPost);
+app.post("/api/posts", auth.check, posts.createPost);
+app.put("/api/posts/:id", auth.check, posts.updatePost);
+app.delete("/api/posts/:id", auth.check, posts.deletePost);
+app.post("/api/posts/:id/upvote", auth.check, posts.upvotePost);
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend listening on http://localhost:${PORT}`);

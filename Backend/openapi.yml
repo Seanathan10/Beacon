@@ -346,6 +346,250 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/posts:
+    get:
+      summary: Get all posts
+      description: Retrieves all community posts from the database
+      operationId: getAllPosts
+      responses:
+        200:
+          description: Successful response with array of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a new post
+      description: Creates a new community post with the provided data
+      operationId: createPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - location
+                - message
+              properties:
+                title:
+                  type: string
+                  maxLength: 100
+                  description: Title of the post
+                  example: "Best Coffee Shop"
+                location:
+                  type: string
+                  maxLength: 200
+                  description: Location of the place
+                  example: "123 Main St, Santa Cruz, CA"
+                category:
+                  type: string
+                  maxLength: 20
+                  description: Category of the post
+                  example: "Hot"
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Tags for the post
+                  example: ["Food", "Cafe"]
+                message:
+                  type: string
+                  description: Description/message content
+                  example: "Amazing espresso and cozy atmosphere!"
+                image:
+                  type: string
+                  maxLength: 2000
+                  description: URL of the attached image
+                  nullable: true
+      responses:
+        201:
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        400:
+          description: Bad request - missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/posts/{id}:
+    get:
+      summary: Get a specific post by ID
+      description: Retrieves a single post by its ID
+      operationId: getPost
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the post to retrieve
+      responses:
+        200:
+          description: Successful response with post data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        404:
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      summary: Update a specific post by ID
+      description: Updates a post (owner only)
+      operationId: updatePost
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the post to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 100
+                  nullable: true
+                location:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                category:
+                  type: string
+                  maxLength: 20
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                message:
+                  type: string
+                  nullable: true
+                image:
+                  type: string
+                  maxLength: 2000
+                  nullable: true
+                upvotes:
+                  type: integer
+                  nullable: true
+      responses:
+        200:
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a specific post by ID
+      description: Delete a single post by its ID (owner only)
+      operationId: deletePost
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the post to delete
+      responses:
+        200:
+          description: Successfully deleted post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Post deleted successfully"
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/posts/{id}/upvote:
+    post:
+      summary: Upvote a post
+      description: Increment the upvote count for a post
+      operationId: upvotePost
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the post to upvote
+      responses:
+        200:
+          description: Post upvoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        404:
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   schemas:
@@ -404,3 +648,55 @@ components:
           type: string
           description: JWT token for authenticated user
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the post
+          example: 1
+        creatorID:
+          type: integer
+          description: ID of the account that created the post
+          example: 1
+          nullable: true
+        title:
+          type: string
+          maxLength: 100
+          description: Title of the post
+          example: "Best Coffee Shop"
+        location:
+          type: string
+          maxLength: 200
+          description: Location of the place
+          example: "123 Main St, Santa Cruz, CA"
+        category:
+          type: string
+          maxLength: 20
+          description: Category of the post
+          example: "Hot"
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for the post
+          example: ["Food", "Cafe"]
+        message:
+          type: string
+          description: Description/message content
+          example: "Amazing espresso and cozy atmosphere!"
+        image:
+          type: string
+          maxLength: 2000
+          description: URL of the attached image
+          nullable: true
+        upvotes:
+          type: integer
+          description: Number of upvotes
+          example: 10
+        createdAt:
+          type: string
+          description: Timestamp when the post was created
+          example: "2026-01-17 12:00:00"

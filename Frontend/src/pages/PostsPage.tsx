@@ -1,98 +1,130 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { PostCard, Post } from "@/components/Post";
+import NewPostModal from "@/components/NewPostModal";
 import "./PostsPage.css";
 
-const initialData: Post[] = [
-    {
-        id: 1,
-        title: "Taco Bell",
-        location: "1405 Mission St, Santa Cruz, CA",
-        category: "Hot",
-        tags: ["Food", "Casual"],
-        message:
-            "Authentic Latinx cuisine, straight from the heart of Santa Cruz.",
-        image: "https://s3-media0.fl.yelpcdn.com/bphoto/xla2vDAWBz4b3y3d0iVHuw/348s.jpg",
-        upvotes: 10,
-        comments: [
-            { id: 1, author: "Chad Jack", content: "Gem Alarm!" },
-            { id: 2, author: "Aaron Yaiga", content: "Thanks for sharing." },
-            { id: 3, author: "Ryo Yamada", content: "Interesting.." },
-        ],
-    },
-    {
-        id: 2,
-        title: "Matcha Labubu Cafe",
-        location: "16th Ave, Santa Cruz, CA 95062",
-        category: "Trendy",
-        tags: ["Cafe", "Boba", "Dessert"],
-        message:
-            "A cute little cafe with amazing matcha desserts and boba drinks.",
-        image: "https://www.matchacafe-maiko.com/assets/img/store/store-ga-atlanta.jpg",
-        upvotes: 8,
-        comments: [
-            {
-                id: 1,
-                author: "Sakura Tanaka",
-                content: "My favorite spot! I love the hojicha ice cream!",
-            },
-            {
-                id: 2,
-                author: "Liam Smith",
-                content: "Highly recommend the matcha latte.",
-            },
-        ],
-    },
-    {
-        id: 3,
-        title: "Farmers Market",
-        location: "700 Front Street, Santa Cruz, CA 95060",
-        category: "Local",
-        tags: ["Community", "Fresh Produce"],
-        message: "A small popup farmer's market near Trader Joe's.",
-        image: "https://californiagrown.org/wp-content/uploads/2022/07/Paprika-Studios-CAG-Ag-Tour-Felton-Market-9176-copy.jpg",
-        upvotes: 5,
-        comments: [
-            { id: 1, author: "Molly Member", content: "I love fresh produce!" },
-        ],
-    },
-];
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export function PostsPage() {
     const navigate = useNavigate();
-    const [posts, setPosts] = useState<Post[]>(initialData);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // simple monotonic id generator (no backend)
-    const nextId = useMemo(() => {
-        const maxId = initialData.reduce((m, p) => Math.max(m, p.id), 0);
-        return { current: maxId + 1 };
-    }, []);
+    const getAuthToken = () => localStorage.getItem("accessToken");
+
+    const fetchPosts = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const token = getAuthToken();
+            const response = await fetch(`${API_BASE}/api/posts`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            
+            if (response.status === 401) {
+                navigate("/login");
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch posts");
+            }
+            
+            const data = await response.json();
+            // Backend returns posts without comments array, so we add empty comments
+            const postsWithComments = data.map((post: any) => ({
+                ...post,
+                comments: post.comments || [],
+            }));
+            setPosts(postsWithComments);
+        } catch (err) {
+            console.error("Error fetching posts:", err);
+            setError("Failed to load posts. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [navigate]);
+
+    useEffect(() => {
+        fetchPosts();
+    }, [fetchPosts]);
 
     const handleBackClick = () => navigate("/home");
 
-    const addPost = () => {
-        const id = nextId.current++;
-        const newPost: Post = {
-            id,
-            title: `New Post #${id}`,
-            location: "Santa Cruz, CA",
-            category: "New",
-            tags: ["Community"],
-            message: "Just added to the feed!",
-            image: "https://placehold.co/900x600",
-            upvotes: 0,
-            comments: [],
-        };
+    const handleAddPost = async (newPostData: Omit<Post, "id" | "upvotes" | "comments">) => {
+        try {
+            const token = getAuthToken();
+            const response = await fetch(`${API_BASE}/api/posts`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(newPostData),
+            });
 
-        setPosts((prev) => [newPost, ...prev]);
+            if (response.status === 401) {
+                navigate("/login");
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Failed to create post");
+            }
+
+            const createdPost = await response.json();
+            setPosts((prev) => [{ ...createdPost, comments: [] }, ...prev]);
+        } catch (err) {
+            console.error("Error creating post:", err);
+            setError("Failed to create post. Please try again.");
+        }
     };
 
-    const removePost = (id: number) => {
-        setPosts((prev) => prev.filter((p) => p.id !== id));
+    const removePost = async (id: number) => {
+        try {
+            const token = getAuthToken();
+            const response = await fetch(`${API_BASE}/api/posts/${id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 401) {
+                navigate("/login");
+                return;
+            }
+
+            if (!response.ok && response.status !== 403) {
+                throw new Error("Failed to delete post");
+            }
+
+            if (response.status === 403) {
+                setError("You can only delete your own posts.");
+                return;
+            }
+
+            setPosts((prev) => prev.filter((p) => p.id !== id));
+        } catch (err) {
+            console.error("Error deleting post:", err);
+            setError("Failed to delete post. Please try again.");
+        }
     };
 
     return (
         <div className="posts-page">
+            {isModalOpen && (
+                <NewPostModal
+                    onClose={() => setIsModalOpen(false)}
+                    onSubmit={handleAddPost}
+                />
+            )}
+
             <div className="posts-content">
                 <div className="posts-header">
                     <button className="back-button" onClick={handleBackClick}>
@@ -122,13 +154,25 @@ export function PostsPage() {
                     </div>
 
                     <div className="posts-actions">
-                        <button className="add-post-button" onClick={addPost}>
+                        <button className="add-post-button" onClick={() => setIsModalOpen(true)}>
                             + Add Post
                         </button>
                     </div>
                 </div>
 
-                {posts.length === 0 ? (
+                {error && (
+                    <div className="posts-error">
+                        <p>{error}</p>
+                        <button onClick={() => setError(null)}>Dismiss</button>
+                    </div>
+                )}
+
+                {isLoading ? (
+                    <div className="posts-loading">
+                        <div className="posts-loading-spinner"></div>
+                        <p>Loading posts...</p>
+                    </div>
+                ) : posts.length === 0 ? (
                     <div className="posts-empty">
                         <div className="posts-empty-icon">🫶</div>
                         <div className="posts-empty-title">No posts yet</div>
@@ -138,7 +182,7 @@ export function PostsPage() {
                         </div>
                         <button
                             className="add-post-button posts-empty-cta"
-                            onClick={addPost}
+                            onClick={() => setIsModalOpen(true)}
                         >
                             + Add Post
                         </button>
