@@ -45,7 +45,7 @@ export function LoginPage() {
         <button type="submit">
           <nav>
             <NavLink to="/home" end>
-              Home
+              Skip login and go to Homepage
             </NavLink>
           </nav>
         </button>
