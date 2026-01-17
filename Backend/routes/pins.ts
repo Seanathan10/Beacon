@@ -1,9 +1,16 @@
 import { Request, Response } from 'express';
-import * as db from '../database/db.ts';
+import * as db from '../database/db';
 
 export function getAllPins(req: Request, res: Response) {
-	const results = db.query(`SELECT * FROM pin;`);
-	res.json(results);
+	try {
+		console.log("[getAllPins] User:", req.user);
+		const results = db.query(`SELECT * FROM pin WHERE creatorID = ?;`, [req.user.id]);
+		console.log("[getAllPins] Results:", results);
+		res.json(results);
+	} catch (error) {
+		console.error("[getAllPins] Error:", error);
+		res.status(500).json({ message: "Failed to fetch pins", error: String(error) });
+	}
 }
 
 export function getPin(req: Request, res: Response) {

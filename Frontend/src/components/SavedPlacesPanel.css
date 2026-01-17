@@ -1,0 +1,149 @@
+.saved-places-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 100;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.saved-places-panel.collapsed {
+    width: 60px;
+    height: 60px;
+}
+
+.saved-places-panel.expanded {
+    width: 320px;
+    max-height: 70vh;
+}
+
+.panel-toggle {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: #2d6a4f;
+    color: white;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 300;
+}
+
+.panel-toggle:hover {
+    background: #1b4332;
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(45, 106, 79, 0.15);
+}
+
+.panel-toggle:active {
+    transform: scale(0.98);
+}
+
+.panel-content {
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    width: 100%;
+    background: #faf9f7;
+    border: 1px solid #e5e3df;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 14px;
+    max-height: calc(70vh - 80px);
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-content h3 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.places-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.place-item {
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 1px solid #e5e3df;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.place-item:hover {
+    background: #f4f2ef;
+    border-color: #2d6a4f;
+}
+
+.place-item:active {
+    background: #ede9e4;
+}
+
+.place-name {
+    display: block;
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    margin-bottom: 3px;
+}
+
+.place-message {
+    display: block;
+    font-size: 0.8rem;
+    color: #5c5c5c;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loading,
+.empty {
+    text-align: center;
+    padding: 14px;
+    color: #8a8a8a;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* Scrollbar styling */
+.panel-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+    background: #f4f2ef;
+    border-radius: 3px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+    background: #2d6a4f;
+}

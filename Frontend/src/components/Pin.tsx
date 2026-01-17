@@ -20,8 +20,8 @@ export default function Pin({
     onClose,
     onDetails,
 }: PinProps) {
-    console.log("[Pin.tsx]   " + latitude);
-    console.log("[Pin.tsx]   " + longitude);
+    // console.log("[Pin.tsx]   " + latitude);
+    // console.log("[Pin.tsx]   " + longitude);
 
     const [modalIsOpen, setModalOpen] = useState<boolean>(false);
 

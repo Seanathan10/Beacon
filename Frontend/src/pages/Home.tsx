@@ -5,6 +5,7 @@ import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
 import Map, { GeolocateControl, NavigationControl } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
+import SavedPlacesPanel from "@/components/SavedPlacesPanel";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { useControl } from "react-map-gl/mapbox";
 
@@ -70,7 +71,7 @@ function HomePage() {
                 name: result.name,
                 isLoading: false,
             });
-            
+
             console.log("TRANSLATION COMPLETE -> pindata = ", pinData);
         } catch (error) {
             console.error("Reverse geocoding failed:", error);
@@ -148,6 +149,8 @@ function HomePage() {
                     />
                 )}
             </Map>
+
+            <SavedPlacesPanel />
         </div>
     );
 }
