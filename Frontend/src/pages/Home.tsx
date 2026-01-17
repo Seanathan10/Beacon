@@ -52,7 +52,7 @@ function HomePage() {
         onClick={(e) => {console.log(e.lngLat); setClickedCoords(e.lngLat)}}
       >
         {clickedCoords && <Pin
-          name={"STORE"}
+          name={"GEM ALARM"}
           latitude={clickedCoords.lat}
           longitude={clickedCoords.lng}
           onClose={() => setClickedCoords(null)}
