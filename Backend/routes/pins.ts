@@ -10,7 +10,7 @@ export function getAllPins(req: Request, res: Response) {
 			p.longitude,
 			p.title,
 			p.location,
-			p.message,
+			p.description as message,
 			p.image
 		FROM pin p
 		JOIN account a ON a.id = p.creatorID;
@@ -34,7 +34,7 @@ export function getPin(req: Request, res: Response) {
 
 export function createPin(req: Request, res: Response) {
     const results = db.query(`
-		INSERT INTO pin(creatorID, latitude, longitude, title, location, message, image)
+		INSERT INTO pin(creatorID, latitude, longitude, title, location, description, image)
 		VALUES(?, ?, ?, ?, ?, ?, ?)
 		RETURNING id;
 	`,
@@ -71,7 +71,7 @@ export function updatePin(req: Request, res: Response) {
     const params: any[] = [];
 
     if (message) {
-        updates.push("message = ?");
+        updates.push("description = ?");
         params.push(message);
     }
     if (title) {
