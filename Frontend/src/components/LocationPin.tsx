@@ -10,19 +10,11 @@ interface LocationPinProps {
 	onShowDetails: () => void;
 }
 
-function PopupButton({ onClick, color, content }: { onClick: () => void, color: string, content: any }) {
+function HeartIcon({ filled }: { filled: boolean }) {
 	return (
-		<button
-			className="location-popup-button"
-			onClick={onClick}
-			style={{ backgroundColor: color }}
-			onMouseEnter={(e) =>
-				(e.currentTarget.style.opacity = "0.9")
-			}
-			onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-		>
-			{content}
-		</button>
+		<img
+			src={filled ? '/filledheart.svg' : '/outlineheart.svg'}
+		/>
 	)
 }
 
@@ -33,6 +25,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	const descriptionPreview = messageText.length > 50 ? `${messageText.slice(0, 50).trimEnd()}...` : messageText;
 
 	const [likes, setLikes] = useState<number>(0);
+	const [isLiked, setIsLiked] = useState<boolean>(false);
 
 	useEffect(() => {
 		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
@@ -40,29 +33,33 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 				Authorization: `Bearer ${localStorage.getItem("accessToken")}`
 			}
 		})
-		.then(res => res.json())
-		.then(res => setLikes(res.likes));
-	}, [selectedPoint])
+			.then(res => res.json())
+			.then(res => {
+				setLikes(res.likes);
+				setIsLiked(res.wasLiked);
+			});
+	}, [selectedPoint]);
 
-	const onLike = () => {
-		setLikes(prev => prev + 1);
+
+	const makeFetchRequest = (method: string) => {
 		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-			method: 'POST',
+			method: method,
 			headers: {
 				Authorization: `Bearer ${localStorage.getItem("accessToken")}`
 			}
 		});
 	}
 
-	const onDislike = () => {
-		setLikes(prev => prev - 1);
-		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-			method: 'DELETE',
-			headers: {
-				Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-			}
-		});
-	}
+	useEffect(() => {
+		if (isLiked) {
+			setLikes(prev => prev + 1);
+			makeFetchRequest('POST');
+		} else {
+			setLikes(prev => prev - 1);
+			makeFetchRequest('DELETE');
+
+		}
+	}, [isLiked]);
 
 	return (
 		<Popup
@@ -113,16 +110,33 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 					</p>
 				)}
 				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-					<PopupButton
-						color={selectedPoint.color || PIN_COLOR}
-						content={"ℹ️"}
+					<button
+						className="location-popup-button"
 						onClick={onShowDetails}
-					/>
-					<PopupButton
-						color={selectedPoint.color || PIN_COLOR}
-						content={`${likes}❤️`}
-						onClick={onLike}
-					/>
+						style={{ backgroundColor: selectedPoint.color || PIN_COLOR }}
+						onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+						onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+					>
+						{"ℹ️"}
+
+					</button>
+
+					<button
+						className="location-popup-button"
+						onClick={() => setIsLiked(prev => !prev)}
+						onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+						onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'none',
+							color: '#1a1a1a',
+						}}
+					>
+						<p>{likes}</p>
+						<HeartIcon filled={isLiked} />
+					</button>
 				</div>
 			</div>
 		</Popup>
