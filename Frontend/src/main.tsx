@@ -4,7 +4,7 @@ import "./index.css";
 import Landing from "./pages/Landing";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
-import {PostsPage} from "./pages/PostsPage";
+import { PostsPage } from "./pages/PostsPage";
 
 const router = createBrowserRouter([
     {

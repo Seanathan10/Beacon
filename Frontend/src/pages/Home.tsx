@@ -77,6 +77,7 @@ function HomePage() {
     const [cursor, setCursor] = useState<string>("auto");
     const [userEmail, userId, isLoggedIn, logout, authSuccess] = AuthHook();
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+    const [isDropdownClosing, setIsDropdownClosing] = useState<boolean>(false);
     const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
 
     const onMouseEnter = useCallback(() => setCursor("pointer"), []);
@@ -185,9 +186,17 @@ function HomePage() {
         if (isLoggedIn) fetchSavedPlaces();
     }, [isLoggedIn]);
 
+    const closeDropdown = () => {
+        setIsDropdownClosing(true);
+        setTimeout(() => {
+            setIsDropdownOpen(false);
+            setIsDropdownClosing(false);
+        }, 200);
+    };
+
     const handleLogout = () => {
         logout();
-        setIsDropdownOpen(false);
+        closeDropdown();
     };
 
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
@@ -226,11 +235,6 @@ function HomePage() {
             address: result.fullAddress || "Unknown Location",
             email: userEmail || "",
         });
-    };
-
-
-    const handleDiscoverClick = () => {
-        navigate("/explore");
     };
 
     return (
@@ -276,13 +280,7 @@ function HomePage() {
                         onFocusChange={(focused) => setIsSearchFocused(focused)}
                         isFocused={isSearchFocused}
                     />
-                    <button
-                        className="explore-button"
-                        style={{ backgroundColor: "#4db688", fontWeight: "bold", fontSize: 18 }}
-                        onClick={handleDiscoverClick}
-                    >
-                        Explore
-                    </button>
+
                 </div>
 
                 <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
@@ -292,7 +290,7 @@ function HomePage() {
                     <div className="user-menu">
                         <button
                             className="user-menu-toggle"
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            onClick={() => isDropdownOpen ? closeDropdown() : setIsDropdownOpen(true)}
                         >
                             <span className="user-email">
                                 <Avatar letter={userEmail[0]} />
@@ -312,7 +310,7 @@ function HomePage() {
                             </svg>
                         </button>
                         {isDropdownOpen && (
-                            <div className="user-dropdown">
+                            <div className={`user-dropdown ${isDropdownClosing ? 'is-closing' : ''}`}>
                                 <button
                                     onClick={handleLogout}
                                     className="dropdown-item logout"

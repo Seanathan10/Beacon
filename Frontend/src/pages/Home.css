@@ -48,8 +48,8 @@
 }
 
 .user-menu-toggle {
-	display: flex;
-	border-radius: 999px;
+    display: flex;
+    border-radius: 999px;
     align-items: center;
     gap: 8px;
     padding: 0px 12px 0px 0px;
@@ -112,6 +112,22 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.user-dropdown.is-closing {
+    animation: slideUp 0.2s ease forwards;
 }
 
 .dropdown-item {
