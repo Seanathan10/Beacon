@@ -100,8 +100,8 @@
 .detailed-info-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 24px;
+    /* gap: 6px; */
+    margin-bottom: 16px;
 }
 
 .detailed-info-section:last-of-type {
