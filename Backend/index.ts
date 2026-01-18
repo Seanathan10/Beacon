@@ -9,6 +9,7 @@ import * as OpenApiValidator from "express-openapi-validator";
 import * as auth from "./routes/auth";
 import * as pins from "./routes/pins";
 import * as posts from "./routes/posts";
+import * as comments from "./routes/comments";
 
 const app = express();
 const PORT = 3000;
@@ -93,6 +94,12 @@ app.post("/api/posts", auth.check, posts.createPost);
 app.put("/api/posts/:id", auth.check, posts.updatePost);
 app.delete("/api/posts/:id", auth.check, posts.deletePost);
 app.post("/api/posts/:id/upvote", auth.check, posts.upvotePost);
+
+// Comments routes
+app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
+app.post("/api/pins/:pinId/comments", auth.check, comments.createComment);
+app.put("/api/comments/:commentId", auth.check, comments.updateComment);
+app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend listening on http://0.0.0.0:${PORT}`);

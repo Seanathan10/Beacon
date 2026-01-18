@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
-import SavedPlacesPanel from "@/components/SavedPlacesPanel";
+import Sidebar from "@/components/Sidebar";
 import Map, {
     GeolocateControl,
     NavigationControl,
@@ -91,6 +91,7 @@ function HomePage() {
         type: "FeatureCollection",
         features: [],
     });
+    const [savedPlaces, setSavedPlaces] = useState<PinData[]>([]);
 
     const [cursor, setCursor] = useState<string>("auto");
     const [userEmail, userId, isLoggedIn, logout, authSuccess] = AuthHook();
@@ -147,7 +148,24 @@ function HomePage() {
             }
         };
 
+        const fetchSavedPlaces = async () => {
+            try {
+                const res = await fetch(`${BASE_API_URL}/api/pins/user`, {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setSavedPlaces(data);
+                }
+            } catch (error) {
+                console.error("Error fetching saved places:", error);
+            }
+        };
+
         fetchPins();
+        if (isLoggedIn) fetchSavedPlaces();
     }, [isLoggedIn]);
 
     const handleLogout = () => {
@@ -186,7 +204,7 @@ function HomePage() {
                 email: feature.properties?.email || "",
                 address: result,
             });
-            
+
             setPinData(null); // Close any existing pin
             return;
         }
@@ -209,194 +227,216 @@ function HomePage() {
         navigate("/explore");
     };
 
+
     return (
         <div className="home-container">
-            <div className="search-container">
-                <SearchBar
-                    mapRef={mapRef}
-                    searchMarkerRef={searchMarkerRef}
-                    onSelectPlace={(place) =>
-                        setPinData({
-                            lat: place.lat,
-                            lng: place.lng,
-                            address: place.address,
-                            isLoading: false,
-                            email: userEmail || "",
-                        })
-                    }
-                />
-                <button className="discover-button" onClick={handleDiscoverClick}>
-                    Discover
-                </button>
-            </div>
-
-            <SavedPlacesPanel mapRef={mapRef} />
-
-            <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
-
-            {isLoggedIn && (
-                <div className="user-menu">
-                    <button
-                        className="user-menu-toggle"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    >
-                        <span className="user-email">
-                            {userEmail || "Account"}
-                        </span>
-                        <svg
-                            className={`chevron ${isDropdownOpen ? "open" : ""}`}
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </button>
-                    {isDropdownOpen && (
-                        <div className="user-dropdown">
-                            <button
-                                onClick={handleLogout}
-                                className="dropdown-item logout"
-                            >
-                                Log Out
-                            </button>
-                        </div>
-                    )}
+            <Sidebar
+                mapRef={mapRef}
+                allPins={allPins.features.map(f => ({
+                    id: f.properties.id,
+                    latitude: f.geometry.coordinates[1],
+                    longitude: f.geometry.coordinates[0],
+                    title: f.properties.title,
+                    message: f.properties.message,
+                    image: f.properties.image,
+                    color: f.properties.color,
+                    email: f.properties.email
+                }))}
+                savedPlaces={savedPlaces.map((p: any) => ({
+                    id: p.id,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    title: p.title || p.message, // Use message as fallback title
+                    message: p.message,
+                    image: p.image,
+                    color: p.color || PIN_COLOR
+                }))}
+                isLoggedIn={isLoggedIn}
+            />
+            <div className="main-content">
+                <div className="search-container">
+                    <SearchBar
+                        mapRef={mapRef}
+                        searchMarkerRef={searchMarkerRef}
+                        onSelectPlace={(place) =>
+                            setPinData({
+                                lat: place.lat,
+                                lng: place.lng,
+                                address: place.address,
+                                isLoading: false,
+                                email: userEmail || "",
+                            })
+                        }
+                    />
                 </div>
-            )}
 
-            <Map
-                ref={(map) => {
-                    if (map) mapRef.current = map.getMap();
-                }}
-                mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
-                initialViewState={{
-                    longitude: -122.4,
-                    latitude: 37.8,
-                    zoom: 9,
-                }}
-                mapStyle="mapbox://styles/mapbox/streets-v12"
-                onClick={handleMapClick}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                interactiveLayerIds={["point"]}
-                cursor={cursor}
-                interactive={true}
-                doubleClickZoom={true}
-                dragRotate={true}
-                touchZoomRotate={true}
-                attributionControl={false}
-            >
-                <GeolocateControl
-                    position="bottom-right"
-                    trackUserLocation
-                    showUserHeading
-                    showAccuracyCircle
-                    showButton
-                />
-                <NavigationControl
-                    position="bottom-right"
-                    showCompass={true}
-                    showZoom={true}
-                    visualizePitch={true}
-                />
+                <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
 
-                {pinData && (
-                    <Pin
-                        name={pinData.address?.name || "Unknown Location"}
-                        latitude={pinData.lat}
-                        longitude={pinData.lng}
-                        isLoading={pinData.isLoading}
-                        onClose={() => setPinData(null)}
-                        onDetails={() => {}}
-                        onPinCreated={(data) => {
-                            setAllPins((prev) => ({
-                                ...prev,
-                                features: [
-                                    ...prev.features,
-                                    {
-                                        type: "Feature",
-                                        geometry: {
-                                            type: "Point",
-                                            coordinates: [
-                                                pinData.lng,
-                                                pinData.lat,
-                                            ],
-                                        },
-                                        properties: {
-                                            title: data.title,
-                                            location: pinData.name,
-                                            message: data.message,
-                                            image: data.image || "",
-                                            color: localStorage.getItem("email") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
-                                            email: userEmail,
-                                        },
-                                    },
-                                ],
-                            }));
-                            setPinData(null);
-                        }}
-                    />
+
+                {isLoggedIn && (
+                    <div className="user-menu">
+                        <button
+                            className="user-menu-toggle"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        >
+                            <span className="user-email">
+                                {userEmail || "Account"}
+                            </span>
+                            <svg
+                                className={`chevron ${isDropdownOpen ? "open" : ""}`}
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        {isDropdownOpen && (
+                            <div className="user-dropdown">
+                                <button
+                                    onClick={handleLogout}
+                                    className="dropdown-item logout"
+                                >
+                                    Log Out
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )}
 
-                {selectedPoint && (
-                    <LocationPin
-                        selectedPoint={selectedPoint}
-                        setSelectedPoint={setSelectedPoint}
-                        onShowDetails={() => setShowDetailedModal(true)}
+                <Map
+                    ref={(map) => {
+                        if (map) mapRef.current = map.getMap();
+                    }}
+                    mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
+                    initialViewState={{
+                        longitude: -122.4,
+                        latitude: 37.8,
+                        zoom: 9,
+                    }}
+                    mapStyle="mapbox://styles/mapbox/streets-v12"
+                    onClick={handleMapClick}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    interactiveLayerIds={["point"]}
+                    cursor={cursor}
+                    interactive={true}
+                    doubleClickZoom={true}
+                    dragRotate={true}
+                    touchZoomRotate={true}
+                    attributionControl={false}
+                >
+                    <GeolocateControl
+                        position="bottom-right"
+                        trackUserLocation
+                        showUserHeading
+                        showAccuracyCircle
+                        showButton
                     />
-                )}
+                    <NavigationControl
+                        position="bottom-right"
+                        showCompass={true}
+                        showZoom={true}
+                        visualizePitch={true}
+                    />
 
-                {showDetailedModal && selectedPoint && (
-                    <DetailedPinModal
-                        selectedPoint={selectedPoint}
-                        currentUserId={userId}
-                        currentUserEmail={localStorage.getItem("userEmail")}
-                        onClose={() => setShowDetailedModal(false)}
-                        onUpdate={(updatedPoint) => {
-                            setAllPins((prev) => ({
-                                type: "FeatureCollection",
-                                features: prev.features.map((f) => {
-                                    if (f.properties.id === updatedPoint.id) {
-                                        return {
-                                            ...f,
-                                            properties: {
-                                                ...f.properties,
-                                                message: updatedPoint.message,
-                                                image: updatedPoint.image,
-                                                color:
-                                                    updatedPoint.color ||
-                                                    f.properties.color,
+                    {pinData && (
+                        <Pin
+                            name={typeof pinData.address === "object" ? pinData.address?.name : (pinData.address || "Unknown Location")}
+                            latitude={pinData.lat}
+                            longitude={pinData.lng}
+                            isLoading={pinData.isLoading}
+                            onClose={() => setPinData(null)}
+                            onDetails={() => { }}
+                            onPinCreated={(data) => {
+                                setAllPins((prev) => ({
+                                    ...prev,
+                                    features: [
+                                        ...prev.features,
+                                        {
+                                            type: "Feature",
+                                            geometry: {
+                                                type: "Point",
+                                                coordinates: [
+                                                    pinData.lng,
+                                                    pinData.lat,
+                                                ],
                                             },
-                                        };
-                                    }
-                                    return f;
-                                }),
-                            }));
-                            setSelectedPoint((prev) =>
-                                prev
-                                    ? {
-                                        ...prev,
-                                        ...updatedPoint,
-                                        color:
-                                            updatedPoint.color || prev.color,
-                                    }
-                                    : null,
-                            );
-                        }}
-                    />
-                )}
+                                            properties: {
+                                                title: data.title,
+                                                location: typeof pinData.address === "object" ? pinData.address?.name : pinData.address,
+                                                message: data.message,
+                                                image: data.image || "",
+                                                color: localStorage.getItem("email") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
+                                                email: userEmail,
+                                            },
+                                        },
+                                    ],
+                                }));
+                                setPinData(null);
+                            }}
+                        />
+                    )}
 
-                <Source id="my-data" type="geojson" data={allPins}>
-                    <Layer {...PIN_LAYER_STYLE} />
-                    <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
-                </Source>
-            </Map>
+                    {selectedPoint && (
+                        <LocationPin
+                            selectedPoint={selectedPoint}
+                            setSelectedPoint={setSelectedPoint}
+                            onShowDetails={() => setShowDetailedModal(true)}
+                        />
+                    )}
+
+                    {showDetailedModal && selectedPoint && (
+                        <DetailedPinModal
+                            selectedPoint={selectedPoint}
+                            currentUserId={userId}
+                            currentUserEmail={localStorage.getItem("userEmail")}
+                            onClose={() => setShowDetailedModal(false)}
+                            onUpdate={(updatedPoint) => {
+                                setAllPins((prev) => ({
+                                    type: "FeatureCollection",
+                                    features: prev.features.map((f) => {
+                                        if (f.properties.id === updatedPoint.id) {
+                                            return {
+                                                ...f,
+                                                properties: {
+                                                    ...f.properties,
+                                                    message: updatedPoint.message,
+                                                    image: updatedPoint.image,
+                                                    color:
+                                                        updatedPoint.color ||
+                                                        f.properties.color,
+                                                },
+                                            };
+                                        }
+                                        return f;
+                                    }),
+                                }));
+                                setSelectedPoint((prev) =>
+                                    prev
+                                        ? {
+                                            ...prev,
+                                            ...updatedPoint,
+                                            color:
+                                                updatedPoint.color || prev.color,
+                                        }
+                                        : null,
+                                );
+                            }}
+                        />
+                    )}
+
+                    <Source id="my-data" type="geojson" data={allPins as any}>
+                        <Layer {...PIN_LAYER_STYLE} />
+                        <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
+                    </Source>
+                </Map>
+            </div>
         </div>
     );
 }
