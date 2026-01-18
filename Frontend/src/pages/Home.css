@@ -48,14 +48,15 @@
 }
 
 .user-menu-toggle {
-    display: flex;
+	display: flex;
+	border-radius: 999px;
     align-items: center;
     gap: 8px;
-    padding: 0 20px;
+    padding: 0px 12px 0px 0px;
     background-color: #faf9f7;
     color: #1a1a1a;
     border: 1px solid #e5e3df;
-    border-radius: 16px;
+    border-radius: 32px;
     font-weight: 500;
     font-size: 0.95rem;
     cursor: pointer;
