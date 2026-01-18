@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 
 import Landing from "./pages/Landing";
+import SharedItinerary from "./pages/SharedItinerary";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { PostsPage } from "./pages/PostsPage";
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
     {
         path: '/explore',
         element: <PostsPage />,
+    },
+    {
+        path: '/shared/:id',
+        element: <SharedItinerary />,
     }
 ]);
 

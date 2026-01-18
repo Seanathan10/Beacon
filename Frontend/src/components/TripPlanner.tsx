@@ -117,7 +117,12 @@ interface TripPlannerProps {
     mapRef?: React.MutableRefObject<mapboxgl.Map | null>;
     onFlightSelected?: (originCoords: { lat: number; lng: number }, destCoords: { lat: number; lng: number }) => void;
     onHotelSelected?: (destAirportCoords: { lat: number; lng: number } | undefined, hotelCoords: { lat: number; lng: number }, routeData?: RouteData) => void;
+    initialResult?: TripPlanResult;
+    isSharedView?: boolean;
 }
+
+// Export TripPlanResult for use in other components
+export type { TripPlanResult };
 
 type ProgressStage = 'geocoding' | 'flights' | 'transit' | 'driving' | 'hotels' | 'pins' | 'ready' | 'itinerary' | 'complete' | 'error';
 
@@ -207,7 +212,7 @@ function renderFlightNumbers(flightNumber: string): React.ReactNode {
 
 
 
-export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideModeChange, mapRef, onFlightSelected, onHotelSelected }: TripPlannerProps) {
+export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideModeChange, mapRef, onFlightSelected, onHotelSelected, initialResult, isSharedView = false }: TripPlannerProps) {
     const [startCity, setStartCity] = useState('');
     const [endCity, setEndCity] = useState('');
     const [itineraryType, setItineraryType] = useState('');
@@ -219,7 +224,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [result, setResult] = useState<TripPlanResult | null>(null);
+    const [result, setResult] = useState<TripPlanResult | null>(initialResult || null);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
     const [isAskingAI, setIsAskingAI] = useState(false);
@@ -238,6 +243,10 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
     const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [selectedPinIds, setSelectedPinIds] = useState<Set<number>>(new Set());
     const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false);
+
+    // Share state
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -494,6 +503,48 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             setAiAnswer('Sorry, I could not get an answer at this time.');
         } finally {
             setIsAskingAI(false);
+        }
+    };
+
+    const handleShare = async () => {
+        if (!result || isSharing) return;
+        setIsSharing(true);
+
+        try {
+            const response = await fetch(`${BASE_API_URL}/api/share`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    itinerary: result.itinerary,
+                    itineraryType: result.itineraryType,
+                    settings: {
+                        origin: result.origin,
+                        destination: result.destination,
+                        durationDays: result.durationDays,
+                        transitOptions: result.transitOptions,
+                        ecoHotels: result.ecoHotels,
+                        localPins: result.localPins,
+                        carbonStats: result.carbonStats,
+                        originCoords: result.originCoords,
+                        destCoords: result.destCoords,
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to share itinerary');
+
+            const data = await response.json();
+            const url = `${window.location.origin}/shared/${data.id}`;
+            setShareUrl(url);
+            
+            // Copy to clipboard
+            await navigator.clipboard.writeText(url);
+        } catch (err) {
+            console.error('Error sharing itinerary:', err);
+        } finally {
+            setIsSharing(false);
         }
     };
 
@@ -1062,7 +1113,19 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                     <div className="trip-results">
                         <div className="trip-results-header">
                             <h2>{result.origin} → {result.destination}</h2>
-                            <span className="trip-type-badge">✨ {result.itineraryType}</span>
+                            <div className="trip-header-actions">
+                                <span className="trip-type-badge">✨ {result.itineraryType}</span>
+                                {!isSharedView && (
+                                    <button
+                                        className="trip-share-btn"
+                                        onClick={handleShare}
+                                        disabled={isSharing}
+                                        title={shareUrl ? 'Link copied!' : 'Share itinerary'}
+                                    >
+                                        {isSharing ? '...' : shareUrl ? '✓ Copied!' : '🔗 Share'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Carbon Stats */}
@@ -1074,11 +1137,11 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             <div className="carbon-stat-details">
                                 <div className="carbon-stat">
                                     <span className="label">Best Option</span>
-                                    <span className="value">{getModeIcon(result.carbonStats.bestOption.mode)} {result.carbonStats.bestOption.carbonKg} kg</span>
+                                    <span className="value">🧳 {result.carbonStats.typicalTouristKg} kg</span>
                                 </div>
                                 <div className="carbon-stat">
                                     <span className="label">Typical Tourist</span>
-                                    <span className="value">🧳 {result.carbonStats.typicalTouristKg} kg</span>
+                                    <span className="value">{getModeIcon(result.carbonStats.bestOption.mode)} {result.carbonStats.bestOption.carbonKg} kg</span>
                                 </div>
                                 <div className="carbon-stat">
                                     <span className="label">Offset Cost</span>
@@ -1259,9 +1322,11 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             )}
                         </div>
 
-                        <button className="trip-back-btn" onClick={() => setResult(null)}>
-                            ← Plan Another Trip
-                        </button>
+                        {!isSharedView && (
+                            <button className="trip-back-btn" onClick={() => setResult(null)}>
+                                ← Plan Another Trip
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

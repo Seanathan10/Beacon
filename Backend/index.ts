@@ -12,6 +12,7 @@ import * as posts from "./routes/posts";
 import * as comments from "./routes/comments";
 import * as likes from "./routes/likes";
 import * as trip from "./routes/trip";
+import { shareRouter } from "./routes/share";
 
 const app = express();
 const PORT = 3000;
@@ -117,6 +118,9 @@ app.post("/api/trip/ask", auth.check, trip.askQuestion);
 app.post("/api/trip/generate-itinerary", auth.check, trip.generateItineraryWithSelections);
 app.post("/api/trip/local-route", auth.check, trip.getLocalRoute);
 app.post("/api/trip/nearby-pins", auth.check, trip.getNearbyPinsForSelection);
+
+// Share routes (public - no auth required for viewing shared itineraries)
+app.use("/api/share", shareRouter);
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend listening on http://0.0.0.0:${PORT}`);

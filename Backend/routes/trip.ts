@@ -560,8 +560,8 @@ export async function planTripStream(req: Request, res: Response) {
         const bestOption = transitOptions[0] || { mode: "n/a", carbonKg: 0 };
         const worstOption = transitOptions[transitOptions.length - 1] || bestOption;
         const typicalTouristKg = calculateTypicalTouristCarbon(distanceKm, durationDays);
-        const savingsVsTypical = typicalTouristKg > 0
-            ? Math.round((1 - bestOption.carbonKg / typicalTouristKg) * 100)
+        const savingsVsTypical = bestOption.carbonKg > 0
+            ? Math.round((1 - typicalTouristKg / bestOption.carbonKg) * 100)
             : 0;
 
         // Send all options to frontend for user selection (no itinerary yet)
@@ -862,8 +862,8 @@ export async function planTrip(req: Request, res: Response) {
         const bestOption = transitOptions[0] || { mode: "n/a", carbonKg: 0 };
         const worstOption = transitOptions[transitOptions.length - 1] || bestOption;
         const typicalTouristKg = calculateTypicalTouristCarbon(distanceKm, durationDays);
-        const savingsVsTypical = typicalTouristKg > 0
-            ? Math.round((1 - bestOption.carbonKg / typicalTouristKg) * 100)
+        const savingsVsTypical = bestOption.carbonKg > 0
+            ? Math.round((1 - typicalTouristKg / bestOption.carbonKg) * 100)
             : 0;
 
         const response: TripPlanResponse = {

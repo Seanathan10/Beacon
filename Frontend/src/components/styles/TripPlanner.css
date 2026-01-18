@@ -1820,3 +1820,149 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Share Button Styles */
+.trip-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trip-share-btn {
+    background: linear-gradient(135deg, #4db688 0%, #3a9d6e 100%);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.trip-share-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 182, 136, 0.35);
+}
+
+.trip-share-btn:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+/* Shared Itinerary Page Styles */
+.shared-itinerary-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.shared-itinerary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.shared-itinerary-header .back-link {
+    color: #5c5c5c;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.shared-itinerary-header .back-link:hover {
+    color: #4db688;
+}
+
+.shared-badge {
+    background: linear-gradient(135deg, #4db688 0%, #3a9d6e 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.shared-itinerary-page .trip-planner-panel {
+    flex: 1;
+    max-width: 800px;
+    margin: 24px auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+/* Loading and Error screens for shared itinerary */
+.shared-loading-screen,
+.shared-error-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.loading-content,
+.error-content {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.loading-spinner-large {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e3df;
+    border-top-color: #4db688;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.error-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.error-content h2 {
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+}
+
+.error-content p {
+    color: #6b6b6b;
+    margin: 0 0 20px 0;
+}
+
+.back-home-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #4db688 0%, #3a9d6e 100%);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.back-home-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(77, 182, 136, 0.35);
+}

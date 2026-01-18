@@ -890,6 +890,85 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/share:
+    post:
+      summary: Share an itinerary
+      description: Save an itinerary and get a shareable ID
+      operationId: shareItinerary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itinerary
+              properties:
+                itinerary:
+                  type: object
+                  description: The complete itinerary data
+                itineraryType:
+                  type: string
+                  description: Type of itinerary
+                settings:
+                  type: object
+                  description: Additional settings
+      responses:
+        200:
+          description: Itinerary shared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Shareable ID
+        400:
+          description: Missing itinerary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Failed to share itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/share/{id}:
+    get:
+      summary: Get a shared itinerary
+      description: Retrieve a shared itinerary by ID
+      operationId: getSharedItinerary
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The shared itinerary ID
+      responses:
+        200:
+          description: Itinerary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedItinerary'
+        404:
+          description: Itinerary not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Failed to fetch itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/trip/plan:
     post:
       summary: Plan a trip
@@ -1494,3 +1573,24 @@ components:
                 description: Transportation note
                 example: "Take the DASH bus from Hollywood & Highland"
                 nullable: true
+
+    SharedItinerary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the shared itinerary
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        itinerary:
+          $ref: '#/components/schemas/ItineraryResult'
+        itineraryType:
+          type: string
+          description: Type of itinerary
+          example: "adventure"
+        settings:
+          type: object
+          description: Additional settings for the itinerary
+        createdAt:
+          type: string
+          format: date-time
+          description: When the itinerary was shared
