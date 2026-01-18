@@ -5,15 +5,18 @@ const API_URL_PROD = "https://api.truthnuke.tech";
 
 export const BASE_API_URL = import.meta.env.VITE_API_URL == "local" ? API_URL_DEV : API_URL_PROD;
 export const PIN_COLOR = "#007CBF";
-export const USER_PIN_COLOR = "#FFD700";
+export const USER_PIN_COLOR = "#FFC700";
 
 export const PIN_LAYER_STYLE: CircleLayerSpecification = {
 	id: "point",
 	type: "circle",
 	source: "my-data",
 	paint: {
-		"circle-radius": 10,
+		"circle-radius": 7,
 		"circle-color": ["get", "color"],
+		"circle-stroke-width": 3.5,
+		"circle-stroke-color": ["get", "color"],
+		"circle-opacity": 0.5,
 	},
 	maxzoom: 22,
 	minzoom: 5,
