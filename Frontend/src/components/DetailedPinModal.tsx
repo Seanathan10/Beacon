@@ -38,6 +38,17 @@ interface Comment {
   createdAt: string;
 }
 
+function ModalSection({ header, content }: { header: string, content: any }) {
+  return (
+    <div className="detailed-info-section">
+      <h3 style={{ marginBottom: 0 }}>{header}</h3>
+      <p className="detailed-message">
+        {content}
+      </p>
+    </div>
+  )
+}
+
 export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate }: DetailedPinModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState(selectedPoint.description);
@@ -169,11 +180,6 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
   const messageText = selectedPoint.description?.trim() || "";
   const showMessage = messageText && messageText !== titleText;
 
-  // console.log( isOwner )
-  // console.log( currentUserEmail )
-  // console.log( currentUserId )
-  // console.log (selectedPoint.email )
-
   const handleFileSelect = (file: File) => {
     setUploadError(null);
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -259,7 +265,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         <div className="detailed-modal-header">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <h2>{isEditing ? "Edit Pin" : selectedPoint.title}</h2>
-            <p>{selectedPoint.address}</p>
+            <p style={{ margin: 0 }}>{selectedPoint.address}</p>
           </div>
           <button
             className="detailed-modal-close"
@@ -340,43 +346,44 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
               )}
 
               {showMessage && (
-                <div className="detailed-info-section">
-                  <h3>Description</h3>
-                  <p className="detailed-message">
-                    {selectedPoint.description}
-                  </p>
-                </div>
+                <ModalSection
+                  header={"Description"}
+                  content={selectedPoint.description}
+                />
               )}
 
               {selectedPoint.email && (
-                <div className="detailed-info-section">
-                  <h3>Uploaded by</h3>
-                  <p className="detailed-message">
-                    {selectedPoint.email.split("@")[0]}
-                  </p>
-                </div>
+                <ModalSection
+                  header={"Uploaded by"}
+                  content={selectedPoint.email.split("@")[0]}
+                />
               )}
 
               <div className="detailed-info-section">
-                <h3>Location</h3>
-                <div className="location-details">
-                  <div className="detail-item">
-                    <span className="detail-label">
-                      Latitude
-                    </span>
-                    <span className="detail-value">
-                      {selectedPoint.latitude.toFixed(6)}
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">
-                      Longitude
-                    </span>
-                    <span className="detail-value">
-                      {selectedPoint.longitude.toFixed(6)}
-                    </span>
-                  </div>
-                </div>
+                <ModalSection
+                  header={"Coordinates"}
+                  content={(
+                    <div className="location-details">
+                      <div className="detail-item">
+                        <span className="detail-label">
+                          Latitude
+                        </span>
+                        <span className="detail-value">
+                          {selectedPoint.latitude.toFixed(6)}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">
+                          Longitude
+                        </span>
+                        <span className="detail-value">
+                          {selectedPoint.longitude.toFixed(6)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                />
               </div>
 
               {/* Comments Section */}
