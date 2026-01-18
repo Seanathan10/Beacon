@@ -12,7 +12,7 @@ export const PIN_LAYER_STYLE: CircleLayerSpecification = {
 	type: "circle",
 	source: "my-data",
 	paint: {
-		"circle-radius": 7,
+		"circle-radius": ["interpolate", ["linear"], ["get", "likes"], 0, 5, 20, 10],
 		"circle-color": ["get", "color"],
 		"circle-stroke-width": 3.5,
 		"circle-stroke-color": ["get", "color"],

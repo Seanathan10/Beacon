@@ -11,6 +11,7 @@ import Map, {
 import { Source, Layer, CircleLayerSpecification, HeatmapLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
 import { reverseGeocode, ReverseGeocodeResult } from "@/utils/geocoding";
+import { lerpColor } from "@/utils/colorUtils";
 import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { NavLink, useNavigate, useSearchParams } from "react-router";
@@ -152,8 +153,13 @@ function HomePage() {
                             title: p.title,
                             description: p.description,
                             image: p.image,
-                            color: localStorage.getItem("userEmail") == p.email ? USER_PIN_COLOR : PIN_COLOR,
+                            color: lerpColor(
+                                localStorage.getItem("userEmail") == p.email ? USER_PIN_COLOR : PIN_COLOR,
+                                "#FFA500",
+                                Math.min((p.likes || 0) / 20, 1)
+                            ),
                             address: p.address,
+                            likes: p.likes || 0,
                         },
                     })),
                 };

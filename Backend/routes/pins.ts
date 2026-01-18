@@ -12,7 +12,8 @@ export function getAllPins(req: Request, res: Response) {
 			p.address,
 			p.description,
 			p.image,
-            p.tags
+            p.tags,
+            p.likes
 		FROM pin p
 		JOIN account a ON a.id = p.creatorID;
 	`);
