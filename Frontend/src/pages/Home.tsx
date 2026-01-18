@@ -165,25 +165,29 @@ function HomePage() {
             }
         };
 
-        const fetchSavedPlaces = async () => {
-            try {
-                const res = await fetch(`${BASE_API_URL}/api/pins/user`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-                    }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setSavedPlaces(data);
-                }
-            } catch (error) {
-                console.error("Error fetching saved places:", error);
-            }
+        const fetchSavedPlaces = () => {
+            const savedPins = JSON.parse(localStorage.getItem("savedPins") || '{}');
+			const email = localStorage.getItem("userEmail")!;
+			const savedPinIDs = savedPins[email] || [];
+
+			const saved = allPins.features
+				.filter(f => savedPinIDs.includes(f.properties.id))
+				.map(f => ({
+					id: f.properties.id,
+					latitude: f.geometry.coordinates[1],
+					longitude: f.geometry.coordinates[0],
+					title: f.properties.title,
+					description: f.properties.description,
+					image: f.properties.image,
+					color: f.properties.color,
+					email: f.properties.email
+				}));
+			setSavedPlaces(saved as any);
         };
 
         fetchPins();
         if (isLoggedIn) fetchSavedPlaces();
-    }, [isLoggedIn]);
+    }, [isLoggedIn, allPins.features]);
 
     const handleLogout = () => {
         logout();
@@ -399,6 +403,25 @@ function HomePage() {
                             selectedPoint={selectedPoint}
                             setSelectedPoint={setSelectedPoint}
                             onShowDetails={() => setShowDetailedModal(true)}
+                            onBookmarkChange={(pinId, isBookmarked) => {
+                                const savedPins = JSON.parse(localStorage.getItem("savedPins") || '{}');
+                                const email = localStorage.getItem("userEmail")!;
+                                const savedPinIDs = savedPins[email] || [];
+                                
+                                const saved = allPins.features
+                                    .filter(f => savedPinIDs.includes(f.properties.id))
+                                    .map(f => ({
+                                        id: f.properties.id,
+                                        latitude: f.geometry.coordinates[1],
+                                        longitude: f.geometry.coordinates[0],
+                                        title: f.properties.title,
+                                        description: f.properties.description,
+                                        image: f.properties.image,
+                                        color: f.properties.color,
+                                        email: f.properties.email
+                                    }));
+                                setSavedPlaces(saved as any);
+                            }}
                         />
                     )}
 

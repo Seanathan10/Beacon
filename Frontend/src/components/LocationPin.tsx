@@ -8,6 +8,7 @@ interface LocationPinProps {
 	selectedPoint: SelectedPoint;
 	setSelectedPoint: (a: any) => void;
 	onShowDetails: () => void;
+	onBookmarkChange?: (pinId: number, isBookmarked: boolean) => void;
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -26,7 +27,7 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
 	)
 }
 
-export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails }: LocationPinProps) {
+export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails, onBookmarkChange }: LocationPinProps) {
 	const titleText = selectedPoint.title?.trim() || selectedPoint.description?.trim() || "Untitled Pin";
 	const messageText = selectedPoint.description?.trim() || "";
 	const showMessage = messageText && messageText !== titleText;
@@ -104,6 +105,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		}
 
 		localStorage.setItem("savedPins", JSON.stringify(saved));
+		onBookmarkChange?.(selectedPoint.id!, newSavedState);
 	};
 
 
