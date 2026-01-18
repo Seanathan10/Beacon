@@ -222,7 +222,174 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-                
+
+  /api/pins/{pinId}/comments:
+    get:
+      summary: Get all comments for a pin
+      description: Retrieves all comments for a specific pin
+      operationId: getPinComments
+      parameters:
+        - in: path
+          name: pinId
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin
+      responses:
+        200:
+          description: Successful response with array of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a comment on a pin
+      description: Posts a new comment on a specific pin
+      operationId: createComment
+      parameters:
+        - in: path
+          name: pinId
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  maxLength: 280
+                  description: The comment text
+      responses:
+        201:
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        400:
+          description: Bad request - invalid comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/comments/{commentId}:
+    put:
+      summary: Update a comment
+      description: Updates a comment (owner only)
+      operationId: updateComment
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: integer
+          description: The ID of the comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  maxLength: 280
+      responses:
+        200:
+          description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a comment
+      description: Deletes a comment (owner only)
+      operationId: deleteComment
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: integer
+          description: The ID of the comment
+      responses:
+        200:
+          description: Comment deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/login:
     post:
@@ -643,6 +810,35 @@ components:
           description: Address of the pin location
           example: "123 Main St, San Francisco, CA"
           nullable: true
+    
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the comment
+          example: 1
+        pinID:
+          type: integer
+          description: ID of the pin this comment belongs to
+          example: 1
+        accountID:
+          type: integer
+          description: ID of the account that created the comment
+          example: 1
+        email:
+          type: string
+          description: Email of the comment author
+          example: "user@example.com"
+        comment:
+          type: string
+          maxLength: 280
+          description: The comment text
+          example: "Great spot!"
+        createdAt:
+          type: string
+          description: Timestamp when the comment was created
+          example: "2026-01-17 12:00:00"
     
     Error:
       type: object
