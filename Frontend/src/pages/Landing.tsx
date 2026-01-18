@@ -99,13 +99,6 @@ function Landing() {
                 <nav className="landing__nav">
                     <a href="#product">About</a>
                     <NavLink
-                        to="/explore"
-                        className="button button--primary"
-                        prefetch="intent"
-                    >
-                        Explore Hot Spots
-                    </NavLink>
-                    <NavLink
                         to="/home"
                         className="button button--primary"
                         style={{ backgroundColor: "#5cbd51" }}
@@ -247,152 +240,10 @@ function Landing() {
                         </div>
                     </div>
                 </section>
-
-                {/* <section className="logos" aria-label="Community partners">
-          <p>Used by neighborhood collectives and sustainable travel clubs</p>
-          <div className="logos__row">
-            <span>Urban Roots</span>
-            <span>CityCycle</span>
-            <span>Green Atlas</span>
-            <span>Locals First</span>
-            <span>Coastline Co-op</span>
-          </div>
-        </section> */}
-
-                <section className="features" id="impact">
-                    <h2>Understand the impact of where you go.</h2>
-                    <div className="features__grid">
-                        <article>
-                            <h3>AI that actually gets it</h3>
-                            <p>
-                                Beacon tags photos for local authenticity and
-                                flags large corporate chains automatically.
-                            </p>
-                        </article>
-                        <article>
-                            <h3>Real-time guidance</h3>
-                            <p>
-                                Get suggestions for hole-in-the-wall spots,
-                                ethical stays, and low-impact routes while you
-                                plan.
-                            </p>
-                        </article>
-                        <article>
-                            <h3>Walking guides for every stop</h3>
-                            <p>
-                                AI builds a friendly tour with history,
-                                highlights, and tips you can share with friends
-                                instantly.
-                            </p>
-                        </article>
-                    </div>
-                </section>
-
-                <section className="workflow" id="guide">
-                    <div className="workflow__content">
-                        <h2>Plan carbon-neutral adventures with friends.</h2>
-                        <p>
-                            Coordinate trips, vote on pins, and co-create
-                            itineraries that prioritize local experiences over
-                            tourist traps.
-                        </p>
-                        <div className="workflow__list">
-                            <div>
-                                <h4>Collaborate in real time</h4>
-                                <p>
-                                    Invite friends to add pins, stories, and
-                                    accessibility notes.
-                                </p>
-                            </div>
-                            <div>
-                                <h4>Track your footprint</h4>
-                                <p>
-                                    See emissions saved and make carbon-positive
-                                    choices.
-                                </p>
-                            </div>
-                            <div>
-                                <h4>Discover together</h4>
-                                <p>
-                                    Find community events and neighborhood gems
-                                    nearby.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="workflow__card">
-                        <h3>Friends trip: Kyoto</h3>
-                        <ul>
-                            <li>Morning: Nishiki Market (local vendors)</li>
-                            <li>Midday: River walk + bike share</li>
-                            <li>Evening: Rooftop solar izakaya</li>
-                        </ul>
-                        <div className="workflow__footer">
-                            <span>Projected impact: +12 kg CO₂ offset</span>
-                            <button
-                                className="button button--tiny"
-                                type="button"
-                            >
-                                Share plan
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="testimonial" id="community">
-                    <div className="testimonial__quote">
-                        <p>
-                            “I used to juggle five apps to plan ethical trips.
-                            Now Beacon keeps every local gem, guide, and insider
-                            tip connected.”
-                        </p>
-                        <span>Riya · Climate-minded traveler</span>
-                    </div>
-                    <div className="testimonial__cards">
-                        <div className="testimonial__card">
-                            <h4>Community-powered</h4>
-                            <p>
-                                Follow local curators and see their newest
-                                discoveries.
-                            </p>
-                        </div>
-                        <div className="testimonial__card">
-                            <h4>Always independent</h4>
-                            <p>
-                                We prioritize small businesses and avoid
-                                corporate chains.
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="cta">
-                    <h2>Your travels deserve better tools.</h2>
-                    <p>
-                        Start mapping, tagging, and sharing the places that keep
-                        communities thriving.
-                    </p>
-                    <div className="cta__actions">
-                        <NavLink
-                            to="/home"
-                            className="button button--primary"
-                            prefetch="intent"
-                        >
-                            Open App
-                        </NavLink>
-                    </div>
-                </section>
             </main>
 
             <footer className="footer">
-                <nav>
-                    <a href="#">Our Mission</a>
-                    <a href="#">Pricing</a>
-                    <a href="#">Community</a>
-                    <a href="#">Careers</a>
-                    <a href="#">Blog</a>
-                    <a href="#">Privacy Policy</a>
-                </nav>
+
                 <p>© 2026 Beacon. All rights reserved.</p>
             </footer>
         </div>
