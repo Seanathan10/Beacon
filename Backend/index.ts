@@ -10,6 +10,7 @@ import * as auth from "./routes/auth";
 import * as pins from "./routes/pins";
 import * as posts from "./routes/posts";
 import * as comments from "./routes/comments";
+import * as likes from "./routes/likes";
 
 const app = express();
 const PORT = 3000;
@@ -100,6 +101,10 @@ app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
 app.post("/api/pins/:pinId/comments", auth.check, comments.createComment);
 app.put("/api/comments/:commentId", auth.check, comments.updateComment);
 app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
+
+//likes routes
+app.get("/api/likes/:id", auth.check, likes.getLikes);
+app.post("/api/likes/:id", auth.check, likes.addLikes);
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend listening on http://0.0.0.0:${PORT}`);
