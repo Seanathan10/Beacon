@@ -236,7 +236,13 @@ function Landing() {
                                 <span>Family-owned</span>
                                 <span>Walkable</span>
                             </div>
-                            <div className="highlight__panel-photo" />
+                            <div className="highlight__panel-photo">
+                                <img
+                                    src="https://images.unsplash.com/photo-1525610553991-2bede1a236e2?auto=format&fit=crop&q=80&w=1000"
+                                    alt="Harbor Street Cafe"
+                                    loading="lazy"
+                                />
+                            </div>
                         </div>
                     </div>
                 </section>

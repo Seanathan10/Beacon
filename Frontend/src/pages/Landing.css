@@ -80,6 +80,7 @@
 }
 
 @keyframes float {
+
     0%,
     100% {
         transform: translateY(0);
@@ -91,6 +92,7 @@
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         box-shadow: 0 0 0 0 rgba(45, 106, 79, 0.4);
@@ -154,11 +156,9 @@
     font-size: 1.75rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-    background: linear-gradient(
-        135deg,
-        var(--color-text) 0%,
-        var(--color-green) 100%
-    );
+    background: linear-gradient(135deg,
+            var(--color-text) 0%,
+            var(--color-green) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -235,12 +235,10 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
     transition: var(--transition-slow);
 }
 
@@ -622,16 +620,23 @@
 
 .highlight__panel-photo {
     margin-top: 1.5rem;
-    height: 140px;
+    height: 180px;
+    /* Increased height for better visibility */
     border-radius: var(--radius-md);
-    background: linear-gradient(
-        135deg,
-        var(--color-green-light) 0%,
-        var(--color-bg-alt) 50%,
-        #e8d5c4 100%
-    );
-    background-size: 200% 200%;
-    animation: shimmer 3s ease infinite;
+    overflow: hidden;
+    background: var(--color-bg-alt);
+    position: relative;
+}
+
+.highlight__panel-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+
+.highlight__panel-card:hover .highlight__panel-photo img {
+    transform: scale(1.05);
 }
 
 /* ===== Logos Section ===== */
@@ -709,11 +714,9 @@
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(
-        90deg,
-        var(--color-green),
-        var(--color-green-light)
-    );
+    background: linear-gradient(90deg,
+            var(--color-green),
+            var(--color-green-light));
     transform: scaleX(0);
     transform-origin: left;
     transition: var(--transition-slow);
@@ -762,7 +765,7 @@
     margin-bottom: 1rem;
 }
 
-.workflow__content > p {
+.workflow__content>p {
     color: var(--color-text-muted);
     font-size: 1.05rem;
     max-width: 480px;
@@ -775,13 +778,13 @@
     gap: 1.5rem;
 }
 
-.workflow__list > div {
+.workflow__list>div {
     padding-left: 1.5rem;
     border-left: 3px solid var(--color-green);
     transition: var(--transition-base);
 }
 
-.workflow__list > div:hover {
+.workflow__list>div:hover {
     padding-left: 2rem;
     border-left-color: var(--color-primary);
 }
@@ -937,11 +940,9 @@
 .cta {
     padding: 7rem 5%;
     text-align: center;
-    background: linear-gradient(
-        180deg,
-        var(--color-bg) 0%,
-        var(--color-green-bg) 100%
-    );
+    background: linear-gradient(180deg,
+            var(--color-bg) 0%,
+            var(--color-green-bg) 100%);
 }
 
 .cta h2 {
