@@ -96,7 +96,7 @@ export function PostsPage() {
             });
 
             if (response.status === 401) {
-                navigate("/login");
+                // navigate("/login");
                 return;
             }
 
