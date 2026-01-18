@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from "express";
-import { searchFlights, getCityAirportCode, FlightResult } from "../services/amadeus";
+import { searchFlights, getCityAirportCode, getAirportCoordinates, FlightResult } from "../services/amadeus";
 import { searchTransit, searchDriving, TransitResult } from "../services/googleRoutes";
 import { searchEcoHotels, EcoHotel } from "../services/hotelService";
 import { generateItinerary, LocalPin, ItineraryResult } from "../services/ai";
@@ -276,7 +276,7 @@ export async function planTripStream(req: Request, res: Response) {
         })();
 
         // Show geocoding for minimum time, then transition to flights
-        await stageDelay();
+        //await stageDelay();
         sendSSE(res, {
             stage: 'flights',
             message: 'Searching for flights...',
@@ -302,7 +302,7 @@ export async function planTripStream(req: Request, res: Response) {
                 return [] as TransitResult[];
             });
 
-        await stageDelay();
+        //await stageDelay();
         sendSSE(res, {
             stage: 'transit',
             message: 'Checking train and bus routes...',
@@ -326,7 +326,7 @@ export async function planTripStream(req: Request, res: Response) {
                 return null;
             });
 
-        await stageDelay();
+        //await stageDelay();
         sendSSE(res, {
             stage: 'driving',
             message: 'Calculating driving route...',
@@ -350,7 +350,7 @@ export async function planTripStream(req: Request, res: Response) {
                 return [] as EcoHotel[];
             });
 
-        await stageDelay();
+        //await stageDelay();
         sendSSE(res, {
             stage: 'hotels',
             message: 'Finding eco-friendly accommodations...',
@@ -367,7 +367,7 @@ export async function planTripStream(req: Request, res: Response) {
         });
 
         // Stage 6: Get nearby pins (65%)
-        await stageDelay();
+        //await stageDelay();
         sendSSE(res, {
             stage: 'pins',
             message: 'Discovering local recommendations...',
@@ -383,7 +383,7 @@ export async function planTripStream(req: Request, res: Response) {
             data: { pinsFound: localPins.length },
         });
 
-        await stageDelay();
+        //await stageDelay();
 
         // Build transit options (before itinerary generation)
         const transitOptions: TransitOption[] = [];
@@ -529,6 +529,10 @@ export async function planTripStream(req: Request, res: Response) {
         const optionsResponse = {
             origin: startLocation,
             destination: endLocation,
+            originCoords: originCoords || undefined,
+            destCoords: destCoords || undefined,
+            originAirportCoords: originAirport ? getAirportCoordinates(originAirport) : undefined,
+            destAirportCoords: destAirport ? getAirportCoordinates(destAirport) : undefined,
             itineraryType,
             durationDays,
             transitOptions,
@@ -928,6 +932,70 @@ export async function generateItineraryWithSelections(req: Request, res: Respons
         });
     } catch (error) {
         console.error("Itinerary generation error:", error);
+        res.status(500).json({ error: getErrorMessage(error) });
+    }
+}
+
+/**
+ * Get transit/driving route between two coordinates
+ * Used for hotel-to-airport route visualization
+ */
+export async function getLocalRoute(req: Request, res: Response) {
+    try {
+        const { originLat, originLng, destLat, destLng, departureTime } = req.body;
+
+        if (!originLat || !originLng || !destLat || !destLng) {
+            return res.status(400).json({ error: "Missing coordinates" });
+        }
+
+        const origin = { lat: originLat, lng: originLng };
+        const destination = { lat: destLat, lng: destLng };
+
+        // Try transit first
+        try {
+            // Pass departureTime if available, otherwise it defaults to now
+            const transitResults = await searchTransit(origin, destination, departureTime);
+            if (transitResults.length > 0) {
+                const bestRoute = transitResults[0];
+                // Return segments for multi-colored rendering
+                return res.json({
+                    mode: "transit",
+                    polyline: bestRoute.polyline,
+                    duration: bestRoute.duration,
+                    distanceKm: bestRoute.distanceKm,
+                    segments: bestRoute.segments.map(seg => ({
+                        lineName: seg.lineName,
+                        polyline: seg.polyline,
+                        departureStop: seg.departureStop,
+                        arrivalStop: seg.arrivalStop,
+                        departureLocation: seg.departureLocation,
+                        arrivalLocation: seg.arrivalLocation,
+                    })),
+                });
+            }
+        } catch (transitError) {
+            console.log("Transit route not available, falling back to driving");
+        }
+
+        // Fall back to driving
+        try {
+            const drivingResult = await searchDriving(origin, destination);
+            if (drivingResult.polyline) {
+                return res.json({
+                    mode: "driving",
+                    polyline: drivingResult.polyline,
+                    duration: drivingResult.duration,
+                    distanceKm: drivingResult.distanceKm,
+                });
+            }
+        } catch (drivingError) {
+            console.error("Driving route error:", drivingError);
+        }
+
+        // No route found
+        return res.status(404).json({ error: "No route found" });
+    } catch (error) {
+        console.error("Local route error:", error);
         res.status(500).json({ error: getErrorMessage(error) });
     }
 }

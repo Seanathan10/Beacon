@@ -6,10 +6,11 @@
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
 interface RouteStep {
+    travelMode?: string;
     transitDetails?: {
         stopDetails: {
-            departureStop: { name: string };
-            arrivalStop: { name: string };
+            departureStop: { name: string; location?: { latLng: { latitude: number; longitude: number } } };
+            arrivalStop: { name: string; location?: { latLng: { latitude: number; longitude: number } } };
         };
         localizedValues: {
             departureTime: { time: { text: string } };
@@ -24,6 +25,7 @@ interface RouteStep {
     };
     staticDuration?: string;
     distanceMeters?: number;
+    polyline?: { encodedPolyline: string };
 }
 
 interface RouteLeg {
@@ -48,6 +50,11 @@ export interface TransitSegment {
     arrivalTime: string;
     headsign: string;
     agency: string;
+    polyline?: string;
+    departureLocation?: { lat: number; lng: number };
+    arrivalLocation?: { lat: number; lng: number };
+    isWalking?: boolean;
+    durationSeconds?: number;
 }
 
 export interface TransitResult {
@@ -103,7 +110,8 @@ function formatDuration(seconds: number): string {
 export async function searchTransit(
     origin: string | { lat: number; lng: number },
     destination: string | { lat: number; lng: number },
-    departureTime?: string
+    departureTime?: string,
+    transitRoutingPreference?: string
 ): Promise<TransitResult[]> {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
@@ -119,23 +127,26 @@ export async function searchTransit(
         ? { address: destination }
         : { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } };
 
-    const requestBody = {
+    const requestBody: any = {
         origin: originWaypoint,
         destination: destinationWaypoint,
         travelMode: "TRANSIT",
         computeAlternativeRoutes: true,
-        transitPreferences: {
-            routingPreference: "LESS_WALKING",
-        },
         ...(departureTime && { departureTime }),
     };
+
+    if (transitRoutingPreference) {
+        requestBody.transitPreferences = {
+            routingPreference: transitRoutingPreference,
+        };
+    }
 
     const response = await fetch(ROUTES_API_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.transitDetails,routes.legs.steps.distanceMeters",
+            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.transitDetails,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.polyline.encodedPolyline,routes.legs.steps.transitDetails.stopDetails.departureStop.location,routes.legs.steps.transitDetails.stopDetails.arrivalStop.location,routes.legs.steps.travelMode",
         },
         body: JSON.stringify(requestBody),
     });
@@ -174,6 +185,33 @@ export async function searchTransit(
                         arrivalTime: td.localizedValues?.arrivalTime?.time?.text || "",
                         headsign: td.headsign,
                         agency: td.transitLine.agencies?.[0]?.name || "",
+                        polyline: step.polyline?.encodedPolyline,
+                        departureLocation: td.stopDetails.departureStop.location?.latLng ? {
+                            lat: td.stopDetails.departureStop.location.latLng.latitude,
+                            lng: td.stopDetails.departureStop.location.latLng.longitude,
+                        } : undefined,
+                        arrivalLocation: td.stopDetails.arrivalStop.location?.latLng ? {
+                            lat: td.stopDetails.arrivalStop.location.latLng.latitude,
+                            lng: td.stopDetails.arrivalStop.location.latLng.longitude,
+                        } : undefined,
+                        isWalking: false,
+                        durationSeconds: parseDuration(step.staticDuration || "0s"),
+                    });
+                } else if (step.travelMode === "WALK" && step.polyline?.encodedPolyline) {
+                    // Include walking segments for complete route visualization
+                    const stepDurationSeconds = parseDuration(step.staticDuration || "0s");
+                    segments.push({
+                        mode: "WALK",
+                        lineName: "Walk",
+                        departureStop: "",
+                        arrivalStop: "",
+                        departureTime: "",
+                        arrivalTime: "",
+                        headsign: "",
+                        agency: "",
+                        polyline: step.polyline.encodedPolyline,
+                        isWalking: true,
+                        durationSeconds: stepDurationSeconds,
                     });
                 }
             }

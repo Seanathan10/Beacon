@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import './styles/TripPlanner.css';
 import { DatePicker } from './DatePicker';
 import { BASE_API_URL } from '../../constants';
+import mapboxgl from 'mapbox-gl';
 
 interface TransitOption {
     mode: 'flight' | 'train' | 'bus' | 'driving';
@@ -40,6 +41,10 @@ interface EcoHotel {
     editorialSummary?: string;
     websiteUri?: string;
     googleMapsUri?: string;
+    location?: {
+        lat: number;
+        lng: number;
+    };
 }
 
 interface LocalPin {
@@ -61,6 +66,10 @@ interface ItineraryResult {
 interface TripOptionsData {
     origin: string;
     destination: string;
+    originCoords?: { lat: number; lng: number };
+    destCoords?: { lat: number; lng: number };
+    originAirportCoords?: { lat: number; lng: number };
+    destAirportCoords?: { lat: number; lng: number };
     itineraryType: string;
     durationDays: number;
     transitOptions: TransitOption[];
@@ -81,11 +90,29 @@ interface TripPlanResult extends TripOptionsData {
     itinerary: ItineraryResult;
 }
 
+interface RouteSegment {
+    lineName: string;
+    polyline?: string;
+    departureStop: string;
+    arrivalStop: string;
+    departureLocation?: { lat: number; lng: number };
+    arrivalLocation?: { lat: number; lng: number };
+}
+
+interface RouteData {
+    mode: 'transit' | 'driving';
+    polyline?: string;
+    segments?: RouteSegment[];
+}
+
 interface TripPlannerProps {
     isOpen: boolean;
     onClose: () => void;
     onPlanComplete: (result: TripPlanResult) => void;
     onWideModeChange?: (isWide: boolean) => void;
+    mapRef?: React.MutableRefObject<mapboxgl.Map | null>;
+    onFlightSelected?: (originCoords: { lat: number; lng: number }, destCoords: { lat: number; lng: number }) => void;
+    onHotelSelected?: (destAirportCoords: { lat: number; lng: number } | undefined, hotelCoords: { lat: number; lng: number }, routeData?: RouteData) => void;
 }
 
 type ProgressStage = 'geocoding' | 'flights' | 'transit' | 'driving' | 'hotels' | 'pins' | 'ready' | 'itinerary' | 'complete' | 'error';
@@ -176,7 +203,7 @@ function renderFlightNumbers(flightNumber: string): React.ReactNode {
 
 
 
-export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideModeChange }: TripPlannerProps) {
+export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideModeChange, mapRef, onFlightSelected, onHotelSelected }: TripPlannerProps) {
     const [startCity, setStartCity] = useState('');
     const [endCity, setEndCity] = useState('');
     const [itineraryType, setItineraryType] = useState('');
@@ -203,8 +230,9 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
     // Selection phase state
     const [optionsData, setOptionsData] = useState<TripOptionsData | null>(null);
-    const [selectedTransitIndex, setSelectedTransitIndex] = useState<number>(0);
-    const [selectedHotelIndex, setSelectedHotelIndex] = useState<number>(0);
+    const [selectionStep, setSelectionStep] = useState<'transit' | 'hotel'>('transit');
+    const [selectedTransitIndex, setSelectedTransitIndex] = useState<number | null>(null);
+    const [selectedHotelIndex, setSelectedHotelIndex] = useState<number | null>(null);
     const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false);
 
     useEffect(() => {
@@ -234,8 +262,9 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             onClose();
             setResult(null);
             setOptionsData(null);
-            setSelectedTransitIndex(0);
-            setSelectedHotelIndex(0);
+            setSelectionStep('transit');
+            setSelectedTransitIndex(null);
+            setSelectedHotelIndex(null);
             setProgress(0);
             setCurrentStage(null);
             setStageStatuses(new Map());
@@ -333,8 +362,11 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                                 // Options are ready - show selection UI
                                 const options = update.data as TripOptionsData;
                                 setOptionsData(options);
-                                setSelectedTransitIndex(0);
-                                setSelectedHotelIndex(0);
+
+                                setSelectionStep('transit');
+                                setSelectedTransitIndex(null);
+                                setSelectedHotelIndex(null);
+
                                 // Mark all stages as done
                                 setStageStatuses(prev => {
                                     const updated = new Map(prev);
@@ -380,11 +412,17 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         if (!optionsData) return;
 
         setIsGeneratingItinerary(true);
+        setIsGeneratingItinerary(true);
         setError(null);
 
         try {
+            if (selectedTransitIndex === null) {
+                throw new Error("Please select a transit option");
+            }
             const selectedTransitOption = optionsData.transitOptions[selectedTransitIndex];
-            const selectedHotelOption = optionsData.ecoHotels?.[selectedHotelIndex];
+            const selectedHotelOption = selectedHotelIndex !== null
+                ? optionsData.ecoHotels?.[selectedHotelIndex]
+                : undefined;
 
             const response = await fetch(`${BASE_API_URL}/api/trip/generate-itinerary`, {
                 method: 'POST',
@@ -451,6 +489,147 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             setAiAnswer('Sorry, I could not get an answer at this time.');
         } finally {
             setIsAskingAI(false);
+        }
+    };
+
+    // Handle transit selection - draw flight line on map
+    const handleTransitSelect = (idx: number) => {
+        setSelectedTransitIndex(idx);
+
+        if (!optionsData) return;
+
+        const option = optionsData.transitOptions[idx];
+
+        // For flights, draw a line between origin and destination airports
+        if (option.mode === 'flight' && optionsData.originAirportCoords && optionsData.destAirportCoords) {
+            onFlightSelected?.(optionsData.originAirportCoords, optionsData.destAirportCoords);
+
+            // Fit map to show both airports, handling antimeridian crossing
+            if (mapRef?.current) {
+                const originLng = optionsData.originAirportCoords.lng;
+                const destLng = optionsData.destAirportCoords.lng;
+                const lngDiff = destLng - originLng;
+
+                // Check if we need to cross the antimeridian (shortest path > 180°)
+                if (Math.abs(lngDiff) > 180) {
+                    // Calculate center point for antimeridian-crossing routes
+                    const centerLat = (optionsData.originAirportCoords.lat + optionsData.destAirportCoords.lat) / 2;
+
+                    // Adjust destination longitude to find the midpoint across the antimeridian
+                    const adjustedDestLng = lngDiff > 0 ? destLng - 360 : destLng + 360;
+                    let centerLng = (originLng + adjustedDestLng) / 2;
+
+                    // Normalize center longitude to -180 to 180 range
+                    if (centerLng > 180) centerLng -= 360;
+                    if (centerLng < -180) centerLng += 360;
+
+                    // Use flyTo with appropriate zoom for long-haul flights
+                    mapRef.current.flyTo({
+                        center: [centerLng, centerLat],
+                        zoom: 2,
+                        duration: 1500,
+                    });
+                } else {
+                    // Normal case: use fitBounds
+                    const bounds = new mapboxgl.LngLatBounds();
+                    bounds.extend([originLng, optionsData.originAirportCoords.lat]);
+                    bounds.extend([destLng, optionsData.destAirportCoords.lat]);
+                    mapRef.current.fitBounds(bounds, {
+                        padding: { top: 100, bottom: 100, left: 400, right: 100 },
+                        duration: 1500,
+                    });
+                }
+            }
+        } else if (optionsData.originCoords && optionsData.destCoords) {
+            // For other transit modes, use city coordinates
+            onFlightSelected?.(optionsData.originCoords, optionsData.destCoords);
+
+            if (mapRef?.current) {
+                const bounds = new mapboxgl.LngLatBounds();
+                bounds.extend([optionsData.originCoords.lng, optionsData.originCoords.lat]);
+                bounds.extend([optionsData.destCoords.lng, optionsData.destCoords.lat]);
+                mapRef.current.fitBounds(bounds, {
+                    padding: { top: 100, bottom: 100, left: 400, right: 100 },
+                    duration: 1500,
+                });
+            }
+        }
+    };
+
+    // Handle hotel selection - fetch transit/driving route and draw on map
+    const handleHotelSelect = async (idx: number) => {
+        setSelectedHotelIndex(idx);
+
+        if (!optionsData) return;
+
+        const hotel = optionsData.ecoHotels[idx];
+
+        if (hotel.location && optionsData.destAirportCoords) {
+            // Calculate estimated arrival time (use departure date at 14:00 for daytime transit check)
+            let departureTimeStr = undefined;
+            if (departureDate) {
+                // Create a date object for 2 PM on the departure date
+                const arrivalDate = new Date(departureDate);
+                arrivalDate.setHours(14, 0, 0, 0);
+                departureTimeStr = arrivalDate.toISOString();
+            }
+
+            // Fetch transit/driving route between airport and hotel
+            try {
+                const response = await fetch(`${BASE_API_URL}/api/trip/local-route`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                    },
+                    body: JSON.stringify({
+                        originLat: optionsData.destAirportCoords.lat,
+                        originLng: optionsData.destAirportCoords.lng,
+                        destLat: hotel.location.lat,
+                        destLng: hotel.location.lng,
+                        departureTime: departureTimeStr
+                    }),
+                });
+
+                if (response.ok) {
+                    const routeData = await response.json();
+                    // Notify parent with full route data including segments
+                    onHotelSelected?.(optionsData.destAirportCoords, hotel.location, {
+                        mode: routeData.mode,
+                        polyline: routeData.polyline,
+                        segments: routeData.segments,
+                    });
+                } else {
+                    // Fallback to straight line if no route found
+                    onHotelSelected?.(optionsData.destAirportCoords, hotel.location);
+                }
+            } catch (error) {
+                console.error('Failed to fetch local route:', error);
+                // Fallback to straight line
+                onHotelSelected?.(optionsData.destAirportCoords, hotel.location);
+            }
+
+            // Fit map to show both airport and hotel with the route
+            if (mapRef?.current) {
+                const bounds = new mapboxgl.LngLatBounds();
+                bounds.extend([optionsData.destAirportCoords.lng, optionsData.destAirportCoords.lat]);
+                bounds.extend([hotel.location.lng, hotel.location.lat]);
+                mapRef.current.fitBounds(bounds, {
+                    padding: { top: 100, bottom: 100, left: 400, right: 100 },
+                    duration: 1500,
+                });
+            }
+        } else if (hotel.location) {
+            // No airport coords, just draw to hotel
+            onHotelSelected?.(undefined, hotel.location);
+
+            if (mapRef?.current) {
+                mapRef.current.flyTo({
+                    center: [hotel.location.lng, hotel.location.lat],
+                    zoom: 14,
+                    duration: 1500,
+                });
+            }
         }
     };
 
@@ -547,136 +726,155 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                     // Selection Phase UI
                     <div className="trip-selection-container">
                         <div className="trip-selection-header">
-                            <h2>✨ Choose Your Options</h2>
+                            <h2>{selectionStep === 'transit' ? '✨ Select Your Travel' : '🏨 Select Your Stay'}</h2>
                             <p>{optionsData.origin} → {optionsData.destination}</p>
                         </div>
 
-                        {/* Transit Selection */}
-                        <div className="selection-section">
-                            <h3>🚀 Select Your Travel</h3>
-                            <p className="selection-hint">Choose how you'd like to get there</p>
-                            <div className="transit-selection-grid">
-                                {optionsData.transitOptions.map((option, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`transit-selection-card ${selectedTransitIndex === idx ? 'selected' : ''}`}
-                                        onClick={() => setSelectedTransitIndex(idx)}
-                                    >
-                                        <div className="transit-selection-check">
-                                            {selectedTransitIndex === idx && <span>✓</span>}
-                                        </div>
-                                        <div className="transit-icon">{getModeIcon(option.mode)}</div>
-                                        <div className="transit-info">
-                                            <div className="transit-mode">
-                                                {option.mode === 'flight' && option.flightNumber
-                                                    ? renderFlightNumbers(option.flightNumber)
-                                                    : option.mode.charAt(0).toUpperCase() + option.mode.slice(1)}
-                                            </div>
-                                            {option.mode === 'flight' && option.stops !== undefined && (
-                                                <span className={`transit-stops ${option.stops === 0 ? 'nonstop' : ''}`}>
-                                                    {option.stops === 0 ? 'Nonstop' : `${option.stops} stop${option.stops > 1 ? 's' : ''}`}
-                                                </span>
-                                            )}
-                                            <span className="transit-duration">{formatDuration(option.duration)}</span>
-                                            <div className="transit-price-row">
-                                                {option.price && <span className="transit-price">{option.price}</span>}
-                                            </div>
-                                            {option.bookingUrl && (
-                                                <a
-                                                    href={option.bookingUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="transit-booking-link"
-                                                    onClick={(e) => e.stopPropagation()}
+                        {selectionStep === 'transit' ? (
+                            <>
+                                <div className="selection-section">
+                                    <p className="selection-hint">Choose how you'd like to get there</p>
+                                    <div className="transit-selection-grid">
+                                        {optionsData.transitOptions.map((option, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`transit-selection-card ${selectedTransitIndex === idx ? 'selected' : ''}`}
+                                                onClick={() => handleTransitSelect(idx)}
+                                            >
+                                                <div className="transit-selection-check">
+                                                    {selectedTransitIndex === idx && <span>✓</span>}
+                                                </div>
+                                                <div className="transit-icon">{getModeIcon(option.mode)}</div>
+                                                <div className="transit-info">
+                                                    <div className="transit-mode">
+                                                        {option.mode === 'flight' && option.flightNumber
+                                                            ? renderFlightNumbers(option.flightNumber)
+                                                            : option.mode.charAt(0).toUpperCase() + option.mode.slice(1)}
+                                                    </div>
+                                                    {option.mode === 'flight' && option.stops !== undefined && (
+                                                        <span className={`transit-stops ${option.stops === 0 ? 'nonstop' : ''}`}>
+                                                            {option.stops === 0 ? 'Nonstop' : `${option.stops} stop${option.stops > 1 ? 's' : ''}`}
+                                                        </span>
+                                                    )}
+                                                    <span className="transit-duration">{formatDuration(option.duration)}</span>
+                                                    <div className="transit-price-row">
+                                                        {option.price && <span className="transit-price">{option.price}</span>}
+                                                    </div>
+                                                    {option.bookingUrl && (
+                                                        <a
+                                                            href={option.bookingUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="transit-booking-link"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Book Flight →
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div
+                                                    className="transit-carbon"
+                                                    style={{
+                                                        backgroundColor: option.carbonRating.color + '20',
+                                                        color: option.carbonRating.color
+                                                    }}
                                                 >
-                                                    Book Flight →
-                                                </a>
-                                            )}
-                                        </div>
-                                        <div
-                                            className="transit-carbon"
-                                            style={{
-                                                backgroundColor: option.carbonRating.color + '20',
-                                                color: option.carbonRating.color
-                                            }}
-                                        >
-                                            {option.carbonKg} kg CO₂
-                                        </div>
+                                                    {option.carbonKg} kg CO₂
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Hotel Selection */}
-                        {optionsData.ecoHotels && optionsData.ecoHotels.length > 0 && (
-                            <div className="selection-section">
-                                <h3>🏨 Select Your Stay</h3>
-                                <p className="selection-hint">Choose an eco-friendly accommodation</p>
-                                <div className="hotel-selection-grid">
-                                    {optionsData.ecoHotels.slice(0, 4).map((hotel, idx) => (
-                                        <div
-                                            key={hotel.id}
-                                            className={`hotel-selection-card ${selectedHotelIndex === idx ? 'selected' : ''}`}
-                                            onClick={() => setSelectedHotelIndex(idx)}
-                                        >
-                                            <div className="hotel-selection-check">
-                                                {selectedHotelIndex === idx && <span>✓</span>}
-                                            </div>
-                                            <div className="hotel-selection-info">
-                                                <span className="hotel-name">{hotel.name}</span>
-                                                {hotel.rating && (
-                                                    <span className="hotel-rating">⭐ {hotel.rating}</span>
-                                                )}
-                                                {hotel.editorialSummary && (
-                                                    <p className="hotel-blurb">{hotel.editorialSummary}</p>
-                                                )}
-                                                {hotel.websiteUri && (
-                                                    <a
-                                                        href={hotel.websiteUri}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="hotel-link"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        Visit Website →
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
-                            </div>
+                                <div className="selection-actions">
+                                    <button
+                                        className="trip-submit-btn"
+                                        onClick={() => {
+                                            if (optionsData.ecoHotels && optionsData.ecoHotels.length > 0) {
+                                                setSelectionStep('hotel');
+                                            } else {
+                                                handleConfirmSelections();
+                                            }
+                                        }}
+                                        disabled={selectedTransitIndex === null}
+                                    >
+                                        Next: Select Hotel →
+                                    </button>
+                                    <button
+                                        className="trip-back-btn"
+                                        onClick={() => {
+                                            setOptionsData(null);
+                                            setSelectedTransitIndex(null);
+                                            setSelectedHotelIndex(null);
+                                        }}
+                                    >
+                                        ← Start Over
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="selection-section">
+                                    <p className="selection-hint">Choose an eco-friendly accommodation</p>
+                                    <div className="hotel-selection-grid">
+                                        {optionsData.ecoHotels.slice(0, 4).map((hotel, idx) => (
+                                            <div
+                                                key={hotel.id}
+                                                className={`hotel-selection-card ${selectedHotelIndex === idx ? 'selected' : ''}`}
+                                                onClick={() => handleHotelSelect(idx)}
+                                            >
+                                                <div className="hotel-selection-check">
+                                                    {selectedHotelIndex === idx && <span>✓</span>}
+                                                </div>
+                                                <div className="hotel-selection-info">
+                                                    <span className="hotel-name">{hotel.name}</span>
+                                                    {hotel.rating && (
+                                                        <span className="hotel-rating">⭐ {hotel.rating}</span>
+                                                    )}
+                                                    {hotel.editorialSummary && (
+                                                        <p className="hotel-blurb">{hotel.editorialSummary}</p>
+                                                    )}
+                                                    {hotel.websiteUri && (
+                                                        <a
+                                                            href={hotel.websiteUri}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="hotel-link"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Visit Website →
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {error && <div className="trip-error">{error}</div>}
+                                <div className="selection-actions">
+                                    <button
+                                        className="trip-submit-btn"
+                                        onClick={handleConfirmSelections}
+                                        disabled={isGeneratingItinerary || selectedHotelIndex === null}
+                                    >
+                                        {isGeneratingItinerary ? (
+                                            <>
+                                                <span className="stage-spinner" />
+                                                Generating Itinerary...
+                                            </>
+                                        ) : (
+                                            '📅 Generate My Itinerary'
+                                        )}
+                                    </button>
+                                    <button
+                                        className="trip-back-btn"
+                                        onClick={() => setSelectionStep('transit')}
+                                        disabled={isGeneratingItinerary}
+                                    >
+                                        ← Back to Transit
+                                    </button>
+                                </div>
+                            </>
                         )}
-
-                        {error && <div className="trip-error">{error}</div>}
-
-                        <div className="selection-actions">
-                            <button
-                                className="trip-submit-btn"
-                                onClick={handleConfirmSelections}
-                                disabled={isGeneratingItinerary}
-                            >
-                                {isGeneratingItinerary ? (
-                                    <>
-                                        <span className="stage-spinner" />
-                                        Generating Itinerary...
-                                    </>
-                                ) : (
-                                    '📅 Generate My Itinerary'
-                                )}
-                            </button>
-                            <button
-                                className="trip-back-btn"
-                                onClick={() => {
-                                    setOptionsData(null);
-                                    setSelectedTransitIndex(0);
-                                    setSelectedHotelIndex(0);
-                                }}
-                                disabled={isGeneratingItinerary}
-                            >
-                                ← Start Over
-                            </button>
-                        </div>
                     </div>
                 ) : !result ? (
                     <>

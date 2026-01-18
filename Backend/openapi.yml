@@ -1078,6 +1078,81 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/trip/local-route:
+    post:
+      summary: Get local transit/driving route between coordinates
+      description: Returns a route polyline for visualization between two points, trying transit first then falling back to driving
+      operationId: getLocalRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - originLat
+                - originLng
+                - destLat
+                - destLng
+              properties:
+                originLat:
+                  type: number
+                  description: Origin latitude
+                  example: 37.6213
+                originLng:
+                  type: number
+                  description: Origin longitude
+                  example: -122.3790
+                destLat:
+                  type: number
+                  description: Destination latitude
+                  example: 37.7749
+                destLng:
+                  type: number
+                  description: Destination longitude
+                  example: -122.4194
+      responses:
+        200:
+          description: Route found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    enum: [transit, driving]
+                    description: The travel mode used
+                  polyline:
+                    type: string
+                    description: Encoded polyline for the route
+                  duration:
+                    type: string
+                    description: Human-readable duration
+                    example: "45m"
+                  distanceKm:
+                    type: number
+                    description: Distance in kilometers
+                    example: 12.5
+        400:
+          description: Bad request - missing coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: No route found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Pin:

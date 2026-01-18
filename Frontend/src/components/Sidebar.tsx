@@ -29,6 +29,21 @@ interface TripPlanResult {
     routePolylines: { mode: string; polyline: string }[];
 }
 
+interface RouteSegment {
+    lineName: string;
+    polyline?: string;
+    departureStop: string;
+    arrivalStop: string;
+    departureLocation?: { lat: number; lng: number };
+    arrivalLocation?: { lat: number; lng: number };
+}
+
+interface RouteData {
+    mode: 'transit' | 'driving';
+    polyline?: string;
+    segments?: RouteSegment[];
+}
+
 interface SidebarProps {
     mapRef: React.MutableRefObject<mapboxgl.Map | null>;
     allPins: Pin[];
@@ -39,10 +54,12 @@ interface SidebarProps {
     onCloseTripPlanner: () => void;
     onTripPlanComplete: (result: TripPlanResult) => void;
     onWideModeChange?: (isWide: boolean) => void;
+    onFlightSelected?: (originCoords: { lat: number; lng: number }, destCoords: { lat: number; lng: number }) => void;
+    onHotelSelected?: (destAirportCoords: { lat: number; lng: number } | undefined, hotelCoords: { lat: number; lng: number }, routeData?: RouteData) => void;
 }
 
 
-export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSearchFocused, showTripPlanner, onCloseTripPlanner, onTripPlanComplete, onWideModeChange }: SidebarProps) {
+export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSearchFocused, showTripPlanner, onCloseTripPlanner, onTripPlanComplete, onWideModeChange, onFlightSelected, onHotelSelected }: SidebarProps) {
     const [activeTab, setActiveTab] = useState<"discovery" | "saved">("discovery");
     const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number }>({ lng: -122.4, lat: 37.8 });
     const [maxDistance, setMaxDistance] = useState(100);
@@ -168,6 +185,9 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
                     onClose={onCloseTripPlanner}
                     onPlanComplete={onTripPlanComplete}
                     onWideModeChange={setIsWide}
+                    mapRef={mapRef}
+                    onFlightSelected={onFlightSelected}
+                    onHotelSelected={onHotelSelected}
                 />
             ) : (
                 <>

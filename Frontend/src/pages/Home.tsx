@@ -81,6 +81,9 @@ function HomePage() {
     const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
     const [showTripPlanner, setShowTripPlanner] = useState<boolean>(false);
     const [tripRoute, setTripRoute] = useState<GeoJSON.FeatureCollection | null>(null);
+    const [flightLine, setFlightLine] = useState<GeoJSON.FeatureCollection | null>(null);
+    const [hotelLine, setHotelLine] = useState<GeoJSON.FeatureCollection | null>(null);
+    const [transferPoints, setTransferPoints] = useState<GeoJSON.FeatureCollection | null>(null);
 
     const onMouseEnter = useCallback(() => setCursor("pointer"), []);
     const onMouseLeave = useCallback(() => setCursor("auto"), []);
@@ -261,8 +264,17 @@ function HomePage() {
                 isLoggedIn={isLoggedIn}
                 isSearchFocused={isSearchFocused}
                 showTripPlanner={showTripPlanner}
-                onCloseTripPlanner={() => setShowTripPlanner(false)}
+                onCloseTripPlanner={() => {
+                    setShowTripPlanner(false);
+                    setFlightLine(null);
+                    setHotelLine(null);
+                    setTransferPoints(null);
+                }}
                 onTripPlanComplete={(result) => {
+                    // Clear selection lines when itinerary is generated
+                    setFlightLine(null);
+                    setHotelLine(null);
+                    setTransferPoints(null);
                     // Decode polylines and create route GeoJSON
                     if (result.routePolylines.length > 0) {
                         const features = result.routePolylines.map((route, idx) => {
@@ -280,6 +292,143 @@ function HomePage() {
                             type: "FeatureCollection",
                             features,
                         } as any);
+                    }
+                }}
+                onFlightSelected={(originCoords, destCoords) => {
+                    // Calculate the shortest path - adjust for antimeridian crossing
+                    let destLng = destCoords.lng;
+                    const lngDiff = destCoords.lng - originCoords.lng;
+                    
+                    // If the longitude difference is greater than 180°, 
+                    // adjust destination to go the "short way" around
+                    if (lngDiff > 180) {
+                        destLng = destCoords.lng - 360;
+                    } else if (lngDiff < -180) {
+                        destLng = destCoords.lng + 360;
+                    }
+                    
+                    // Draw a line between origin and destination airports
+                    setFlightLine({
+                        type: "FeatureCollection",
+                        features: [{
+                            type: "Feature",
+                            properties: { type: "flight" },
+                            geometry: {
+                                type: "LineString",
+                                coordinates: [
+                                    [originCoords.lng, originCoords.lat],
+                                    [destLng, destCoords.lat],
+                                ],
+                            },
+                        }],
+                    } as any);
+                    // Clear hotel line when flight changes
+                    setHotelLine(null);
+                    setTransferPoints(null);
+                }}
+                onHotelSelected={(destAirportCoords, hotelCoords, routeData) => {
+                    // ROYGBIV colors for transit segments
+                    const roygbivColors = [
+                        "#ff0000", // Red
+                        "#ff7f00", // Orange
+                        "#ffff00", // Yellow
+                        "#00ff00", // Green
+                        "#0000ff", // Blue
+                        "#4b0082", // Indigo
+                        "#9400d3", // Violet
+                    ];
+                    
+                    // Check if we have transit route with segments
+                    if (routeData?.mode === 'transit' && routeData.segments && routeData.segments.length > 0) {
+                        // Create features for each segment with different colors
+                        const segmentFeatures: GeoJSON.Feature[] = [];
+                        const transferPointFeatures: GeoJSON.Feature[] = [];
+                        
+                        routeData.segments.forEach((segment, idx) => {
+                            if (segment.polyline) {
+                                const decoded = polyline.decode(segment.polyline);
+                                const colorIdx = idx % roygbivColors.length;
+                                
+                                segmentFeatures.push({
+                                    type: "Feature",
+                                    properties: { 
+                                        type: "transit-segment",
+                                        color: roygbivColors[colorIdx],
+                                        lineName: segment.lineName,
+                                    },
+                                    geometry: {
+                                        type: "LineString",
+                                        coordinates: decoded.map(([lat, lng]: [number, number]) => [lng, lat]),
+                                    },
+                                } as GeoJSON.Feature);
+                                
+                                // Add transfer point (white dot) at the end of each segment except the last
+                                if (idx < routeData.segments!.length - 1 && segment.arrivalLocation) {
+                                    transferPointFeatures.push({
+                                        type: "Feature",
+                                        properties: { 
+                                            type: "transfer-point",
+                                            stopName: segment.arrivalStop,
+                                        },
+                                        geometry: {
+                                            type: "Point",
+                                            coordinates: [segment.arrivalLocation.lng, segment.arrivalLocation.lat],
+                                        },
+                                    } as GeoJSON.Feature);
+                                }
+                            }
+                        });
+                        
+                        if (segmentFeatures.length > 0) {
+                            setHotelLine({
+                                type: "FeatureCollection",
+                                features: segmentFeatures,
+                            });
+                            
+                            if (transferPointFeatures.length > 0) {
+                                setTransferPoints({
+                                    type: "FeatureCollection",
+                                    features: transferPointFeatures,
+                                });
+                            } else {
+                                setTransferPoints(null);
+                            }
+                            return;
+                        }
+                    }
+                    
+                    // Fallback to single polyline (driving or no segments)
+                    if (routeData?.polyline) {
+                        const decoded = polyline.decode(routeData.polyline);
+                        setHotelLine({
+                            type: "FeatureCollection",
+                            features: [{
+                                type: "Feature",
+                                properties: { type: "hotel-route" },
+                                geometry: {
+                                    type: "LineString",
+                                    coordinates: decoded.map(([lat, lng]: [number, number]) => [lng, lat]),
+                                },
+                            }],
+                        } as any);
+                        setTransferPoints(null);
+                    } else if (destAirportCoords) {
+                        // Fallback to straight line
+                        setHotelLine({
+                            type: "FeatureCollection",
+                            features: [{
+                                type: "Feature",
+                                properties: { type: "hotel" },
+                                geometry: {
+                                    type: "LineString",
+                                    coordinates: [
+                                        [destAirportCoords.lng, destAirportCoords.lat],
+                                        [hotelCoords.lng, hotelCoords.lat],
+                                    ],
+                                },
+                            }],
+                        } as any);
+                        setTransferPoints(null);
                     }
                 }}
             />
@@ -529,6 +678,53 @@ function HomePage() {
                                     "line-color": "#22c55e",
                                     "line-width": 4,
                                     "line-opacity": 0.8,
+                                }}
+                            />
+                        </Source>
+                    )}
+
+                    {/* Flight Selection Line */}
+                    {flightLine && (
+                        <Source id="flight-line" type="geojson" data={flightLine as any}>
+                            <Layer
+                                id="flight-line-layer"
+                                type="line"
+                                paint={{
+                                    "line-color": "#3b82f6",
+                                    "line-width": 3,
+                                    "line-opacity": 0.8,
+                                    "line-dasharray": [2, 2],
+                                }}
+                            />
+                        </Source>
+                    )}
+
+                    {/* Hotel Selection Line - supports multi-colored transit segments */}
+                    {hotelLine && (
+                        <Source id="hotel-line" type="geojson" data={hotelLine as any}>
+                            <Layer
+                                id="hotel-line-layer"
+                                type="line"
+                                paint={{
+                                    "line-color": ["coalesce", ["get", "color"], "#e11d48"],
+                                    "line-width": 5,
+                                    "line-opacity": 1,
+                                }}
+                            />
+                        </Source>
+                    )}
+
+                    {/* Transfer Points - white dots at transit transfers */}
+                    {transferPoints && (
+                        <Source id="transfer-points" type="geojson" data={transferPoints as any}>
+                            <Layer
+                                id="transfer-points-layer"
+                                type="circle"
+                                paint={{
+                                    "circle-radius": 8,
+                                    "circle-color": "#ffffff",
+                                    "circle-stroke-color": "#000000",
+                                    "circle-stroke-width": 2,
                                 }}
                             />
                         </Source>
