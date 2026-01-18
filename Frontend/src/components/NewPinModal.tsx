@@ -4,9 +4,6 @@ import { BASE_API_URL } from '../../constants';
 import {reverseGeocode, ReverseGeocodeResult} from "@/utils/geocoding";
 import {CategoryBadge} from "./Post";
 import console from "console";
-import {reverseGeocode, ReverseGeocodeResult} from "@/utils/geocoding";
-import {CategoryBadge} from "./Post";
-import console from "console";
 
 interface NewPinModalProps {
     onClose: () => void;
