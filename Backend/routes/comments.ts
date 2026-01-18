@@ -90,9 +90,11 @@ export function deleteComment(req: Request, res: Response) {
         return;
     }
 
-    const result = db.query("DELETE FROM comment WHERE id = ?", [commentID]);
+    // Use db.prepare().run() for DELETE to get changes count
+    const stmt = db.db.prepare("DELETE FROM comment WHERE id = ?");
+    const result = stmt.run(commentID);
     
-    if ((result as any).changes > 0) {
+    if (result.changes > 0) {
         res.status(200).json({ message: "Comment deleted successfully" });
     } else {
         res.status(500).json({ message: "Failed to delete comment" });

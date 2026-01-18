@@ -369,9 +369,12 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - message
                 properties:
                   message:
                     type: string
+                    example: "Comment deleted successfully"
         401:
           description: Unauthorized - invalid or missing token
           content:
@@ -386,6 +389,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         404:
           description: Comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Failed to delete comment
           content:
             application/json:
               schema:
