@@ -13,7 +13,7 @@ interface DetailedPinModalProps {
     description: string;
     image: string;
     email?: string;
-    address?: ReverseGeocodeResult;
+    address?: string;
   };
   currentUserId: number | null;
   currentUserEmail: string | null;
@@ -38,13 +38,7 @@ interface Comment {
   createdAt: string;
 }
 
-export default function DetailedPinModal({
-  selectedPoint,
-  currentUserId,
-  currentUserEmail,
-  onClose,
-  onUpdate,
-}: DetailedPinModalProps) {
+export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate }: DetailedPinModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState(selectedPoint.description);
   const [image, setImage] = useState(selectedPoint.image);
@@ -60,7 +54,7 @@ export default function DetailedPinModal({
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  console.log(selectedPoint.description)
+  console.log(selectedPoint)
 
   // Fetch comments when modal opens
   useEffect(() => {
@@ -265,7 +259,7 @@ export default function DetailedPinModal({
         <div className="detailed-modal-header">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <h2>{isEditing ? "Edit Pin" : selectedPoint.title}</h2>
-            <p>{selectedPoint.address?.fullAddress}</p>
+            <p>{selectedPoint.address}</p>
           </div>
           <button
             className="detailed-modal-close"

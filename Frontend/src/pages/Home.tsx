@@ -36,7 +36,6 @@ interface SelectedPoint {
     image: string;
     color: string;
     email?: string;
-    address?: ReverseGeocodeResult;
 }
 
 function HomePage() {
@@ -142,6 +141,7 @@ function HomePage() {
                         },
                     })),
                 };
+                console.log(geojson.features.map(f => f.properties.address))
                 setAllPins(geojson);
             } catch (error) {
                 console.error("Error fetching pins:", error);
@@ -237,7 +237,7 @@ function HomePage() {
                     latitude: f.geometry.coordinates[1],
                     longitude: f.geometry.coordinates[0],
                     title: f.properties.title,
-                    message: f.properties.message,
+                    description: f.properties.description,
                     image: f.properties.image,
                     color: f.properties.color,
                     email: f.properties.email
@@ -247,7 +247,7 @@ function HomePage() {
                     latitude: p.latitude,
                     longitude: p.longitude,
                     title: p.title || p.message, // Use message as fallback title
-                    message: p.message,
+                    description: p.description,
                     image: p.image,
                     color: p.color || PIN_COLOR
                 }))}
@@ -373,7 +373,7 @@ function HomePage() {
                                             properties: {
                                                 title: data.title,
                                                 location: typeof pinData.address === "object" ? pinData.address?.name : pinData.address,
-                                                message: data.message,
+                                                description: data.description,
                                                 image: data.image || "",
                                                 color: localStorage.getItem("email") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
                                                 email: userEmail,

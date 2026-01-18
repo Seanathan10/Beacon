@@ -10,7 +10,7 @@ export function getAllPins(req: Request, res: Response) {
 			p.longitude,
 			p.title,
 			p.address,
-			p.description as message,
+			p.description,
 			p.image
 		FROM pin p
 		JOIN account a ON a.id = p.creatorID;
@@ -22,7 +22,7 @@ export function getUserPins(req: Request, res: Response) {
     const userID = req.user.id;
     const results = db.query(`
         SELECT 
-            id, creatorID, latitude, longitude, title, address, description as message, image, likes
+            id, creatorID, latitude, longitude, title, address, description, image, likes
         FROM pin 
         WHERE creatorID = ?;`, [
         userID,
@@ -34,7 +34,7 @@ export function getPin(req: Request, res: Response) {
     const pinID = req.params.id;
     const results = db.query(`
         SELECT 
-            id, creatorID, latitude, longitude, title, address, description as message, image, likes
+            id, creatorID, latitude, longitude, title, address, description, image, likes
         FROM pin 
         WHERE id = ?`, [pinID]);
     res.json(results);
@@ -104,7 +104,7 @@ export function updatePin(req: Request, res: Response) {
     // Return the updated pin
     const updatedPin = db.query(`
         SELECT 
-            id, creatorID, latitude, longitude, title, address, description as message, image, likes
+            id, creatorID, latitude, longitude, title, address, description, image, likes
         FROM pin 
         WHERE id = ?`, [pinID])[0];
     res.json(updatedPin);
@@ -121,12 +121,7 @@ function haversine(theta: number) {
     return (1 - Math.cos(theta)) / 2;
 }
 
-function distBetweenCoordinates(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-) {
+function distBetweenCoordinates(lat1: number, lon1: number, lat2: number, lon2: number) {
     const phi1 = (lat1 * Math.PI) / 180;
     const phi2 = (lat2 * Math.PI) / 180;
     const lambda1 = (lon1 * Math.PI) / 180;
