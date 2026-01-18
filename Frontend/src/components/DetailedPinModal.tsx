@@ -51,12 +51,28 @@ function ModalSection({ header, content }: { header: string, content: any }) {
 
 export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate }: DetailedPinModalProps) {
     const [isEditing, setIsEditing] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [description, setDescription] = useState(selectedPoint.description);
     const [image, setImage] = useState(selectedPoint.image);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    };
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                handleClose();
+            }
+        };
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, []);
 
     // Comments state
     const [comments, setComments] = useState<Comment[]>([]);
@@ -257,9 +273,9 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     };
 
     return (
-        <div className="detailed-modal-overlay" onClick={onClose}>
+        <div className={`detailed-modal-overlay ${isClosing ? 'is-closing' : ''}`} onClick={handleClose}>
             <div
-                className="detailed-modal"
+                className={`detailed-modal ${isClosing ? 'is-closing' : ''}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="detailed-modal-header">
@@ -269,7 +285,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                     </div>
                     <button
                         className="detailed-modal-close"
-                        onClick={onClose}
+                        onClick={handleClose}
                         aria-label="Close"
                     >
                         <svg
@@ -528,12 +544,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                             </>
                         ) : (
                             <>
-                                <button
-                                    className="action-button secondary"
-                                    onClick={onClose}
-                                >
-                                    Close
-                                </button>
+
 
                                 {isOwner ? (
                                     <button
@@ -542,16 +553,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                                     >
                                         Edit Pin
                                     </button>
-                                ) : (
-                                    <a
-                                        href={`https://www.google.com/maps/?q=${selectedPoint.latitude},${selectedPoint.longitude}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="action-button primary"
-                                    >
-                                        Open in Google Maps
-                                    </a>
-                                )}
+                                ) : null}
                             </>
                         )}
                     </div>

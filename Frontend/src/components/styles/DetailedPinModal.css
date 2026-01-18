@@ -24,6 +24,20 @@
     }
 }
 
+.detailed-modal-overlay.is-closing {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 .detailed-modal {
     background: #faf9f7;
     border-radius: 20px;
@@ -49,12 +63,28 @@
     }
 }
 
+.detailed-modal.is-closing {
+    animation: slideDown 0.3s ease forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
 .detailed-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 20px 24px;
-	padding-bottom: 0px;
+    padding-bottom: 0px;
     border-bottom: 1px solid #e5e3df;
 }
 
@@ -473,6 +503,7 @@ textarea {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }

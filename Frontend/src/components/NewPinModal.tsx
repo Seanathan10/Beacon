@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./styles/NewPinModal.css";
 import { BASE_API_URL } from '../../constants';
 import { reverseGeocode, ReverseGeocodeResult } from "@/utils/geocoding";
@@ -41,8 +41,24 @@ export default function NewPinModal({
     const [isDragging, setIsDragging] = useState(false);
 
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [isClosing, setIsClosing] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 400);
+    };
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                handleClose();
+            }
+        };
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, []);
 
     const handleFileSelect = (file: File) => {
         setUploadError(null);
@@ -198,12 +214,12 @@ export default function NewPinModal({
 
 
     return (
-        <div className="pin-modal-overlay" onClick={onClose}>
-            <div className="pin-modal" onClick={(e) => e.stopPropagation()}>
+        <div className={`pin-modal-overlay ${isClosing ? 'is-closing' : ''}`} onClick={handleClose}>
+            <div className={`pin-modal ${isClosing ? 'is-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
                 <header className="pin-modal__header">
                     <button
                         className="pin-modal__close"
-                        onClick={onClose}
+                        onClick={handleClose}
                         aria-label="Close modal"
                     >
                         <svg
@@ -439,7 +455,7 @@ export default function NewPinModal({
                     <div className="pin-modal__actions">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="pin-modal__btn pin-modal__btn--secondary"
                             disabled={isUploading}
                         >

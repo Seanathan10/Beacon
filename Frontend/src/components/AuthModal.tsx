@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BASE_API_URL } from '../../constants';
 
 type AuthMode = "login" | "register";
@@ -20,6 +20,25 @@ export default function AuthModal({
         email: "",
         password: "",
     });
+
+    const [isClosing, setIsClosing] = useState(false);
+
+    const handleClose = () => {
+        if (onClose) {
+            setIsClosing(true);
+            setTimeout(onClose, 500);
+        }
+    };
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isOpen) {
+                handleClose();
+            }
+        };
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [isOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -58,9 +77,9 @@ export default function AuthModal({
             if (!response.ok) {
                 throw new Error(
                     data.message ||
-                        (authMode === "register"
-                            ? "Registration failed"
-                            : "Login failed"),
+                    (authMode === "register"
+                        ? "Registration failed"
+                        : "Login failed"),
                 );
             }
 
@@ -87,8 +106,8 @@ export default function AuthModal({
     if (!isOpen) return null;
 
     return (
-        <div className="auth-modal-overlay" onClick={onClose}>
-            <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+        <div className={`auth-modal-overlay ${isClosing ? 'is-closing' : ''}`} onClick={handleClose}>
+            <div className={`auth-modal ${isClosing ? 'is-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div className="auth-modal-header">
                     <div className="auth-brand">
                         <svg
@@ -177,8 +196,8 @@ export default function AuthModal({
                         {isLoading
                             ? "Please wait..."
                             : authMode === "login"
-                              ? "Sign In"
-                              : "Create Account"}
+                                ? "Sign In"
+                                : "Create Account"}
                     </button>
                 </form>
 
