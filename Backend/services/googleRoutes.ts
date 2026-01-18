@@ -160,6 +160,20 @@ export async function searchTransit(
     const data = await response.json();
     const routes: Route[] = data.routes || [];
 
+    console.log("[searchTransit] API Response:", {
+        routeCount: routes.length,
+        origin: typeof origin === "string" ? origin : `${origin.lat},${origin.lng}`,
+        destination: typeof destination === "string" ? destination : `${destination.lat},${destination.lng}`,
+        departureTime,
+        firstRouteInfo: routes[0] ? {
+            duration: routes[0].duration,
+            distanceMeters: routes[0].distanceMeters,
+            hasPolyline: !!routes[0].polyline?.encodedPolyline,
+            legCount: routes[0].legs?.length,
+            stepCount: routes[0].legs?.[0]?.steps?.length,
+        } : "No routes returned",
+    });
+
     return routes.map((route) => {
         const durationSeconds = parseDuration(route.duration);
         const distanceKm = route.distanceMeters / 1000;

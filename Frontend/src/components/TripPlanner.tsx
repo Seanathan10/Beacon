@@ -70,6 +70,7 @@ interface TripOptionsData {
     destCoords?: { lat: number; lng: number };
     originAirportCoords?: { lat: number; lng: number };
     destAirportCoords?: { lat: number; lng: number };
+    destAirportCode?: string;
     itineraryType: string;
     durationDays: number;
     transitOptions: TransitOption[];
@@ -216,7 +217,6 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<TripPlanResult | null>(null);
-    const [selectedTransit, setSelectedTransit] = useState<number>(0);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
     const [isAskingAI, setIsAskingAI] = useState(false);
@@ -576,6 +576,11 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
             // Fetch transit/driving route between airport and hotel
             try {
+                // Use airport code + "Airport" and hotel address for more reliable transit routing
+                const airportAddress = optionsData.destAirportCode
+                    ? `${optionsData.destAirportCode} Airport`
+                    : undefined;
+
                 const response = await fetch(`${BASE_API_URL}/api/trip/local-route`, {
                     method: 'POST',
                     headers: {
@@ -583,10 +588,14 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                     },
                     body: JSON.stringify({
-                        originLat: optionsData.destAirportCoords.lat,
-                        originLng: optionsData.destAirportCoords.lng,
-                        destLat: hotel.location.lat,
-                        destLng: hotel.location.lng,
+                        // Pass addresses for transit search (more reliable)
+                        originAddress: airportAddress,
+                        destAddress: hotel.address,
+                        // Also include coordinates as fallback for driving route
+                        originLat: optionsData.destAirportCoords?.lat,
+                        originLng: optionsData.destAirportCoords?.lng,
+                        destLat: hotel.location?.lat,
+                        destLng: hotel.location?.lng,
                         departureTime: departureTimeStr
                     }),
                 });
@@ -984,81 +993,80 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             </div>
                         </div>
 
-                        {/* Transit Options */}
-                        <div className="transit-options">
-                            <h3>🚀 Travel Options</h3>
-                            <div className="transit-grid">
-                                {result.transitOptions.map((option, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`transit-card ${selectedTransit === idx ? 'selected' : ''}`}
-                                        onClick={() => setSelectedTransit(idx)}
-                                    >
-                                        <div className="transit-icon">{getModeIcon(option.mode)}</div>
-                                        <div className="transit-info">
-                                            <div className="transit-mode">
-                                                {option.mode === 'flight' && option.flightNumber
-                                                    ? renderFlightNumbers(option.flightNumber)
-                                                    : option.mode.charAt(0).toUpperCase() + option.mode.slice(1)}
-                                            </div>
-                                            {option.mode === 'flight' && option.stops !== undefined && (
-                                                <span className={`transit-stops ${option.stops === 0 ? 'nonstop' : ''}`}>
-                                                    {option.stops === 0 ? 'Nonstop' : `${option.stops} stop${option.stops > 1 ? 's' : ''}`}
-                                                </span>
-                                            )}
-                                            <span className="transit-duration">{formatDuration(option.duration)}</span>
-                                            <div className="transit-price-row">
-                                                {option.price && <span className="transit-price">{option.price}</span>}
-                                                {option.bookingUrl && (
-                                                    <a
-                                                        href={option.bookingUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="transit-book-link"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        Book ↗
-                                                    </a>
-                                                )}
-                                            </div>
+                        {/* Selected Flight - Display Only */}
+                        {selectedTransitIndex !== null && result.transitOptions[selectedTransitIndex] && (
+                            <div className="selected-flight-section">
+                                <h3>✈️ Your Flight</h3>
+                                <div className="selected-flight-card">
+                                    <div className="selected-flight-icon">{getModeIcon(result.transitOptions[selectedTransitIndex].mode)}</div>
+                                    <div className="selected-flight-info">
+                                        <div className="selected-flight-number">
+                                            {result.transitOptions[selectedTransitIndex].mode === 'flight' && result.transitOptions[selectedTransitIndex].flightNumber
+                                                ? renderFlightNumbers(result.transitOptions[selectedTransitIndex].flightNumber!)
+                                                : result.transitOptions[selectedTransitIndex].mode.charAt(0).toUpperCase() + result.transitOptions[selectedTransitIndex].mode.slice(1)}
                                         </div>
-                                        <div className="transit-carbon" style={{ backgroundColor: option.carbonRating.color + '20', color: option.carbonRating.color }}>
-                                            {option.carbonKg} kg CO₂
+                                        {result.transitOptions[selectedTransitIndex].mode === 'flight' && result.transitOptions[selectedTransitIndex].stops !== undefined && (
+                                            <span className={`transit-stops ${result.transitOptions[selectedTransitIndex].stops === 0 ? 'nonstop' : ''}`}>
+                                                {result.transitOptions[selectedTransitIndex].stops === 0 ? 'Nonstop' : `${result.transitOptions[selectedTransitIndex].stops} stop${result.transitOptions[selectedTransitIndex].stops! > 1 ? 's' : ''}`}
+                                            </span>
+                                        )}
+                                        <span className="selected-flight-duration">{formatDuration(result.transitOptions[selectedTransitIndex].duration)}</span>
+                                        <div className="selected-flight-details">
+                                            {result.transitOptions[selectedTransitIndex].price && (
+                                                <span className="selected-flight-price">{result.transitOptions[selectedTransitIndex].price}</span>
+                                            )}
+                                            <span
+                                                className="selected-flight-carbon"
+                                                style={{
+                                                    backgroundColor: result.transitOptions[selectedTransitIndex].carbonRating.color + '20',
+                                                    color: result.transitOptions[selectedTransitIndex].carbonRating.color
+                                                }}
+                                            >
+                                                {result.transitOptions[selectedTransitIndex].carbonKg} kg CO₂
+                                            </span>
+                                        </div>
+                                        {result.transitOptions[selectedTransitIndex].bookingUrl && (
+                                            <a
+                                                href={result.transitOptions[selectedTransitIndex].bookingUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="selected-flight-book-btn"
+                                            >
+                                                Book Flight →
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Selected Hotel - Display Only */}
+                        {selectedHotelIndex !== null && result.ecoHotels && result.ecoHotels[selectedHotelIndex] && (
+                            <div className="selected-hotel-section">
+                                <h3>🏨 Your Accommodation</h3>
+                                <div className="selected-hotel-card">
+                                    <div className="selected-hotel-info">
+                                        <span className="selected-hotel-name">{result.ecoHotels[selectedHotelIndex].name}</span>
+                                        {result.ecoHotels[selectedHotelIndex].rating && (
+                                            <span className="selected-hotel-rating">⭐ {result.ecoHotels[selectedHotelIndex].rating} ({result.ecoHotels[selectedHotelIndex].userRatingCount})</span>
+                                        )}
+                                        {result.ecoHotels[selectedHotelIndex].editorialSummary && (
+                                            <p className="selected-hotel-summary">{result.ecoHotels[selectedHotelIndex].editorialSummary}</p>
+                                        )}
+                                        <p className="selected-hotel-address">{result.ecoHotels[selectedHotelIndex].address}</p>
+                                        <div className="selected-hotel-links">
+                                            {result.ecoHotels[selectedHotelIndex].websiteUri && (
+                                                <a href={result.ecoHotels[selectedHotelIndex].websiteUri} target="_blank" rel="noopener noreferrer" className="selected-hotel-link">
+                                                    Website ↗
+                                                </a>
+                                            )}
+                                            {result.ecoHotels[selectedHotelIndex].googleMapsUri && (
+                                                <a href={result.ecoHotels[selectedHotelIndex].googleMapsUri} target="_blank" rel="noopener noreferrer" className="selected-hotel-link">
+                                                    Maps 📍
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Eco Hotels */}
-                        {result.ecoHotels && result.ecoHotels.length > 0 && (
-                            <div className="eco-hotels-section">
-                                <h3>🏨 Eco-Friendly Stays</h3>
-                                <div className="eco-hotels-grid">
-                                    {result.ecoHotels.slice(0, 4).map((hotel) => (
-                                        <div key={hotel.id} className="eco-hotel-card">
-                                            <div className="eco-hotel-header">
-                                                <span className="hotel-name">{hotel.name}</span>
-                                                {hotel.priceLevel && <span className="hotel-price">{hotel.priceLevel}</span>}
-                                            </div>
-                                            <div className="eco-hotel-rating">
-                                                {hotel.rating && <span>⭐ {hotel.rating} ({hotel.userRatingCount})</span>}
-                                            </div>
-                                            <p className="hotel-summary">{hotel.editorialSummary || hotel.address}</p>
-                                            <div className="hotel-links">
-                                                {hotel.websiteUri && (
-                                                    <a href={hotel.websiteUri} target="_blank" rel="noopener noreferrer" className="hotel-link">
-                                                        Website ↗
-                                                    </a>
-                                                )}
-                                                {hotel.googleMapsUri && (
-                                                    <a href={hotel.googleMapsUri} target="_blank" rel="noopener noreferrer" className="hotel-link">
-                                                        Maps 📍
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         )}
@@ -1066,6 +1074,24 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                         {/* Itinerary */}
                         <div className="itinerary-section">
                             <h3>📅 Your Itinerary</h3>
+
+                            {/* Trip Overview with Flight & Hotel Reference */}
+                            <div className="itinerary-overview">
+                                {selectedTransitIndex !== null && result.transitOptions[selectedTransitIndex] && (
+                                    <p className="itinerary-travel-ref">
+                                        <strong>Travel:</strong> {result.transitOptions[selectedTransitIndex].mode === 'flight' && result.transitOptions[selectedTransitIndex].flightNumber
+                                            ? `Flight ${result.transitOptions[selectedTransitIndex].flightNumber!.split('|')[0].trim()}`
+                                            : result.transitOptions[selectedTransitIndex].mode.charAt(0).toUpperCase() + result.transitOptions[selectedTransitIndex].mode.slice(1)}
+                                        {' • '}{formatDuration(result.transitOptions[selectedTransitIndex].duration)}
+                                    </p>
+                                )}
+                                {selectedHotelIndex !== null && result.ecoHotels && result.ecoHotels[selectedHotelIndex] && (
+                                    <p className="itinerary-hotel-ref">
+                                        <strong>Stay:</strong> {result.ecoHotels[selectedHotelIndex].name}
+                                    </p>
+                                )}
+                            </div>
+
                             <p className="itinerary-summary">{result.itinerary.summary}</p>
 
                             {result.itinerary.days.map((day) => (

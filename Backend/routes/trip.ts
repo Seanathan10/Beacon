@@ -533,6 +533,7 @@ export async function planTripStream(req: Request, res: Response) {
             destCoords: destCoords || undefined,
             originAirportCoords: originAirport ? getAirportCoordinates(originAirport) : undefined,
             destAirportCoords: destAirport ? getAirportCoordinates(destAirport) : undefined,
+            destAirportCode: destAirport || undefined,
             itineraryType,
             durationDays,
             transitOptions,
@@ -942,19 +943,37 @@ export async function generateItineraryWithSelections(req: Request, res: Respons
  */
 export async function getLocalRoute(req: Request, res: Response) {
     try {
-        const { originLat, originLng, destLat, destLng, departureTime } = req.body;
+        const { originLat, originLng, destLat, destLng, originAddress, destAddress, departureTime } = req.body;
 
-        if (!originLat || !originLng || !destLat || !destLng) {
-            return res.status(400).json({ error: "Missing coordinates" });
+        // Prefer addresses for transit search (more reliable), fall back to coordinates
+        const origin = originAddress || (originLat && originLng ? { lat: originLat, lng: originLng } : null);
+        const destination = destAddress || (destLat && destLng ? { lat: destLat, lng: destLng } : null);
+
+        if (!origin || !destination) {
+            return res.status(400).json({ error: "Missing origin or destination (provide addresses or coordinates)" });
         }
 
-        const origin = { lat: originLat, lng: originLng };
-        const destination = { lat: destLat, lng: destLng };
+        console.log("[LocalRoute] Request:", {
+            origin,
+            destination,
+            departureTime,
+        });
 
-        // Try transit first
+        // Try public transit first (any mode: metro, train, bus, etc.)
         try {
             // Pass departureTime if available, otherwise it defaults to now
+            console.log("[LocalRoute] Searching for transit routes...");
             const transitResults = await searchTransit(origin, destination, departureTime);
+            console.log("[LocalRoute] Transit results:", {
+                count: transitResults.length,
+                firstRoute: transitResults[0] ? {
+                    duration: transitResults[0].duration,
+                    distanceKm: transitResults[0].distanceKm,
+                    segmentCount: transitResults[0].segments.length,
+                    hasPolyline: !!transitResults[0].polyline,
+                    segmentsWithPolylines: transitResults[0].segments.filter(s => s.polyline).length,
+                } : null,
+            });
             if (transitResults.length > 0) {
                 const bestRoute = transitResults[0];
                 // Return segments for multi-colored rendering

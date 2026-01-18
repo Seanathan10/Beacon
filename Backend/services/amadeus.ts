@@ -102,14 +102,28 @@ function parseDurationToMinutes(duration: string): number {
 
 /**
  * Estimate CO2 emissions for a flight.
- * Average: ~0.255 kg CO2 per passenger-km for short-haul, ~0.195 for long-haul.
- * Using a simplified estimate based on duration.
+ * Uses distance-based emission factors aligned with Google/ICAO methodology.
+ * Factors are per passenger-km for economy class.
  */
 function estimateFlightCarbon(durationMinutes: number): number {
-    // Rough estimate: average speed 800 km/h, so distance ≈ (duration/60) * 800
-    const distanceKm = (durationMinutes / 60) * 800;
-    // Use 0.22 kg CO2/km as a middle estimate
-    return Math.round(distanceKm * 0.22);
+    // Estimate distance: average cruise speed ~850 km/h
+    const distanceKm = (durationMinutes / 60) * 850;
+
+    // Use distance-based emission factors (kg CO2 per passenger-km)
+    // Based on ICAO Carbon Emissions Calculator methodology
+    let factor: number;
+    if (distanceKm < 1500) {
+        // Short-haul: higher emissions due to takeoff/landing proportion
+        factor = 0.255;
+    } else if (distanceKm < 4000) {
+        // Medium-haul
+        factor = 0.156;
+    } else {
+        // Long-haul: more efficient per km
+        factor = 0.109;
+    }
+
+    return Math.round(distanceKm * factor);
 }
 
 /**

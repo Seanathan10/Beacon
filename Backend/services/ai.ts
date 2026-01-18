@@ -115,7 +115,49 @@ Transit context: ${transitSummary}
 
 Generate a detailed itinerary with sustainability tips and carbon offset suggestions.`;
 
-    const response = await ai.models.generateContent({
+    // Helper to parse response
+    const parseResponse = (response: Awaited<ReturnType<typeof ai.models.generateContent>>): ItineraryResult | null => {
+        if (response.parsed) {
+            return response.parsed as unknown as ItineraryResult;
+        } else if (response.text) {
+            try {
+                return JSON.parse(response.text) as ItineraryResult;
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    };
+
+    // First attempt: with grounding (may fail with empty content on some model versions)
+    try {
+        const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {
+                    role: "user",
+                    parts: [{ text: prompt }],
+                },
+            ],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: itinerarySchema,
+                tools: [{ googleSearch: {} }], // Enable Grounding
+            },
+        });
+
+        const result = parseResponse(response);
+        if (result) {
+            return result;
+        }
+        // If response is empty, fall through to retry without grounding
+        console.warn("Gemini returned empty content with grounding enabled, retrying without grounding...");
+    } catch (err) {
+        console.warn("Grounded request failed, retrying without grounding:", err);
+    }
+
+    // Fallback: without grounding (more reliable for structured JSON output)
+    const fallbackResponse = await ai.models.generateContent({
         model: GEMINI_MODEL,
         contents: [
             {
@@ -126,17 +168,16 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
         config: {
             responseMimeType: "application/json",
             responseSchema: itinerarySchema,
-            tools: [{ googleSearch: {} }], // Enable Grounding
+            // No grounding - more reliable for structured output
         },
     });
 
-    if (response.parsed) {
-        return response.parsed as unknown as ItineraryResult;
-    } else if (response.text) {
-        return JSON.parse(response.text) as ItineraryResult;
-    } else {
-        throw new Error(`Failed to generate valid itinerary JSON. Response: ${JSON.stringify(response)}`);
+    const fallbackResult = parseResponse(fallbackResponse);
+    if (fallbackResult) {
+        return fallbackResult;
     }
+
+    throw new Error(`Failed to generate valid itinerary JSON. Response: ${JSON.stringify(fallbackResponse)}`);
 }
 
 /**
