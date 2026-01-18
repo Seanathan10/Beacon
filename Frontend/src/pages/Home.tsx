@@ -270,6 +270,7 @@ function HomePage() {
                             })
                         }
                         onFocusChange={(focused) => setIsSearchFocused(focused)}
+                        isFocused={isSearchFocused}
                     />
                 </div>
 
@@ -283,7 +284,7 @@ function HomePage() {
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
                             <span className="user-email">
-                                {userEmail || "Account"}
+                                {userEmail.split("@")[0] || "Account"}
                             </span>
                             <svg
                                 className={`chevron ${isDropdownOpen ? "open" : ""}`}

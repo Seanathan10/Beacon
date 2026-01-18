@@ -13,6 +13,7 @@ interface SearchBarProps {
         address?: any;
     }) => void;
     onFocusChange?: (isFocused: boolean) => void;
+    isFocused?: boolean;
 }
 
 export default function SearchBar({
@@ -20,6 +21,7 @@ export default function SearchBar({
     searchMarkerRef,
     onSelectPlace,
     onFocusChange,
+    isFocused,
 }: SearchBarProps) {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -165,7 +167,7 @@ export default function SearchBar({
                 </button>
             </form>
 
-            {searchResults.length > 0 && (
+            {isFocused && searchResults.length > 0 && (
                 <ul className="search-results">
                     {searchResults.map((suggestion) => (
                         <li
