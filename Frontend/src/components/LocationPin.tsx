@@ -41,6 +41,10 @@ export default function LocationPin({
 			? `${messageText.slice(0, 50).trimEnd()}...`
 			: messageText;
 
+	const onLike = () => {
+		console.log("like")
+	}
+
 	return (
 		<Popup
 			longitude={selectedPoint.longitude}
