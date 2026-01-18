@@ -95,8 +95,6 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-    console.log(selectedPoint)
-
     // Fetch comments when modal opens
     useEffect(() => {
         if (selectedPoint.id) {
@@ -325,7 +323,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                 <div className="detailed-modal-header">
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <h2>{isEditing ? "Edit Pin" : selectedPoint.title}</h2>
-                        <p style={{ margin: 0 }}>{selectedPoint.address}</p>
+                        <p style={{ margin: 0, color: "black" }}>{selectedPoint.address}</p>
                     </div>
                     <div className="detailed-modal-header-actions">
                         <button

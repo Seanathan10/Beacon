@@ -55,7 +55,6 @@ export function getPin(req: Request, res: Response) {
 }
 
 export function createPin(req: Request, res: Response) {
-    console.log("Creating pin with data:", req.body, req.body.tags, JSON.stringify(req.body.tags));
     const results = db.query(`
 		INSERT INTO pin(creatorID, latitude, longitude, title, address, description, image, tags)
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?)

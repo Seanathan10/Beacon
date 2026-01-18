@@ -126,17 +126,17 @@ export async function reverseGeocode(
     lat: number,
     lon: number,
 ): Promise<ReverseGeocodeResult> {
-    console.log("Preparing to reverse geocode:", { lat, lon });
+    // console.log("Preparing to reverse geocode:", { lat, lon });
     const accessToken = import.meta.env.VITE_LOCATIONIQ_TOKEN;
 
-    console.log("Using LocationIQ access token:", accessToken ? "Yes" : "No");
+    // console.log("Using LocationIQ access token:", accessToken ? "Yes" : "No");
 
     if (!accessToken) {
         throw new Error(
             "LocationIQ access token not configured. Set VITE_LOCATIONIQ_TOKEN in your environment.",
         );
     }
-    console.log("Starting reverse geocoding request...");
+    // console.log("Starting reverse geocoding request...");
 
     const url = new URL("https://us1.locationiq.com/v1/reverse");
     url.searchParams.set("key", accessToken);
@@ -154,10 +154,10 @@ export async function reverseGeocode(
             `Reverse geocoding failed: ${response.statusText} - ${errorText}`,
         );
     }
-    console.log("Reverse geocoding response status:", response.status);
+    // console.log("Reverse geocoding response status:", response.status);
 
     const data: LocationIQResponse = await response.json();
-    console.log("Reverse geocoding data:", data);
+    // console.log("Reverse geocoding data:", data);
     if (!data || !data.address) {
         return {
             name: "Unknown Location",

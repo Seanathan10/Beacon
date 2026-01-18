@@ -44,7 +44,6 @@ function HomePage() {
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                console.log("sending API heartbeat")
                 const base = import.meta.env.VITE_API_BASE;
                 const res = await fetch(`${base}/heartbeat`);
 
@@ -158,7 +157,6 @@ function HomePage() {
                         },
                     })),
                 };
-                console.log(geojson.features.map(f => f.properties.address))
                 setAllPins(geojson);
             } catch (error) {
                 console.error("Error fetching pins:", error);
@@ -192,21 +190,14 @@ function HomePage() {
 
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
         // Check if we clicked on a point feature
-        // console.log("Map clicked at:", e.lngLat);
         const features = e.target.queryRenderedFeatures(e.point, {
             layers: ["point"],
         });
 
         const { lat, lng } = e.lngLat;
-        console.log("Map clicked at:", lat, lng);
-
         const result = await reverseGeocode(lat, lng);
-
-        console.log("Reverse geocode result:", result);
-        // console.log("Features at click:", features);
         if (features && features.length > 0) {
             const feature = features[0];
-            console.log("Clicked on feature:", result);
             const coords = (feature.geometry as any).coordinates;
             setSelectedPoint({
                 id: feature.properties?.id,
@@ -214,7 +205,6 @@ function HomePage() {
                 longitude: coords[0],
                 latitude: coords[1],
                 title: feature.properties?.title || "",
-                // location: feature.properties?.location || "",
                 description: feature.properties?.description || "No description provided.",
                 image: feature.properties?.image || "",
                 color: feature.properties?.color || PIN_COLOR,
@@ -226,9 +216,6 @@ function HomePage() {
             return;
         }
 
-        // Otherwise, handle as a new pin creation
-
-        console.log("Creating new pin at:", lat, lng);
         setSelectedPoint(null);
         setPinData({
             lat,
@@ -237,15 +224,10 @@ function HomePage() {
             address: result.fullAddress || "Unknown Location",
             email: userEmail || "",
         });
-        console.log("Set pin data to:", {
-            lat,
-            lng,
-        });
     };
 
 
     const handleDiscoverClick = () => {
-        // console.log('Discover button clicked');
         navigate("/explore");
     };
 
