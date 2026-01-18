@@ -316,9 +316,9 @@ export default function NewPinModal({
                     <div className="pin-modal__field">
                         <label className="pin-modal__label">
                             Tags
-                            <span className="pin-modal__label-hint">
+                            {/* <span className="pin-modal__label-hint">
                                 optional
-                            </span>
+                            </span> */}
                         </label>
 
                         <div className="pin-modal__horizontal" style={{ flexWrap: "wrap", gap: "4px", justifyContent: 'space-evenly' }}>
@@ -369,9 +369,9 @@ export default function NewPinModal({
                         <div className="pin-modal__field">
                             <label className="pin-modal__label">
                                 Photo
-                                <span className="pin-modal__label-hint">
+                                {/* <span className="pin-modal__label-hint">
                                     optional
-                                </span>
+                                </span> */}
                             </label>
 
                             {imagePreview ? (
