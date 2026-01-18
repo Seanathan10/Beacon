@@ -270,6 +270,7 @@ function HomePage() {
                             })
                         }
                         onFocusChange={(focused) => setIsSearchFocused(focused)}
+                        isFocused={isSearchFocused}
                     />
                 </div>
 
