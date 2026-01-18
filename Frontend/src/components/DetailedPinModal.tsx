@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./styles/DetailedPinModal.css";
 import { BASE_API_URL, PIN_COLOR } from '../../constants';
 import { ReverseGeocodeResult } from "@/utils/geocoding";
@@ -31,9 +31,10 @@ const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit
 
 interface Comment {
     id: number;
-    userId: number;
-    userEmail: string;
-    text: string;
+    accountID: number;
+    pinID: number;
+    email: string;
+    comment: string;
     createdAt: string;
 }
 
@@ -52,10 +53,115 @@ export default function DetailedPinModal({
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Comments state (GUI only, no functionality)
-    const [comments] = useState<Comment[]>([]);
+    // Comments state
+    const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [showAllComments, setShowAllComments] = useState(false);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+    // Fetch comments when modal opens
+    useEffect(() => {
+        if (selectedPoint.id) {
+            fetchComments();
+        }
+    }, [selectedPoint.id]);
+
+    const fetchComments = async () => {
+        if (!selectedPoint.id) return;
+        
+        setIsLoadingComments(true);
+        try {
+            const response = await fetch(
+                `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                    },
+                }
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data);
+            } else {
+                console.error("Failed to fetch comments");
+            }
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+        } finally {
+            setIsLoadingComments(false);
+        }
+    };
+
+    const handleSubmitComment = async () => {
+        if (!newComment.trim() || !selectedPoint.id) return;
+        
+        if (newComment.length > 280) {
+            alert("Comment must be 280 characters or less");
+            return;
+        }
+
+        setIsSubmittingComment(true);
+        try {
+            const response = await fetch(
+                `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                    },
+                    body: JSON.stringify({ comment: newComment.trim() }),
+                }
+            );
+            
+            if (response.ok) {
+                const newCommentData = await response.json();
+                setComments([newCommentData, ...comments]);
+                setNewComment("");
+            } else {
+                let errorMessage = "Failed to post comment";
+                try {
+                    const error = await response.json();
+                    errorMessage = error.message || errorMessage;
+                } catch {
+                    errorMessage = `Failed to post comment (${response.status})`;
+                }
+                alert(errorMessage);
+            }
+        } catch (error) {
+            console.error("Error posting comment:", error);
+            alert("Failed to post comment. Please check your connection.");
+        } finally {
+            setIsSubmittingComment(false);
+        }
+    };
+
+    const handleDeleteComment = async (commentId: number) => {
+        if (!confirm("Delete this comment?")) return;
+
+        try {
+            const response = await fetch(
+                `${BASE_API_URL}/api/comments/${commentId}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                    },
+                }
+            );
+            
+            if (response.ok) {
+                setComments(comments.filter(c => c.id !== commentId));
+            } else {
+                alert("Failed to delete comment");
+            }
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+            alert("Failed to delete comment");
+        }
+    };
 
     // const isOwner =
     //     currentUserId != null &&
@@ -316,66 +422,112 @@ export default function DetailedPinModal({
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
                                             rows={1}
+                                            maxLength={280}
+                                            disabled={isSubmittingComment}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSubmitComment();
+                                                }
+                                            }}
                                         />
                                         <button 
                                             className="comment-submit-btn"
-                                            disabled={!newComment.trim()}
+                                            disabled={!newComment.trim() || isSubmittingComment}
+                                            onClick={handleSubmitComment}
                                         >
-                                            <svg
-                                                width="18"
-                                                height="18"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            >
-                                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                            </svg>
+                                            {isSubmittingComment ? (
+                                                <svg
+                                                    width="18"
+                                                    height="18"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    className="spinning"
+                                                >
+                                                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                                                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                                                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                                                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                                                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                                                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                                                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                                                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                                                </svg>
+                                            ) : (
+                                                <svg
+                                                    width="18"
+                                                    height="18"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                >
+                                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                                </svg>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
 
+                                {/* Loading State */}
+                                {isLoadingComments && (
+                                    <div className="comments-loading">Loading comments...</div>
+                                )}
+
+                                {/* Empty State */}
+                                {!isLoadingComments && comments.length === 0 && (
+                                    <div className="comments-empty">
+                                        No comments yet. Be the first to comment!
+                                    </div>
+                                )}
+
                                 {/* Comments List */}
-                                <div className="comments-list">
-                                    {(showAllComments ? comments : comments.slice(0, 2)).map((comment) => (
-                                        <div key={comment.id} className="comment-item">
-                                            <div className="comment-avatar">
-                                                {comment.userEmail.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="comment-content">
-                                                <div className="comment-header">
-                                                    <span className="comment-author">
-                                                        {comment.userEmail}
-                                                    </span>
-                                                    <span className="comment-time">
-                                                        {new Date(comment.createdAt).toLocaleDateString('en-US', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                        })}
-                                                    </span>
+                                {!isLoadingComments && comments.length > 0 && (
+                                    <div className="comments-list">
+                                        {(showAllComments ? comments : comments.slice(0, 2)).map((comment) => (
+                                            <div key={comment.id} className="comment-item">
+                                                <div className="comment-avatar">
+                                                    {comment.email.charAt(0).toUpperCase()}
                                                 </div>
-                                                <p className="comment-text">{comment.text}</p>
-                                                <div className="comment-actions">
-                                                    <button className="comment-action-btn">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                                                        </svg>
-                                                        Like
-                                                    </button>
-                                                    <button className="comment-action-btn">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                                                        </svg>
-                                                        Reply
-                                                    </button>
+                                                <div className="comment-content">
+                                                    <div className="comment-header">
+                                                        <span className="comment-author">
+                                                            {comment.email.split('@')[0]}
+                                                        </span>
+                                                        <span className="comment-time">
+                                                            {new Date(comment.createdAt).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="comment-text">{comment.comment}</p>
+                                                    {currentUserEmail === comment.email && (
+                                                        <div className="comment-actions">
+                                                            <button 
+                                                                className="comment-action-btn delete"
+                                                                onClick={() => handleDeleteComment(comment.id)}
+                                                            >
+                                                                <svg width="14" height="14" viewBox="0 0 24 24\" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                                </svg>
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Show More/Less Button */}
                                 {comments.length > 2 && (
