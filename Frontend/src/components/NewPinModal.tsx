@@ -15,7 +15,7 @@ interface NewPinModalProps {
     }) => void;
     latitude: number;
     longitude: number;
-    address?: ReverseGeocodeResult;
+    address?: string;
 }
 
 const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit for Vercel Blob
@@ -30,7 +30,7 @@ export default function NewPinModal({
     longitude,
     address,
 }: NewPinModalProps) {
-    const [title, setTitle] = useState(address?.name && address?.name.toLowerCase() !== "unknown location" ? address?.name : "");
+    const [title, setTitle] = useState(address && address?.toLowerCase() !== "unknown location" ? address : "");
     const [message, setMessage] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -266,7 +266,7 @@ export default function NewPinModal({
                             />
                         </svg>
                         <span>
-                            {address?.name}, {formatCoordinate(latitude, true)}{" "}
+                            {address}, {formatCoordinate(latitude, true)}{" "}
                             {formatCoordinate(longitude, false)}
                         </span>
                     </div>

@@ -6,7 +6,7 @@ import {ReverseGeocodeResult} from "@/utils/geocoding";
 import {data} from "react-router";
 
 interface PinProps {
-	address?: ReverseGeocodeResult;
+	address?: string;
 	latitude: number;
     longitude: number;
     isLoading?: boolean;
@@ -29,8 +29,8 @@ export default function Pin({
     onDetails,
     onPinCreated,
 }: PinProps) {
-    // console.log("[Pin.tsx]   " + latitude);
-    // console.log("[Pin.tsx]   " + longitude);
+    console.log("[Pin.tsx]   " + latitude);
+    console.log("[Pin.tsx]   " + longitude);
 
     const [modalIsOpen, setModalOpen] = useState<boolean>(false);
 
@@ -57,7 +57,7 @@ export default function Pin({
                             {isLoading ? (
                                 <span className="loading-text">Loading...</span>
                             ) : (
-                                address?.name || "Unknown Location"
+                                address || "Unknown Location"
                             )}
                         </div>
                         <button

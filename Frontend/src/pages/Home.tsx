@@ -21,7 +21,7 @@ interface PinData {
     lat: number;
     lng: number;
     isLoading: boolean;
-    address: ReverseGeocodeResult | string | undefined;
+    address: string;
     email: string;
 }
 
@@ -181,9 +181,11 @@ function HomePage() {
         });
 
         const { lat, lng } = e.lngLat;
+        console.log("Map clicked at:", lat, lng);
 
         const result = await reverseGeocode(lat, lng);
 
+        console.log("Reverse geocode result:", result);
         // console.log("Features at click:", features);
         if (features && features.length > 0) {
             const feature = features[0];
@@ -208,13 +210,19 @@ function HomePage() {
         }
 
         // Otherwise, handle as a new pin creation
+
+        console.log("Creating new pin at:", lat, lng);
         setSelectedPoint(null);
         setPinData({
             lat,
             lng,
-            address: result || "Unknown Location",
             isLoading: false,
+            address: result.fullAddress || "Unknown Location",
             email: userEmail || "",
+        });
+        console.log("Set pin data to:", {
+            lat,
+            lng,
         });
     };
 
@@ -356,6 +364,7 @@ function HomePage() {
                     {pinData && (
                         <Pin
                             address={pinData.address}
+                            latitude={pinData.lat}
                             longitude={pinData.lng}
                             isLoading={pinData.isLoading}
                             onClose={() => setPinData(null)}
@@ -413,7 +422,7 @@ function HomePage() {
                                                 ...f,
                                                 properties: {
                                                     ...f.properties,
-                                                    message: updatedPoint.message,
+                                                    description: updatedPoint.description,
                                                     image: updatedPoint.image,
                                                     color:
                                                         updatedPoint.color ||
