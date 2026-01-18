@@ -28,6 +28,7 @@ interface SidebarProps {
 export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSearchFocused }: SidebarProps) {
     const [activeTab, setActiveTab] = useState<"discovery" | "saved">("discovery");
     const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number }>({ lng: -122.4, lat: 37.8 });
+    const [maxDistance, setMaxDistance] = useState(100);
 
     // Distance calculation (Haversine formula)
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -73,9 +74,9 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
                 ...pin,
                 distance: calculateDistance(mapCenter.lat, mapCenter.lng, pin.latitude, pin.longitude)
             }))
-            .filter(pin => (pin.distance * KM_TO_MILES) < 100)
+            .filter(pin => (pin.distance * KM_TO_MILES) < maxDistance)
             .sort((a, b) => a.distance - b.distance);
-    }, [allPins, mapCenter]);
+    }, [allPins, mapCenter, maxDistance]);
 
 
     const handlePinClick = (pin: Pin) => {
@@ -140,6 +141,26 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
             {/* <header className="sidebar-header">
                 <h2>Beacon</h2>
             </header> */}
+
+            {activeTab === "discovery" && (
+                <div className="sidebar-slider-container">
+                    <div className="sidebar-slider-header">
+                        <span className="slider-label">Distance</span>
+                        <span className="slider-value">{maxDistance} mi</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={maxDistance}
+                        onChange={(e) => setMaxDistance(Number(e.target.value))}
+                        className="sidebar-range-input"
+                        style={{
+                            background: `linear-gradient(to right, #4db688 0%, #4db688 ${maxDistance * 100 / 200}%, #e0e0e0 ${maxDistance * 100 / 200}%, #e0e0e0 100%)`
+                        }}
+                    />
+                </div>
+            )}
 
             <div className="sidebar-content">
                 <div

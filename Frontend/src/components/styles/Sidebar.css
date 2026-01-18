@@ -208,3 +208,87 @@
 .empty-state-icon {
     font-size: 2.5rem;
 }
+
+/* Slider Styles */
+.sidebar-slider-container {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.slider-value {
+    color: #4db688;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+}
+
+.sidebar-range-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #e0e0e0;
+    /* Fallback */
+    outline: none;
+    padding: 0;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+/* Chrome/Safari Thumb */
+.sidebar-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #4db688;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    margin-top: 0px;
+    /* Center thumb on track if needed */
+}
+
+.sidebar-range-input::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-range-input::-webkit-slider-thumb:active {
+    transform: scale(0.95);
+    background: #4db688;
+}
+
+/* Firefox Thumb */
+.sidebar-range-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #4db688;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    border: none;
+    /* Reset */
+}
+
+.sidebar-range-input::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
