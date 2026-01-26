@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router";
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { BASE_API_URL } from "../../constants";
 
 
 function Landing() {
@@ -10,17 +11,17 @@ function Landing() {
     const mapPreviewRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
 
-    console.log("[LandingPage.tsx] Here.");
-    console.log("[LandingPage.tsx] Using server address: ", import.meta.env.VITE_API_BASE);
+    console.log("[Landing.tsx] Here.");
+    console.log("[Landing.tsx] Using server address: ", BASE_API_URL);
 
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                const res = await fetch("/heartbeat");
+                const res = await fetch(`${BASE_API_URL}/heartbeat`);
                 const data = await res.json();
-                console.log("[LandingPage.tsx] Server reachable");
+                console.log("[Landing.tsx] Server reachable");
             } catch (err) {
-                console.error("[LandingPage.tsx] Server unreachable:", err);
+                console.error("[Landing.tsx] Server unreachable:", err);
             }
         };
 

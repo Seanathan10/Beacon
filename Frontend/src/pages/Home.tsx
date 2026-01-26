@@ -45,8 +45,7 @@ function HomePage() {
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                const base = import.meta.env.VITE_API_BASE;
-                const res = await fetch(`${base}/heartbeat`);
+                const res = await fetch(`${BASE_API_URL}/heartbeat`);
 
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}`);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./styles/SavedPlacesPanel.css";
-import { PIN_COLOR } from "../../constants";
+import { PIN_COLOR, BASE_API_URL } from "../../constants";
 
 interface SavedPlace {
     id: number;
@@ -30,7 +30,7 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                     return;
                 }
 
-                const res = await fetch("/api/pins/user", {
+                const res = await fetch(`${BASE_API_URL}/api/pins/user`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
