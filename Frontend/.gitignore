@@ -14,13 +14,9 @@ dist-ssr
 
 .env
 .env.local
-.env.development.local
-.env.production.local
+.env.development
+.env.production
 
-
-!.env.example
-!.env.development
-!.env.production
 
 .vscode/*
 !.vscode/extensions.json
