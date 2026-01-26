@@ -299,15 +299,15 @@ function HomePage() {
                     // Calculate the shortest path - adjust for antimeridian crossing
                     let destLng = destCoords.lng;
                     const lngDiff = destCoords.lng - originCoords.lng;
-                    
-                    // If the longitude difference is greater than 180°, 
+
+                    // If the longitude difference is greater than 180°,
                     // adjust destination to go the "short way" around
                     if (lngDiff > 180) {
                         destLng = destCoords.lng - 360;
                     } else if (lngDiff < -180) {
                         destLng = destCoords.lng + 360;
                     }
-                    
+
                     // Draw a line between origin and destination airports
                     setFlightLine({
                         type: "FeatureCollection",
@@ -338,21 +338,21 @@ function HomePage() {
                         "#4b0082", // Indigo
                         "#9400d3", // Violet
                     ];
-                    
+
                     // Check if we have transit route with segments
                     if (routeData?.mode === 'transit' && routeData.segments && routeData.segments.length > 0) {
                         // Create features for each segment with different colors
                         const segmentFeatures: GeoJSON.Feature[] = [];
                         const transferPointFeatures: GeoJSON.Feature[] = [];
-                        
+
                         routeData.segments.forEach((segment, idx) => {
                             if (segment.polyline) {
                                 const decoded = polyline.decode(segment.polyline);
                                 const colorIdx = idx % roygbivColors.length;
-                                
+
                                 segmentFeatures.push({
                                     type: "Feature",
-                                    properties: { 
+                                    properties: {
                                         type: "transit-segment",
                                         color: roygbivColors[colorIdx],
                                         lineName: segment.lineName,
@@ -362,12 +362,12 @@ function HomePage() {
                                         coordinates: decoded.map(([lat, lng]: [number, number]) => [lng, lat]),
                                     },
                                 } as GeoJSON.Feature);
-                                
+
                                 // Add transfer point (white dot) at the end of each segment except the last
                                 if (idx < routeData.segments!.length - 1 && segment.arrivalLocation) {
                                     transferPointFeatures.push({
                                         type: "Feature",
-                                        properties: { 
+                                        properties: {
                                             type: "transfer-point",
                                             stopName: segment.arrivalStop,
                                         },
@@ -379,13 +379,13 @@ function HomePage() {
                                 }
                             }
                         });
-                        
+
                         if (segmentFeatures.length > 0) {
                             setHotelLine({
                                 type: "FeatureCollection",
                                 features: segmentFeatures,
                             });
-                            
+
                             if (transferPointFeatures.length > 0) {
                                 setTransferPoints({
                                     type: "FeatureCollection",
@@ -397,7 +397,7 @@ function HomePage() {
                             return;
                         }
                     }
-                    
+
                     // Fallback to single polyline (driving or no segments)
                     if (routeData?.polyline) {
                         const decoded = polyline.decode(routeData.polyline);
@@ -513,6 +513,12 @@ function HomePage() {
                     dragRotate={true}
                     touchZoomRotate={true}
                     attributionControl={false}
+                    transformRequest={(url, resourceType) => {
+                        if (url.includes('events.mapbox.com')) {
+                            return { url: '' };
+                        }
+                        return { url };
+                    }}
                     onZoom={(e) => {
                         const zoom = e.viewState.zoom;
                         if (zoom < 8) {

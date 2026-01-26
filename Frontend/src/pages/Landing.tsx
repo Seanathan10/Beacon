@@ -4,18 +4,23 @@ import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+
 function Landing() {
     const navigate = useNavigate();
     const mapPreviewRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
+
+    console.log("[LandingPage.tsx] Here.");
+    console.log("[LandingPage.tsx] Using server address: ", import.meta.env.VITE_API_BASE);
 
     useEffect(() => {
         const heartbeat = async () => {
             try {
                 const res = await fetch("/heartbeat");
                 const data = await res.json();
+                console.log("[LandingPage.tsx] Server reachable");
             } catch (err) {
-                console.error("[Client-side] Server unreachable:", err);
+                console.error("[LandingPage.tsx] Server unreachable:", err);
             }
         };
 
@@ -35,6 +40,12 @@ function Landing() {
             zoom: 9,
             interactive: false, // Disable interactions for preview
             attributionControl: false,
+            transformRequest: (url, resourceType) => {
+                if (url.includes("events.mapbox.com")) {
+                    return { url: "" };
+                }
+                return { url };
+            },
         });
 
         // Create a hidden map to preload tiles at different zoom levels

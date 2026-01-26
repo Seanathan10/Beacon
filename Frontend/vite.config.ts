@@ -15,11 +15,15 @@ export default defineConfig({
             "/api": {
                 target: "http://localhost:3000",
                 changeOrigin: true,
+                secure: false,
             },
             "/heartbeat": {
                 target: "http://localhost:3000",
                 changeOrigin: true,
+                secure: false,
             },
         },
     },
+    // Environment variable prefix (default is VITE_)
+    envPrefix: 'VITE_',
 });
