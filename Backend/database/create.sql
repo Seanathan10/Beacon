@@ -3,7 +3,7 @@ CREATE TABLE account (
 	id INTEGER PRIMARY KEY,
 	name VARCHAR(20),
 	email VARCHAR(20) UNIQUE NOT NULL,
-	password VARCHAR(20)
+	password VARCHAR(60)
 );
 
 DROP TABLE IF EXISTS pin;

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import * as db from "../database/db";
 
 export interface User {
@@ -10,12 +11,18 @@ export interface User {
 export async function login(req: Request, res: Response) {
     const { email, password } = req.body;
 
-    const user: User = db.query(
-        `SELECT id, email, name FROM account WHERE email = ? AND password = ?`,
-        [email, password],
+    const user: any = db.query(
+        `SELECT id, email, name, password FROM account WHERE email = ?`,
+        [email],
     )[0];
 
     if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -47,9 +54,11 @@ export async function register(req: Request, res: Response) {
     }
 
     try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         db.query(
             `INSERT INTO account (email, password, name) VALUES (?, ?, ?)`,
-            [email, password, name || null],
+            [email, hashedPassword, name || null],
         );
 
         const [{ id }] = db.query(`SELECT last_insert_rowid() as id`);
