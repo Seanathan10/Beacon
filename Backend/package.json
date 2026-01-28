@@ -5,11 +5,11 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
-    "test:logs": "TEST_LOGS=1 NODE_OPTIONS='--experimental-vm-modules' jest",
-    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
-    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
-    "test:verbose": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose",
+    "test": "node scripts/run-jest.mjs",
+    "test:logs": "TEST_LOGS=1 node scripts/run-jest.mjs",
+    "test:watch": "node scripts/run-jest.mjs --watch",
+    "test:coverage": "node scripts/run-jest.mjs --coverage",
+    "test:verbose": "node scripts/run-jest.mjs --verbose",
     "dev": "tsx watch index.ts",
     "start": "tsx index.ts"
   },
