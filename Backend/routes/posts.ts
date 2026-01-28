@@ -36,7 +36,7 @@ export function createPost(req: Request, res: Response) {
     const { title, location, category, tags, message, image } = req.body;
     
     // Convert tags array to comma-separated string for storage
-    const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
+    const tagsString = Array.isArray(tags) ? tags.join(',') : (tags || '');
     
     try {
         const results = db.query(
@@ -50,13 +50,17 @@ export function createPost(req: Request, res: Response) {
                 title,
                 location,
                 category || 'New',
-                tagsString,
-                message,
+                tagsString, 
+                message, 
                 image || null,
             ]
         );
         
         const newPost = results[0];
+        if (!newPost) {
+            throw new Error("Failed to retrieve created post");
+        }
+
         res.status(201).json({
             ...newPost,
             tags: newPost.tags ? newPost.tags.split(',').map((t: string) => t.trim()) : [],

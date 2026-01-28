@@ -2,14 +2,37 @@ openapi: 3.0.0
 info:
   title: Beacon API
   version: 1.0.0
-  description: API for managing pins in the Beacon application
+  description: |
+    Backend API for Beacon.
+
+    Most `/api/*` endpoints require a JWT in `Authorization: Bearer <token>`.
+    Request validation is enforced via `express-openapi-validator`.
 servers:
   - url: http://localhost:3000
     description: Local development server
 
+tags:
+  - name: Health
+    description: Service health and diagnostics
+  - name: Auth
+    description: Registration, login, and authentication
+  - name: Pins
+    description: Map pins (POIs)
+  - name: Comments
+    description: Comments on pins
+  - name: Likes
+    description: Like system for pins
+  - name: Posts
+    description: Community posts
+  - name: Share
+    description: Public sharing of itineraries
+  - name: Trip
+    description: Trip planning and routing
+
 paths:
   /heartbeat:
     get:
+      tags: [Health]
       summary: Health check endpoint
       description: Returns server status and current timestamp
       operationId: heartbeat
@@ -31,6 +54,7 @@ paths:
 
   /api/pins:
     get:
+      tags: [Pins]
       summary: Get all pins
       description: Retrieves all pins from the database
       operationId: getAllPins
@@ -51,6 +75,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     post:
+      tags: [Pins]
       summary: Create a new pin
       description: Creates a new pin with the provided data
       operationId: createPin
@@ -79,7 +104,7 @@ paths:
                   example: "Golden Gate Overlook"
                 message:
                   type: string
-                  maxLength: 200
+                  maxLength: 500
                   description: Message content of the pin
                   nullable: true
                 image:
@@ -87,19 +112,21 @@ paths:
                   maxLength: 2000
                   description: URL of the image
                   nullable: true
-                location:
+                address:
                   type: string
                   maxLength: 200
                   description: Address of the pin location
                   nullable: true
                 tags:
-                  type: string
-                  maxLength: 500
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
                   description: Tags for the pin
-                  nullable: true
 
       responses:
-        200:
+        201:
           description: Pin created successfully
           content:
             application/json:
@@ -130,6 +157,7 @@ paths:
 
   /api/pins/user:
     get:
+      tags: [Pins]
       summary: Get all pins created by the logged-in user
       description: Retrieves all pins created by the authenticated user
       operationId: getUserPins
@@ -151,6 +179,7 @@ paths:
 
   /api/pins/{id}:
     get:
+      tags: [Pins]
       summary: Get a specific pin by ID
       description: Retrieves a single pin by its ID
       operationId: getPin
@@ -171,10 +200,23 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Pin'
+        400:
+          description: Bad request (invalid path parameter)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     
     put:
+      tags: [Pins]
       summary: Update a specific pin by ID
-      description: Updates title/message/image/color for a pin (owner only)
+      description: Updates title/message/image/address for a pin (owner only)
       operationId: updatePin
       parameters:
         - in: path
@@ -197,20 +239,15 @@ paths:
                   nullable: true
                 message:
                   type: string
-                  maxLength: 200
+                  maxLength: 500
                   nullable: true
                 image:
                   type: string
                   maxLength: 2000
                   nullable: true
-                location:
+                address:
                   type: string
                   maxLength: 200
-                  nullable: true
-                tags:
-                  type: string
-                  maxLength: 500
-                  description: Tags for the pin
                   nullable: true
 
       responses:
@@ -220,41 +257,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pin'
-        403:
-          description: Unauthorized - not the owner
+        400:
+          description: Bad request (invalid body or path parameter)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
-          description: Pin not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      summary: Delete a specific pin by ID
-      description: Delete a single pin by its ID (owner only)
-      operationId: deletePin
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: The ID of the pin to delete
-      responses:
-        200:
-          description: Successfully deleted pin
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Pin deleted successfully"
         401:
           description: Unauthorized - invalid or missing token
           content:
@@ -273,6 +281,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Pins]
+      summary: Delete a specific pin by ID
+      description: Delete a single pin by its ID (owner only)
+      operationId: deletePin
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin to delete
+      responses:
+        200:
+          description: Successfully deleted pin
+          content: {}
+        400:
+          description: Bad request (invalid path parameter)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Unauthorized - not the owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Pin not found
+          content: {}
         500:
           description: Internal server error
           content:
@@ -282,6 +328,7 @@ paths:
 
   /api/pins/{pinId}/comments:
     get:
+      tags: [Comments]
       summary: Get all comments for a pin
       description: Retrieves all comments for a specific pin
       operationId: getPinComments
@@ -309,6 +356,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     post:
+      tags: [Comments]
       summary: Create a comment on a pin
       description: Posts a new comment on a specific pin
       operationId: createComment
@@ -360,6 +408,7 @@ paths:
 
   /api/comments/{commentId}:
     put:
+      tags: [Comments]
       summary: Update a comment
       description: Updates a comment (owner only)
       operationId: updateComment
@@ -389,6 +438,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
+        400:
+          description: Bad request - invalid comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         401:
           description: Unauthorized - invalid or missing token
           content:
@@ -409,6 +464,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     delete:
+      tags: [Comments]
       summary: Delete a comment
       description: Deletes a comment (owner only)
       operationId: deleteComment
@@ -459,6 +515,7 @@ paths:
 
   /api/login:
     post:
+      tags: [Auth]
       summary: User login
       description: Authenticates a user and returns a JWT token
       operationId: login
@@ -468,12 +525,15 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - email
+                - password
               properties:
                 email:
                   type: string
                   description: The user's email
                   format: email
-                  example: "user123"
+                  example: "user@example.com"
                 password:
                   type: string
                   description: The user's password
@@ -484,7 +544,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
+                $ref: '#/components/schemas/AuthResponse'
 
         '401':
           description: Unauthorized - invalid credentials
@@ -501,6 +561,7 @@ paths:
 
   /api/register:
     post:
+      tags: [Auth]
       summary: User registration
       description: Creates a new user account and returns a JWT token
       operationId: register
@@ -534,7 +595,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
+                $ref: '#/components/schemas/AuthResponse'
         '409':
           description: Conflict - email already registered
           content:
@@ -548,31 +609,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/check:
-    get:
-      summary: Check token validity
-      description: Validates the provided JWT token
-      operationId: checkToken
-      responses:
-        '200':
-          description: Token is valid
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  valid:
-                    type: boolean
-                    example: true
-        '401':
-          description: Unauthorized - invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /api/posts:
     get:
+      tags: [Posts]
       summary: Get all posts
       description: Retrieves all community posts from the database
       operationId: getAllPosts
@@ -593,6 +632,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     post:
+      tags: [Posts]
       summary: Create a new post
       description: Creates a new community post with the provided data
       operationId: createPost
@@ -624,9 +664,11 @@ paths:
                   example: "Hot"
                   nullable: true
                 tags:
-                  type: array
-                  items:
-                    type: string
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
                   description: Tags for the post
                   example: ["Food", "Cafe"]
                 message:
@@ -666,6 +708,7 @@ paths:
 
   /api/posts/{id}:
     get:
+      tags: [Posts]
       summary: Get a specific post by ID
       description: Retrieves a single post by its ID
       operationId: getPost
@@ -683,6 +726,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         404:
           description: Post not found
           content:
@@ -691,6 +740,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     put:
+      tags: [Posts]
       summary: Update a specific post by ID
       description: Updates a post (owner only)
       operationId: updatePost
@@ -721,10 +771,11 @@ paths:
                   maxLength: 20
                   nullable: true
                 tags:
-                  type: array
-                  items:
-                    type: string
-                  nullable: true
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
                 message:
                   type: string
                   nullable: true
@@ -742,6 +793,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         403:
           description: Unauthorized - not the owner
           content:
@@ -754,8 +811,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     
     delete:
+      tags: [Posts]
       summary: Delete a specific post by ID
       description: Delete a single post by its ID (owner only)
       operationId: deletePost
@@ -777,6 +841,12 @@ paths:
                   message:
                     type: string
                     example: "Post deleted successfully"
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         403:
           description: Unauthorized - not the owner
           content:
@@ -792,6 +862,7 @@ paths:
 
   /api/posts/{id}/upvote:
     post:
+      tags: [Posts]
       summary: Upvote a post
       description: Increment the upvote count for a post
       operationId: upvotePost
@@ -809,6 +880,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         404:
           description: Post not found
           content:
@@ -818,8 +895,10 @@ paths:
 
   /api/likes/{id}:
     get:
+      tags: [Likes]
       summary: Get the number of likes on a pin
-      description: Retrieves likes on a pin
+      description: Retrieves like count and whether the requesting user has liked the pin
+      operationId: getLikes
       parameters:
         - in: path
           name: id
@@ -841,57 +920,78 @@ paths:
                     example: 42
                   wasLiked:
                     type: boolean
-        404:
-          description: Post not found
+        401:
+          description: Unauthorized - invalid or missing token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        401:
-          description: idk
+        404:
+          description: Pin not found
+          content: {}
 
     post:
-      summary: Get the number of likes on a pin
-      description: Retrieves likes on a pin
+      tags: [Likes]
+      summary: Like a pin
+      description: Adds a like for the requesting user (idempotent per user/pin)
+      operationId: addLike
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: integer
-          description: The ID of the pin to retrieve
+          description: The ID of the pin to like
       responses:
         204:
-          description: Successful response with like count
+          description: Like added successfully
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         404:
-          description: Post not found
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Already liked
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
     
     delete:
-      summary: remove a like from a post
-      description: Retrieves likes on a pin
+      tags: [Likes]
+      summary: Unlike a pin
+      description: Removes the requesting user's like
+      operationId: removeLike
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: integer
-          description: The ID of the pin to retrieve
+          description: The ID of the pin to unlike
       responses:
         204:
           description: Successful response
-        404:
-          description: Post not found
+        401:
+          description: Unauthorized - invalid or missing token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        404:
+          description: Like not found
+          content: {}
 
   /api/share:
     post:
+      tags: [Share]
       summary: Share an itinerary
       description: Save an itinerary and get a shareable ID
       operationId: shareItinerary
@@ -939,6 +1039,7 @@ paths:
 
   /api/share/{id}:
     get:
+      tags: [Share]
       summary: Get a shared itinerary
       description: Retrieve a shared itinerary by ID
       operationId: getSharedItinerary
@@ -971,6 +1072,7 @@ paths:
 
   /api/trip/plan:
     post:
+      tags: [Trip]
       summary: Plan a trip
       description: Generate a sustainable trip plan with transit options and AI itinerary
       operationId: planTrip
@@ -979,39 +1081,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - startLocation
-                - endLocation
-                - itineraryType
-              properties:
-                startLocation:
-                  type: string
-                  description: Starting city
-                  example: "San Francisco"
-                endLocation:
-                  type: string
-                  description: Destination city
-                  example: "Los Angeles"
-                itineraryType:
-                  type: string
-                  description: Type of itinerary
-                  example: "nature"
-                departureDate:
-                  type: string
-                  description: Departure date (YYYY-MM-DD)
-                  example: "2026-02-01"
-                durationDays:
-                  type: integer
-                  description: Trip duration in days
-                  example: 3
+              $ref: '#/components/schemas/TripPlanRequest'
       responses:
         200:
           description: Trip plan generated successfully
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/TripPlanResponse'
         400:
           description: Bad request
           content:
@@ -1031,8 +1108,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/trip/plan/stream:
+    post:
+      tags: [Trip]
+      summary: Plan a trip (streaming)
+      description: |
+        Streams progress updates using Server-Sent Events (SSE) and ends once options are ready.
+
+        Each frame is sent as: `data: {json}\n\n`.
+      operationId: planTripStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripPlanRequest'
+      responses:
+        200:
+          description: SSE stream of progress updates
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
   /api/trip/ask:
     post:
+      tags: [Trip]
       summary: Ask a question about the trip
       description: Get AI-powered answers about your trip
       operationId: askTripQuestion
@@ -1089,6 +1190,7 @@ paths:
 
   /api/trip/generate-itinerary:
     post:
+      tags: [Trip]
       summary: Generate itinerary with user selections
       description: Generate a detailed itinerary based on user-selected transit and hotel options
       operationId: generateItinerary
@@ -1159,6 +1261,7 @@ paths:
 
   /api/trip/local-route:
     post:
+      tags: [Trip]
       summary: Get local transit/driving route between coordinates
       description: Returns a route polyline for visualization between two points, trying transit first then falling back to driving
       operationId: getLocalRoute
@@ -1167,52 +1270,52 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - originLat
-                - originLng
-                - destLat
-                - destLng
-              properties:
-                originLat:
-                  type: number
-                  description: Origin latitude
-                  example: 37.6213
-                originLng:
-                  type: number
-                  description: Origin longitude
-                  example: -122.3790
-                destLat:
-                  type: number
-                  description: Destination latitude
-                  example: 37.7749
-                destLng:
-                  type: number
-                  description: Destination longitude
-                  example: -122.4194
+              oneOf:
+                - type: object
+                  required: [originLat, originLng, destLat, destLng]
+                  properties:
+                    originLat:
+                      type: number
+                      description: Origin latitude
+                      example: 37.6213
+                    originLng:
+                      type: number
+                      description: Origin longitude
+                      example: -122.3790
+                    destLat:
+                      type: number
+                      description: Destination latitude
+                      example: 37.7749
+                    destLng:
+                      type: number
+                      description: Destination longitude
+                      example: -122.4194
+                    departureTime:
+                      type: string
+                      description: Optional departure time (ISO 8601)
+                      example: "2026-02-01T08:00:00Z"
+                - type: object
+                  required: [originAddress, destAddress]
+                  properties:
+                    originAddress:
+                      type: string
+                      description: Origin address or place name
+                      example: "SFO Airport"
+                    destAddress:
+                      type: string
+                      description: Destination address or place name
+                      example: "Downtown San Francisco"
+                    departureTime:
+                      type: string
+                      description: Optional departure time (ISO 8601)
+                      example: "2026-02-01T08:00:00Z"
       responses:
         200:
           description: Route found successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  mode:
-                    type: string
-                    enum: [transit, driving]
-                    description: The travel mode used
-                  polyline:
-                    type: string
-                    description: Encoded polyline for the route
-                  duration:
-                    type: string
-                    description: Human-readable duration
-                    example: "45m"
-                  distanceKm:
-                    type: number
-                    description: Distance in kilometers
-                    example: 12.5
+                $ref: '#/components/schemas/LocalRouteResponse'
         400:
           description: Bad request - missing coordinates
           content:
@@ -1232,8 +1335,225 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/trip/nearby-pins:
+    post:
+      tags: [Trip]
+      summary: Get nearby pins for selection
+      description: Returns nearby pins around a coordinate, prioritizing the requesting user's pins
+      operationId: getNearbyPinsForSelection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lat
+                - lng
+              properties:
+                lat:
+                  type: number
+                  example: 34.0522
+                lng:
+                  type: number
+                  example: -118.2437
+                radiusKm:
+                  type: number
+                  description: Search radius in kilometers
+                  example: 50
+      responses:
+        200:
+          description: Pins returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SelectablePin'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    TripPlanRequest:
+      type: object
+      required:
+        - startLocation
+        - endLocation
+        - itineraryType
+      properties:
+        startLocation:
+          type: string
+          description: Starting city or location
+          example: "San Francisco"
+        endLocation:
+          type: string
+          description: Destination city or location
+          example: "Los Angeles"
+        itineraryType:
+          type: string
+          description: Trip theme
+          example: "nature"
+        departureDate:
+          type: string
+          description: Departure date (YYYY-MM-DD)
+          example: "2026-02-01"
+        durationDays:
+          type: integer
+          description: Trip duration in days
+          example: 3
+
+    TripPlanResponse:
+      type: object
+      properties:
+        origin:
+          type: string
+        destination:
+          type: string
+        itineraryType:
+          type: string
+        transitOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransitOption'
+        itinerary:
+          $ref: '#/components/schemas/ItineraryResult'
+        localPins:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalPin'
+        ecoHotels:
+          type: array
+          items:
+            $ref: '#/components/schemas/EcoHotel'
+        carbonStats:
+          type: object
+          properties:
+            bestOption:
+              type: object
+              properties:
+                mode:
+                  type: string
+                carbonKg:
+                  type: number
+            worstOption:
+              type: object
+              properties:
+                mode:
+                  type: string
+                carbonKg:
+                  type: number
+            typicalTouristKg:
+              type: number
+            savingsVsTypical:
+              type: number
+            offsetCostUsd:
+              type: number
+        routePolylines:
+          type: array
+          items:
+            type: object
+            properties:
+              mode:
+                type: string
+              polyline:
+                type: string
+
+    LocalRouteResponse:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [transit, driving]
+          description: The travel mode used
+        polyline:
+          type: string
+          description: Encoded polyline for the overall route
+        duration:
+          type: string
+          description: Human-readable duration
+          example: "45m"
+        distanceKm:
+          type: number
+          description: Distance in kilometers
+          example: 12.5
+        segments:
+          type: array
+          description: Present for transit routes; used for multi-colored rendering
+          items:
+            type: object
+            properties:
+              lineName:
+                type: string
+                nullable: true
+              polyline:
+                type: string
+                nullable: true
+              departureStop:
+                type: string
+                nullable: true
+              arrivalStop:
+                type: string
+                nullable: true
+              departureLocation:
+                type: object
+                nullable: true
+              arrivalLocation:
+                type: object
+                nullable: true
+
+    SelectablePin:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+        longitude:
+          type: number
+        tags:
+          type: string
+          nullable: true
+          description: Tags stored as a JSON-encoded string array
+          example: '["food","coffee"]'
+        image:
+          type: string
+          nullable: true
+        isUserPin:
+          type: boolean
+          description: Whether this pin belongs to the requesting user
+
     Pin:
       type: object
       properties:
@@ -1245,6 +1565,11 @@ components:
           type: integer
           description: ID of the account that created the pin
           example: 1
+        email:
+          type: string
+          format: email
+          description: Email of the pin creator
+          example: "user@example.com"
         latitude:
           type: number
           description: self explanatory
@@ -1257,10 +1582,10 @@ components:
           description: Title of the pin
           example: "Golden Gate Overlook"
           nullable: true
-        message:
+        description:
           type: string
-          maxLength: 200
-          description: Message content of the pin
+          maxLength: 500
+          description: Description/message content of the pin
           example: "Welcome to Beacon!"
           nullable: true
         image:
@@ -1269,7 +1594,7 @@ components:
           description: URL of the image
           example: "https://images.unsplash.com/photo-1516192518150-0d8fee5425e3"
           nullable: true
-        location:
+        address:
           type: string
           maxLength: 200
           description: Address of the pin location
@@ -1278,8 +1603,13 @@ components:
         tags:
           type: string
           maxLength: 500
-          description: Tags for the pin
-          example: "scenic, viewpoint, nature"
+          description: Tags stored as a JSON-encoded string array
+          example: '["scenic","viewpoint","nature"]'
+          nullable: true
+        likes:
+          type: integer
+          description: Base like count stored on the pin
+          example: 0
           nullable: true
     
     Comment:
@@ -1314,22 +1644,47 @@ components:
     Error:
       type: object
       properties:
-        error:
+        message:
           type: string
-          description: Error message
-          example: "creatorID is required"
+          description: Human-readable error message
+          example: "Invalid token"
+        error:
+          oneOf:
+            - type: string
+            - type: object
+          description: Error identifier/message (some endpoints return 'error' instead of 'message')
+          example: "Failed to share itinerary"
+        errors:
+          type: array
+          description: Detailed validation errors (OpenAPI validator)
+          items:
+            type: object
         details:
           type: string
           description: Additional error details
           example: "FOREIGN KEY constraint failed"
 
-    Token:
+    AuthResponse:
       type: object
       properties:
-        token:
+        accessToken:
           type: string
           description: JWT token for authenticated user
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            email:
+              type: string
+              format: email
+              example: "user@example.com"
+            name:
+              type: string
+              nullable: true
+              example: "Test User"
 
     Post:
       type: object
@@ -1577,12 +1932,9 @@ components:
     SharedItinerary:
       type: object
       properties:
-        id:
-          type: string
-          description: Unique identifier for the shared itinerary
-          example: "550e8400-e29b-41d4-a716-446655440000"
         itinerary:
-          $ref: '#/components/schemas/ItineraryResult'
+          type: object
+          description: The complete itinerary payload as stored
         itineraryType:
           type: string
           description: Type of itinerary

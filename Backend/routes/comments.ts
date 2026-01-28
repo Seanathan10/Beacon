@@ -74,16 +74,16 @@ export function deleteComment(req: Request, res: Response) {
     const commentID = req.params.commentId;
     const userID = req.user.id;
 
-    // Check if comment exists and user owns it
-    const comment = db.query(
-        "SELECT accountID FROM comment WHERE id = ?",
-        [commentID]
-    )[0];
-
-    if (!comment) {
+    // Check if comment exists AND user owns it
+    // First, select the comment
+    const commentList = db.query("SELECT accountID FROM comment WHERE id = ?", [commentID]);
+    
+    if (commentList.length === 0) {
         res.status(404).json({ message: "Comment not found" });
         return;
     }
+    
+    const comment = commentList[0];
 
     if (comment.accountID !== userID) {
         res.status(403).json({ message: "Unauthorized to delete this comment" });
@@ -91,8 +91,8 @@ export function deleteComment(req: Request, res: Response) {
     }
 
     // Use db.prepare().run() for DELETE to get changes count
-    const stmt = db.db.prepare("DELETE FROM comment WHERE id = ?");
-    const result = stmt.run(commentID);
+    // NOTE: In our test DB wrapper, db.query handles this if we don't start with SELECT
+    const result = db.query("DELETE FROM comment WHERE id = ?", [commentID]);
     
     if (result.changes > 0) {
         res.status(200).json({ message: "Comment deleted successfully" });

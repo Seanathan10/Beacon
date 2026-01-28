@@ -3,6 +3,17 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as db from "../database/db";
 
+// Use the type defined in types/express/index.d.ts or redefine locally if not automatically picked up
+// To be safe and avoid compilation/test errors, we can use the specific type or any temporarily, 
+// but let's try to do it right. The types should be picked up if tsconfig is correct.
+// However, since we are in a 'commonjs' style migration chaos, let's just use 'any' cast if the global isn't found
+// OR explicitly define it here to mirror the global one for safety.
+
+interface SessionUser {
+    id: string; // or number, depends on your DB implementation. sqlite integer -> number usually, but jsonwebtoken might return string in some configs?
+    // Looking at login, it signs { id: user.id }
+}
+
 export interface User {
     id: string;
     username: string;
@@ -90,7 +101,7 @@ export function check(req: Request, res: Response, next: Function) {
             return res.status(401).json({ message: "Invalid token" });
         }
 
-		req.user = decoded;
+        req.user = decoded as SessionUser;
         next();
     });
 }

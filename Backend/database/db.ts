@@ -1,16 +1,30 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const dbPath = path.join(__dirname, "database.db");
+// Helper for ESM __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const isTest = process.env.NODE_ENV === "test";
+const dbPath = isTest ? ":memory:" : path.join(__dirname, "database.db");
 
 export const db = new DatabaseSync(dbPath);
 
-console.log("Connected to SQLite database");
+console.log(`Connected to SQLite database (${isTest ? "In-Memory" : "File"})`);
 
 // Helper function to run queries
-export function query(sql: string, params: any[] = []): any[] {
+export function query(sql: string, params: any[] = []): any {
     const stmt = db.prepare(sql);
-    return stmt.all(...params);
+    const upperSql = sql.trim().toUpperCase();
+    // If it's a SELECT or has RETURNING clause, use .all() to get rows
+    if (upperSql.startsWith("SELECT") || upperSql.includes("RETURNING")) {
+        // .all() returns an array of rows
+        return stmt.all(...params);
+    } else {
+        // .run() returns { changes, lastInsertRowid }
+        return stmt.run(...params);
+    }
 }
 
 // Initialize posts table if it doesn't exist
@@ -44,4 +58,7 @@ function initPostsTable() {
     }
 }
 
-initPostsTable();
+if (!isTest) {
+    initPostsTable();
+}
+

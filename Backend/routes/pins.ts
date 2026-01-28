@@ -1,10 +1,21 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 
+export function splitTags(tags: string | null): string[] {
+    if (!tags) return [];
+    try {
+        return JSON.parse(tags);
+    } catch {
+        // Fallback for comma-separated if migration happened or data inconsistency
+        return tags.split(',').map(t => t.trim());
+    }
+}
+
 export function getAllPins(req: Request, res: Response) {
     const results = db.query(`
 		SELECT
 			p.id,
+			p.creatorID,
 			a.email,
 			p.latitude,
 			p.longitude,
@@ -19,7 +30,9 @@ export function getAllPins(req: Request, res: Response) {
 	`);
     const pins = results.map((pin: any) => ({
         ...pin,
-        tags: pin.tags ?? JSON.stringify([]),
+        tags: pin.tags, // Keep as string for client to parse? Or parse it? 
+        // The test does: const storedTags = JSON.parse(getResponse.body[0].tags);
+        // So the API returns a JSON STRING for tags.
     }));
 
     res.json(pins);
@@ -34,11 +47,9 @@ export function getUserPins(req: Request, res: Response) {
         WHERE creatorID = ?;`, [
         userID,
     ]);
-    const pins = results.map((pin: any) => ({
-        ...pin,
-        tags: pin.tags ?? JSON.stringify([]),
-    }));
-    res.json(pins);
+    // The test expects the response body tags to be a STRING that can be JSON.parsed.
+    // So we just return the raw string from DB.
+    res.json(results);
 }
 
 export function getPin(req: Request, res: Response) {
@@ -48,17 +59,23 @@ export function getPin(req: Request, res: Response) {
             id, creatorID, latitude, longitude, title, address, description, image, likes, tags
         FROM pin 
         WHERE id = ?`, [pinID]);
-    const pins = results.map((pin: any) => ({
-        ...pin,
-        tags: pin.tags ?? JSON.stringify([]),
-    }));
-    res.json(pins);
+    res.json(results);
 }
 
 export function createPin(req: Request, res: Response) {
-    const results = db.query(`
-		INSERT INTO pin(creatorID, latitude, longitude, title, address, description, image, tags)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+    let tags = '[]';
+    if (typeof req.body.tags === 'string') {
+        tags = req.body.tags;
+    } else if (req.body.tags) {
+        tags = JSON.stringify(req.body.tags);
+    }
+    
+    console.log('Creating Pin:', { ...req.body, creatorID: req.user?.id });
+
+    try {
+        const results = db.query(`
+		INSERT INTO pin(creatorID, latitude, longitude, title, address, description, image, tags, likes)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, 0)
 		RETURNING id;
 	`,
         [
@@ -69,11 +86,15 @@ export function createPin(req: Request, res: Response) {
             req.body.address ?? null,
             req.body.message ?? null,
             req.body.image ?? null,
-            JSON.stringify(req.body.tags) ?? '',
+            tags,
         ],
     );
 
-    res.json(results[0]);
+    res.status(201).json(results[0]);
+    } catch (e) {
+        console.error('Create Pin Error:', e);
+        res.status(400).json({ error: e });
+    }
 }
 
 export function updatePin(req: Request, res: Response) {
@@ -81,15 +102,19 @@ export function updatePin(req: Request, res: Response) {
     const userID = req.user.id;
     const { title, address, message, image } = req.body;
 
-    const pin = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID])[0];
-    if (!pin) {
-        res.status(404).json({ message: "Pin not found" });
-        return;
+    // Check existence and ownership
+    const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
+    if (pinResult.length === 0) {
+        return res.status(404).json({ message: "Pin not found" });
     }
+    
+    const pin = pinResult[0];
+    
+    // Authorization check
     if (pin.creatorID !== userID) {
-        res.status(403).json({ message: "Unauthorized" });
-        return;
+        return res.status(403).json({ message: "Unauthorized" });
     }
+
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -128,6 +153,21 @@ export function updatePin(req: Request, res: Response) {
 
 export function deletePin(req: Request, res: Response) {
     const pinID = req.params.id;
+    const userID = req.user.id; // Correct user ID from token
+
+    // Check existence and ownership
+    const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
+    if (pinResult.length === 0) {
+        return res.status(404).send();
+    }
+    
+    const pin = pinResult[0];
+    
+    // Authorization check
+    if (pin.creatorID !== userID) {
+        return res.status(403).json({ message: "Unauthorized" });
+    }
+
     const result = db.query("DELETE FROM pin WHERE id = ?", [pinID]);
     if (result.changes === 0) res.status(404).send();
     else res.status(200).send();
@@ -159,9 +199,9 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
     const longitude = req.body.longitude;
     const MAX_RADIUS_KM = 10;
 
-    const results = db.query(`SELECT * FROM pin;`);
+    const results: any[] = db.query(`SELECT * FROM pin;`);
     const filtered = results
-        .map((p) => {
+        .map((p: any) => {
             return {
                 ...p,
                 distance: distBetweenCoordinates(
@@ -172,11 +212,11 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
                 ),
             };
         })
-        .sort((a, b) => {
+        .sort((a: any, b: any) => {
             return a.distance - b.distance;
         })
-        .filter((d) => d.distance < MAX_RADIUS_KM)
-        .map((c) => {
+        .filter((d: any) => d.distance < MAX_RADIUS_KM)
+        .map((c: any) => {
             const { distance, ...everythingElse } = c;
             return everythingElse;
         });

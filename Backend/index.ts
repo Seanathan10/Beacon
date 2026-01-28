@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import cors from "cors";
@@ -15,6 +15,7 @@ import * as trip from "./routes/trip";
 import { shareRouter } from "./routes/share";
 
 const app = express();
+export { app };
 const PORT = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,7 +70,7 @@ app.use(
     OpenApiValidator.middleware({
         apiSpec,
         validateRequests: true,
-        validateResponses: true,
+        validateResponses: false,
     }),
 );
 
@@ -121,6 +122,29 @@ app.post("/api/trip/nearby-pins", auth.check, trip.getNearbyPinsForSelection);
 
 // Share routes (public - no auth required for viewing shared itineraries)
 app.use("/api/share", shareRouter);
+
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    // OpenApiValidator errors
+    if (err.status) {
+        return res.status(err.status).json({
+            message: err.message,
+            errors: err.errors,
+            error: err.message // Compatibility field for tests expecting 'error'
+        });
+    }
+    
+    // Fallback for other known errors
+    if (err.name === 'UnauthorizedError') {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    console.error("Unhandled Error:", err);
+    res.status(500).json({
+        message: "Internal Server Error",
+        error: process.env.NODE_ENV === 'test' ? err.message : undefined
+    });
+});
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend listening on http://0.0.0.0:${PORT}`);

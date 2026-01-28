@@ -116,9 +116,9 @@ Transit context: ${transitSummary}
 Generate a detailed itinerary with sustainability tips and carbon offset suggestions.`;
 
     // Helper to parse response
-    const parseResponse = (response: Awaited<ReturnType<typeof ai.models.generateContent>>): ItineraryResult | null => {
+    const parseResponse = (response: any): ItineraryResult | null => {
         if (response.parsed) {
-            return response.parsed as unknown as ItineraryResult;
+            return response.parsed as ItineraryResult;
         } else if (response.text) {
             try {
                 return JSON.parse(response.text) as ItineraryResult;
@@ -126,7 +126,7 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
                 return null;
             }
         }
-        return null;
+        return null; // Ensure a return value even if neither condition is met
     };
 
     // First attempt: with grounding (may fail with empty content on some model versions)
@@ -218,8 +218,8 @@ Calculate savings and provide a recommendation.`;
         },
     });
 
-    if (response.parsed) {
-        return response.parsed as unknown as {
+    if ((response as any).parsed) {
+        return (response as any).parsed as {
             comparison: string;
             savingsPercent: number;
             recommendation: string;
