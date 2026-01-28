@@ -990,8 +990,10 @@ export async function getLocalRoute(req: Request, res: Response) {
         const { originLat, originLng, destLat, destLng, originAddress, destAddress, departureTime } = req.body;
 
         // Prefer addresses for transit search (more reliable), fall back to coordinates
-        const origin = originAddress || (originLat && originLng ? { lat: originLat, lng: originLng } : null);
-        const destination = destAddress || (destLat && destLng ? { lat: destLat, lng: destLng } : null);
+        const hasOriginCoords = originLat !== undefined && originLng !== undefined;
+        const hasDestCoords = destLat !== undefined && destLng !== undefined;
+        const origin = originAddress || (hasOriginCoords ? { lat: originLat, lng: originLng } : null);
+        const destination = destAddress || (hasDestCoords ? { lat: destLat, lng: destLng } : null);
 
         if (!origin || !destination) {
             return res.status(400).json({ error: "Missing origin or destination (provide addresses or coordinates)" });
@@ -1071,7 +1073,7 @@ export async function getNearbyPinsForSelection(req: Request, res: Response) {
     try {
         const { lat, lng, radiusKm = 50 } = req.body;
 
-        if (!lat || !lng) {
+        if (lat === undefined || lng === undefined) {
             return res.status(400).json({ error: "Missing required fields: lat, lng" });
         }
 
