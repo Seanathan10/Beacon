@@ -20,6 +20,70 @@ describe('Request validation', () => {
     userId = user.userId;
   });
 
+  it('should reject register missing required fields', async () => {
+    const missingEmail = await request(app).post('/api/register').send({
+      password: 'password123',
+    });
+
+    expect(missingEmail.status).toBe(400);
+    expect(missingEmail.body).toHaveProperty('message');
+
+    const missingPassword = await request(app).post('/api/register').send({
+      email: 'missingpass@example.com',
+    });
+
+    expect(missingPassword.status).toBe(400);
+    expect(missingPassword.body).toHaveProperty('message');
+  });
+
+  it('should reject invalid email format on register', async () => {
+    const response = await request(app).post('/api/register').send({
+      email: 'not-an-email',
+      password: 'password123',
+      name: 'Valid Name',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject register when name exceeds max length', async () => {
+    const response = await request(app).post('/api/register').send({
+      email: 'longname@example.com',
+      password: 'password123',
+      name: 'This Name Is Definitely Too Long',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject login missing required fields', async () => {
+    const missingEmail = await request(app).post('/api/login').send({
+      password: 'password123',
+    });
+
+    expect(missingEmail.status).toBe(400);
+    expect(missingEmail.body).toHaveProperty('message');
+
+    const missingPassword = await request(app).post('/api/login').send({
+      email: 'login@example.com',
+    });
+
+    expect(missingPassword.status).toBe(400);
+    expect(missingPassword.body).toHaveProperty('message');
+  });
+
+  it('should reject invalid email format on login', async () => {
+    const response = await request(app).post('/api/login').send({
+      email: 'not-an-email',
+      password: 'password123',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
   it('should reject non-integer pin id path params', async () => {
     const response = await request(app)
       .get('/api/pins/not-a-number')
@@ -65,6 +129,70 @@ describe('Request validation', () => {
         title: 123,
         location: 'Somewhere',
         message: 'hi',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject create post when required fields are missing', async () => {
+    const response = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Missing Message',
+        location: 'Somewhere',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject create post with invalid tags type', async () => {
+    const response = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Bad Tags',
+        location: 'Somewhere',
+        message: 'Hello',
+        tags: { not: 'allowed' },
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject update post with invalid upvotes type', async () => {
+    const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
+
+    const response = await request(app)
+      .put(`/api/posts/${postId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ upvotes: 'not-a-number' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject create pin when required fields are missing', async () => {
+    const response = await request(app)
+      .post('/api/pins')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ latitude: 37.7749 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('message');
+  });
+
+  it('should reject create pin with invalid tags type', async () => {
+    const response = await request(app)
+      .post('/api/pins')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        latitude: 37.7749,
+        longitude: -122.4194,
+        tags: { invalid: true },
       });
 
     expect(response.status).toBe(400);

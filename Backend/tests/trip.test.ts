@@ -8,6 +8,7 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
+import { createTestPin, createTestUser } from './helpers/testApp';
 
 // --- Mock external dependencies BEFORE importing the app (ESM) ---
 
@@ -227,6 +228,34 @@ describe('Trip', () => {
 
       expect(mockGenerateItinerary).toHaveBeenCalled();
     });
+
+    it('should return 400 when geocoding fails for origin', async () => {
+      const token = makeToken();
+      const originalFetch = (globalThis as any).fetch;
+
+      (globalThis as any).fetch = jest.fn(async (url: string) => {
+        const urlStr = String(url);
+        if (urlStr.includes('Unknown%20City')) {
+          return { ok: true, json: async () => ({ results: [] }) } as any;
+        }
+        return originalFetch(url);
+      });
+
+      const response = await request(app)
+        .post('/api/trip/plan')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          startLocation: 'Unknown City',
+          endLocation: 'Los Angeles',
+          itineraryType: 'nature',
+          durationDays: 3,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Could not recognize origin location');
+
+      (globalThis as any).fetch = originalFetch;
+    });
   });
 
   describe('POST /api/trip/plan/stream', () => {
@@ -251,6 +280,42 @@ describe('Trip', () => {
       expect(typeof response.text).toBe('string');
       expect(response.text).toContain('data:');
       expect(response.text).toContain('"stage":"ready"');
+    });
+
+    it('should emit an error stage when required fields are missing', async () => {
+      const token = makeToken();
+      const response = await request(app)
+        .post('/api/trip/plan/stream')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ startLocation: 'San Francisco', endLocation: 'Los Angeles' });
+
+      expect(response.status).toBe(200);
+      expect(response.text).toContain('"stage":"error"');
+      expect(response.text).toContain('Missing required fields');
+    });
+
+    it('should emit an error stage when geocoding fails', async () => {
+      const token = makeToken();
+      const originalFetch = (globalThis as any).fetch;
+
+      (globalThis as any).fetch = jest.fn(async (url: string) => {
+        const urlStr = String(url);
+        if (urlStr.includes('Unknown%20City')) {
+          return { ok: true, json: async () => ({ results: [] }) } as any;
+        }
+        return originalFetch(url);
+      });
+
+      const response = await request(app)
+        .post('/api/trip/plan/stream')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ startLocation: 'Unknown City', endLocation: 'Los Angeles', itineraryType: 'nature' });
+
+      expect(response.status).toBe(200);
+      expect(response.text).toContain('"stage":"error"');
+      expect(response.text).toContain('Could not recognize origin location');
+
+      (globalThis as any).fetch = originalFetch;
     });
   });
 
@@ -369,6 +434,17 @@ describe('Trip', () => {
       expect(Array.isArray(response.body.segments)).toBe(true);
     });
 
+    it('should accept address-based inputs', async () => {
+      const token = makeToken();
+      const response = await request(app)
+        .post('/api/trip/local-route')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ originAddress: 'SFO Airport', destAddress: 'Downtown San Francisco' });
+
+      expect(response.status).toBe(200);
+      expect(['transit', 'driving']).toContain(response.body.mode);
+    });
+
     it('should return 404 when no route is found', async () => {
       mockSearchTransit.mockResolvedValueOnce([]);
       mockSearchDriving.mockResolvedValueOnce({
@@ -385,6 +461,26 @@ describe('Trip', () => {
         .send({ originLat: 37.6213, originLng: -122.379, destLat: 37.7749, destLng: -122.4194 });
 
       expect(response.status).toBe(404);
+    });
+
+    it('should fall back to driving when transit is unavailable', async () => {
+      mockSearchTransit.mockResolvedValueOnce([]);
+      mockSearchDriving.mockResolvedValueOnce({
+        distanceKm: 10,
+        duration: '15m',
+        carbonEstimateKg: 2,
+        polyline: 'drive_poly',
+      });
+
+      const token = makeToken();
+      const response = await request(app)
+        .post('/api/trip/local-route')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ originLat: 37.6213, originLng: -122.379, destLat: 37.7749, destLng: -122.4194 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.mode).toBe('driving');
+      expect(response.body.polyline).toBe('drive_poly');
     });
 
     it('should accept 0-valued coordinate inputs', async () => {
@@ -436,6 +532,25 @@ describe('Trip', () => {
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.pins)).toBe(true);
+    });
+
+    it('should prioritize the requesting user pins', async () => {
+      const owner = await createTestUser('nearby-owner@example.com', 'pass', 'Owner');
+      const other = await createTestUser('nearby-other@example.com', 'pass', 'Other');
+
+      createTestPin(other.userId, { title: 'Other Pin', latitude: 37.7749, longitude: -122.4194 });
+      createTestPin(owner.userId, { title: 'Owner Pin', latitude: 37.7749, longitude: -122.4194 });
+
+      const response = await request(app)
+        .post('/api/trip/nearby-pins')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ lat: 37.7749, lng: -122.4194, radiusKm: 50 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pins.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.pins[0].isUserPin).toBe(true);
+      const hasOther = response.body.pins.some((p: any) => p.isUserPin === false);
+      expect(hasOther).toBe(true);
     });
   });
 });
