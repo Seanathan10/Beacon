@@ -1,5 +1,5 @@
 /**
- * End-to-End Tests for Itenerary Sharing
+ * End-to-End Tests for Itinerary Sharing
  *
  * Tests for shared itinerary functionality including:
  * - Creating shareable itineraries
@@ -11,7 +11,11 @@
 import request from 'supertest';
 import { createTestApp } from './helpers/testApp';
 
-const app = createTestApp();
+let app: any;
+
+beforeAll(async () => {
+  app = await createTestApp();
+});
 
 describe('Shared Itineraries', () => {
   describe('POST /api/share', () => {

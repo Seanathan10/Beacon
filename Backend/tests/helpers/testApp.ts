@@ -6,30 +6,39 @@
 import { Express } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { app } from '../../index';
 import { db, query } from '../../database/db'; // Use the main db instance
 import { initializeSchema } from '../setup';
 
-/**
- * Create test Express application
- */
-export function createTestApp(): Express {
-  // Ensure schema is initialized
-  initializeSchema(db);
-  return app;
+let cachedApp: Express | null = null;
+
+export async function createTestApp(): Promise<Express> {
+  if (!cachedApp) {
+    initializeSchema(db);
+    const { app } = await import('../../index');
+    cachedApp = app;
+  }
+  return cachedApp;
 }
 
-/**
- * Create a test user and return auth token
- */
+
+export async function createMockedTestApp(): Promise<Express> {
+  // This is used by trip.test.ts which mocks external services
+  // The mocking happens via jest.unstable_mockModule before importing
+  if (!cachedApp) {
+    initializeSchema(db);
+    const { app } = await import('../../index');
+    cachedApp = app;
+  }
+  return cachedApp;
+}
+
 export async function createTestUser(
   email = 'test@example.com',
   password = 'testpassword123',
   name = 'Test User'
 ): Promise<{ token: string; userId: number; email: string }> {
-  // Ensure password hash function creates valid bcrypt hash that matches what the auth service expects
-  // The actual auth service uses 10 rounds
-  const hashedPassword = await bcrypt.hash(password, 10);
+
+	const hashedPassword = await bcrypt.hash(password, 10);
 
   query('INSERT INTO account (email, password, name) VALUES (?, ?, ?)', [
     email,
@@ -47,9 +56,7 @@ export async function createTestUser(
   return { token, userId: id, email };
 }
 
-/**
- * Create a test pin
- */
+
 export function createTestPin(
   creatorId: number,
   overrides: Partial<{
@@ -96,9 +103,6 @@ export function createTestPin(
   return id;
 }
 
-/**
- * Create a test comment
- */
 export function createTestComment(pinId: number, accountId: number, commentText: string): number {
   query(
     `INSERT INTO comment (pinID, accountID, comment, createdAt)
@@ -110,9 +114,6 @@ export function createTestComment(pinId: number, accountId: number, commentText:
   return id;
 }
 
-/**
- * Create a test post
- */
 export function createTestPost(
   creatorId: number | null,
   overrides: Partial<{

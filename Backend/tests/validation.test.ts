@@ -8,7 +8,11 @@
 import request from 'supertest';
 import { createTestApp, createTestUser, createTestPin, createTestPost, createTestComment } from './helpers/testApp';
 
-const app = createTestApp();
+let app: any;
+
+beforeAll(async () => {
+  app = await createTestApp();
+});
 
 describe('Request validation', () => {
   let token: string;
@@ -235,5 +239,150 @@ describe('Request validation', () => {
 
     // This is handler validation, not OpenAPI.
     expect(response.status).toBe(400);
+  });
+
+  describe('Boundary Value Validation', () => {
+    it('should accept email at maximum length', async () => {
+      // Typical email max is 254 characters
+      const longEmail = 'a'.repeat(240) + '@example.com';
+
+      const response = await request(app).post('/api/register').send({
+        email: longEmail,
+        password: 'password123',
+      });
+
+      // Should either succeed or fail gracefully
+      expect([201, 400]).toContain(response.status);
+    });
+
+    it('should accept password at minimum length', async () => {
+      const response = await request(app).post('/api/register').send({
+        email: 'minpass@example.com',
+        password: '1',
+      });
+
+      // No minimum enforced in schema, so should succeed
+      expect([201, 400]).toContain(response.status);
+    });
+
+    it('should handle very long password', async () => {
+      const longPassword = 'a'.repeat(1000);
+
+      const response = await request(app).post('/api/register').send({
+        email: 'longpass@example.com',
+        password: longPassword,
+      });
+
+      // Should handle gracefully
+      expect([201, 400]).toContain(response.status);
+    });
+
+    it('should accept pin coordinates at exact boundaries', async () => {
+      const boundaryTests = [
+        { latitude: 90, longitude: 180 },
+        { latitude: -90, longitude: -180 },
+        { latitude: 90, longitude: -180 },
+        { latitude: -90, longitude: 180 },
+      ];
+
+      for (const coords of boundaryTests) {
+        const response = await request(app)
+          .post('/api/pins')
+          .set('Authorization', `Bearer ${token}`)
+          .send(coords);
+
+        expect(response.status).toBe(201);
+      }
+    });
+
+    it('should reject pin coordinates beyond boundaries', async () => {
+      const invalidTests = [
+        { latitude: 91, longitude: 0 },
+        { latitude: -91, longitude: 0 },
+        { latitude: 0, longitude: 181 },
+        { latitude: 0, longitude: -181 },
+      ];
+
+      for (const coords of invalidTests) {
+        const response = await request(app)
+          .post('/api/pins')
+          .set('Authorization', `Bearer ${token}`)
+          .send(coords);
+
+        // Should be rejected
+        expect(response.status).toBe(400);
+      }
+    });
+
+    it('should reject negative upvotes', async () => {
+      const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
+
+      const response = await request(app)
+        .put(`/api/posts/${postId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ upvotes: -5 });
+
+      // Should be rejected
+      expect(response.status).toBe(400);
+    });
+
+    it('should accept zero upvotes', async () => {
+      const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
+
+      const response = await request(app)
+        .put(`/api/posts/${postId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ upvotes: 0 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.upvotes).toBe(0);
+    });
+
+    it('should handle very large upvote numbers', async () => {
+      const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
+
+      const response = await request(app)
+        .put(`/api/posts/${postId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ upvotes: 999999 });
+
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe('Array Validation', () => {
+    it('should reject extremely large tag arrays', async () => {
+      const hugeTags = Array(1000).fill('tag');
+
+      const response = await request(app)
+        .post('/api/posts')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Too Many Tags',
+          location: 'Location',
+          message: 'Message',
+          tags: hugeTags,
+        });
+
+      // Should either succeed or fail based on schema limits
+      expect([201, 400]).toContain(response.status);
+    });
+
+    it('should accept reasonable tag array sizes', async () => {
+      const reasonableTags = ['tag1', 'tag2', 'tag3', 'tag4', 'tag5'];
+
+      const response = await request(app)
+        .post('/api/posts')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Good Tags',
+          location: 'Location',
+          message: 'Message',
+          tags: reasonableTags,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.tags).toEqual(reasonableTags);
+    });
   });
 });

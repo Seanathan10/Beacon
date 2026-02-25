@@ -7,13 +7,19 @@ import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_MODEL = "gemini-3-flash-preview";
 
-const apiKey = process.env.GEMINI_API_KEY;
+// Lazy initialization - allow module to load even without API key
+let ai: GoogleGenAI | null = null;
 
-if (!apiKey) {
-    throw new Error("Gemini API key not configured");
+function getAiClient(): GoogleGenAI {
+    if (!ai) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new Error("Gemini API key not configured");
+        }
+        ai = new GoogleGenAI({ apiKey });
+    }
+    return ai;
 }
-
-const ai = new GoogleGenAI({ apiKey });
 
 // -- Types --
 
@@ -131,7 +137,7 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
 
     // First attempt: with grounding (may fail with empty content on some model versions)
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAiClient().models.generateContent({
             model: GEMINI_MODEL,
             contents: [
                 {
@@ -157,7 +163,7 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
     }
 
     // Fallback: without grounding (more reliable for structured JSON output)
-    const fallbackResponse = await ai.models.generateContent({
+    const fallbackResponse = await getAiClient().models.generateContent({
         model: GEMINI_MODEL,
         contents: [
             {
@@ -203,7 +209,7 @@ Best transit option: ${lowestTransit.mode} at ${lowestTransit.carbonKg} kg CO2
 
 Calculate savings and provide a recommendation.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAiClient().models.generateContent({
         model: GEMINI_MODEL,
         contents: [
             {
@@ -253,7 +259,7 @@ Question: ${question}
 
 Provide a helpful, concise answer focused on sustainability and local experiences.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAiClient().models.generateContent({
         model: GEMINI_MODEL,
         contents: [
             {

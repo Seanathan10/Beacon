@@ -8,7 +8,7 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
-import { createTestPin, createTestUser } from './helpers/testApp';
+import { createTestPin, createTestUser, createMockedTestApp } from './helpers/testApp';
 
 // --- Mock external dependencies BEFORE importing the app (ESM) ---
 
@@ -169,19 +169,7 @@ describe('Trip', () => {
       return makeGeocodeResponse(0, 0);
     });
 
-    const mod = await import('../index');
-    app = mod.app;
-  });
-
-  beforeEach(() => {
-    mockSearchFlights.mockClear();
-    mockGetCityAirportCode.mockClear();
-    mockGetAirportCoordinates.mockClear();
-    mockSearchTransit.mockClear();
-    mockSearchDriving.mockClear();
-    mockSearchEcoHotels.mockClear();
-    mockGenerateItinerary.mockClear();
-    mockAnswerTripQuestion.mockClear();
+    app = await createMockedTestApp();
   });
 
   describe('POST /api/trip/plan', () => {

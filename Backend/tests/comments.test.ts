@@ -13,7 +13,11 @@
 import request from 'supertest';
 import { createTestApp, createTestUser, createTestPin, createTestComment } from './helpers/testApp';
 
-const app = createTestApp();
+let app: any;
+
+beforeAll(async () => {
+  app = await createTestApp();
+});
 
 describe('Comments', () => {
   let userToken: string;
@@ -106,6 +110,16 @@ describe('Comments', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.comment.length).toBe(280);
+    });
+
+    it('should accept single character comments', async () => {
+      const response = await request(app)
+        .post(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ comment: 'a' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.comment).toBe('a');
     });
 
     it('should reject comments on non-existent pin', async () => {

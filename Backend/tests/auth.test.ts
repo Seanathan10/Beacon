@@ -12,7 +12,11 @@ import request from 'supertest';
 import { createTestApp, createTestUser } from './helpers/testApp';
 import { getTestDb } from './setup';
 
-const app = createTestApp();
+let app: any;
+
+beforeAll(async () => {
+  app = await createTestApp();
+});
 
 describe('Authentication', () => {
   describe('POST /api/register', () => {

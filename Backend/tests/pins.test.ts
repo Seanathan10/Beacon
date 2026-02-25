@@ -12,7 +12,11 @@
 import request from 'supertest';
 import { createTestApp, createTestUser, createTestPin } from './helpers/testApp';
 
-const app = createTestApp();
+let app: any;
+
+beforeAll(async () => {
+  app = await createTestApp();
+});
 
 describe('Pins', () => {
   let userToken: string;
@@ -303,6 +307,46 @@ describe('Pins', () => {
       expect(getResponse.body[0].longitude).toBeCloseTo(longitude, 6);
     });
 
+    it('should accept extreme valid coordinates', async () => {
+      const extremeCoords = [
+        { latitude: 90, longitude: 180, title: 'North Pole Edge' },
+        { latitude: -90, longitude: -180, title: 'South Pole Edge' },
+        { latitude: 0, longitude: 0, title: 'Null Island' },
+        { latitude: -89.9, longitude: 179.9, title: 'Near Antarctica' },
+      ];
+
+      for (const coords of extremeCoords) {
+        const response = await request(app)
+          .post('/api/pins')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(coords);
+
+        expect(response.status).toBe(201);
+        expect(response.body).toHaveProperty('id');
+      }
+    });
+
+    it('should handle very precise coordinate values', async () => {
+      const response = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          latitude: 37.12345678901234,
+          longitude: -122.98765432109876,
+          title: 'High Precision',
+        });
+
+      expect(response.status).toBe(201);
+
+      const getResponse = await request(app)
+        .get(`/api/pins/${response.body.id}`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      // Should preserve reasonable precision
+      expect(getResponse.body[0].latitude).toBeCloseTo(37.12345678901234, 6);
+      expect(getResponse.body[0].longitude).toBeCloseTo(-122.98765432109876, 6);
+    });
+
     it('should store and retrieve tags correctly', async () => {
       const tags = ['restaurant', 'italian', 'romantic'];
 
@@ -325,7 +369,7 @@ describe('Pins', () => {
       expect(storedTags).toEqual(tags);
     });
 
-    it('should initialize likes to 0 or null', async () => {
+    it('should initialize likes to 0', async () => {
       const response = await request(app)
         .post('/api/pins')
         .set('Authorization', `Bearer ${userToken}`)
@@ -340,8 +384,8 @@ describe('Pins', () => {
         .get(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      // Likes should be 0 or null
-      expect([0, null]).toContain(getResponse.body[0].likes);
+      // Likes should consistently be 0 for new pins
+      expect(getResponse.body[0].likes).toBe(0);
     });
   });
 });

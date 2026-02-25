@@ -91,10 +91,14 @@ paths:
               properties:
                 latitude:
                   type: number
+                  minimum: -90
+                  maximum: 90
                   description: Latitude coordinate of the pin
                   example: 40.7128
                 longitude:
                   type: number
+                  minimum: -180
+                  maximum: 180
                   description: Longitude coordinate of the pin
                   example: -74.0060
                 title:
@@ -673,6 +677,7 @@ paths:
                   example: ["Food", "Cafe"]
                 message:
                   type: string
+                  maxLength: 10000
                   description: Description/message content
                   example: "Amazing espresso and cozy atmosphere!"
                 image:
@@ -778,6 +783,7 @@ paths:
                         type: string
                 message:
                   type: string
+                  maxLength: 10000
                   nullable: true
                 image:
                   type: string
@@ -785,6 +791,7 @@ paths:
                   nullable: true
                 upvotes:
                   type: integer
+                  minimum: 0
                   nullable: true
       responses:
         200:
