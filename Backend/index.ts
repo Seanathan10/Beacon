@@ -31,7 +31,8 @@ const allowedOrigins = new Set<string>([
     "http://localhost:5173",
     "http://localhost:4173",
     "https://ch2026.vercel.app",
-    "https://www.beaconapp.live"
+    "https://www.beaconapp.live",
+    "https://api.truthnuke.tech"
 ]);
 
 const isAllowedOrigin = (origin: string) =>
