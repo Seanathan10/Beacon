@@ -28,12 +28,12 @@ app.use(express.json());
 // --- CORS (FIXED) ---
 const allowedOrigins = new Set<string>([
     "http://localhost:3000",
-    "http://localhost:5173", // Vite dev
-    "http://localhost:4173", // Vite preview (if you use it)
-    "https://ch2026.vercel.app", // Vercel prod
+    "http://localhost:5173",
+    "http://localhost:4173",
+    "https://ch2026.vercel.app",
+    "https://www.beaconapp.live"
 ]);
 
-// Optional: allow Vercel preview deployments like https://<hash>.vercel.app
 const isAllowedOrigin = (origin: string) =>
     allowedOrigins.has(origin) ||
     /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
@@ -41,12 +41,10 @@ const isAllowedOrigin = (origin: string) =>
 app.use(
     cors({
         origin: (origin, cb) => {
-            // allow requests with no Origin header (curl, server-to-server)
             if (!origin) return cb(null, true);
 
             if (isAllowedOrigin(origin)) return cb(null, true);
 
-            // Block everything else
             return cb(new Error(`CORS blocked for origin: ${origin}`), false);
         },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -56,16 +54,15 @@ app.use(
     }),
 );
 
-// Express 5-safe preflight handler (no app.options("*")!)
 app.use((req, res, next) => {
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
 });
 
-// SSE streaming endpoint - before OpenAPI validator to avoid response validation issues
+
 app.post("/api/trip/plan/stream", auth.check, trip.planTripStream);
 
-// IMPORTANT: If OpenApiValidator is validating responses, make sure /heartbeat is in the spec
+
 app.use(
     OpenApiValidator.middleware({
         apiSpec,
@@ -82,11 +79,9 @@ app.get("/heartbeat", (req, res) => {
     });
 });
 
-// Auth routes
 app.post("/api/login", auth.login);
 app.post("/api/register", auth.register);
 
-// Pins routes
 app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
 app.get("/api/pins/:id", auth.check, pins.getPin);
@@ -94,7 +89,6 @@ app.put("/api/pins/:id", auth.check, pins.updatePin);
 app.post("/api/pins", auth.check, pins.createPin);
 app.delete("/api/pins/:id", auth.check, pins.deletePin);
 
-// Posts routes
 app.get("/api/posts", auth.check, posts.getAllPosts);
 app.get("/api/posts/:id", auth.check, posts.getPost);
 app.post("/api/posts", auth.check, posts.createPost);
@@ -102,18 +96,15 @@ app.put("/api/posts/:id", auth.check, posts.updatePost);
 app.delete("/api/posts/:id", auth.check, posts.deletePost);
 app.post("/api/posts/:id/upvote", auth.check, posts.upvotePost);
 
-// Comments routes
 app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
 app.post("/api/pins/:pinId/comments", auth.check, comments.createComment);
 app.put("/api/comments/:commentId", auth.check, comments.updateComment);
 app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
 
-//likes routes
 app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);
 app.delete("/api/likes/:id", auth.check, likes.removeLike);
 
-// Trip planning routes
 app.post("/api/trip/plan", auth.check, trip.planTrip);
 app.post("/api/trip/ask", auth.check, trip.askQuestion);
 app.post("/api/trip/generate-itinerary", auth.check, trip.generateItineraryWithSelections);
@@ -123,18 +114,15 @@ app.post("/api/trip/nearby-pins", auth.check, trip.getNearbyPinsForSelection);
 // Share routes (public - no auth required for viewing shared itineraries)
 app.use("/api/share", shareRouter);
 
-// Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    // OpenApiValidator errors
     if (err.status) {
         return res.status(err.status).json({
             message: err.message,
             errors: err.errors,
-            error: err.message // Compatibility field for tests expecting 'error'
+            error: err.message
         });
     }
     
-    // Fallback for other known errors
     if (err.name === 'UnauthorizedError') {
         return res.status(401).json({ message: "Unauthorized" });
     }
