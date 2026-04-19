@@ -59,7 +59,7 @@ export function initializeSchema(db: DatabaseSync) {
       accountID INTEGER,
       comment VARCHAR(280),
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (pinID) REFERENCES pin(id),
+      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
       FOREIGN KEY (accountID) REFERENCES account(id)
     );
 
@@ -67,7 +67,7 @@ export function initializeSchema(db: DatabaseSync) {
       pinID INTEGER,
       accountID INTEGER,
       PRIMARY KEY (pinID, accountID),
-      FOREIGN KEY (pinID) REFERENCES pin(id),
+      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
       FOREIGN KEY (accountID) REFERENCES account(id)
     );
 
@@ -89,7 +89,7 @@ export function initializeSchema(db: DatabaseSync) {
       postID INTEGER,
       accountID INTEGER,
       PRIMARY KEY (postID, accountID),
-      FOREIGN KEY (postID) REFERENCES post(id),
+      FOREIGN KEY (postID) REFERENCES post(id) ON DELETE CASCADE,
       FOREIGN KEY (accountID) REFERENCES account(id)
     );
 

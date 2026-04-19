@@ -400,6 +400,49 @@ describe('Integration Tests', () => {
     });
   });
 
+  describe('Cascade Deletes', () => {
+    it('should remove comments and likes when a pin is deleted', async () => {
+      const owner = await createTestUser('cascade@test.com', 'pass', 'Cascade');
+      const liker = await createTestUser('cascade-liker@test.com', 'pass', 'Liker');
+
+      const pinId = createTestPin(owner.userId, { title: 'Doomed Pin' });
+
+      // Add a comment
+      await request(app)
+        .post(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ comment: 'Orphan comment' });
+
+      // Add a like
+      await request(app)
+        .post(`/api/likes/${pinId}`)
+        .set('Authorization', `Bearer ${liker.token}`);
+
+      // Delete the pin
+      const deleteResponse = await request(app)
+        .delete(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${owner.token}`);
+
+      expect(deleteResponse.status).toBe(200);
+
+      // Comments should be gone (cascaded with the pin)
+      const commentsResponse = await request(app)
+        .get(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${owner.token}`);
+
+      expect(commentsResponse.status).toBe(200);
+      expect(commentsResponse.body).toEqual([]);
+
+      // Likes should be gone — getLikes joins on the pin table, so a deleted
+      // pin yields 404 (pin row is gone, likes rows cascaded away).
+      const likesResponse = await request(app)
+        .get(`/api/likes/${pinId}`)
+        .set('Authorization', `Bearer ${liker.token}`);
+
+      expect(likesResponse.status).toBe(404);
+    });
+  });
+
   describe('Share Integration', () => {
     it('should create itinerary with trip data and retrieve it publicly', async () => {
       // Simulate a trip planning result being shared

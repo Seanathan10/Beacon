@@ -77,6 +77,26 @@ describe('Pins', () => {
 
       expect(response.status).toBe(401);
     });
+
+    it('should store description field and return it on GET', async () => {
+      const response = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          latitude: 37.7749,
+          longitude: -122.4194,
+          description: 'A scenic overlook',
+        });
+
+      expect(response.status).toBe(201);
+      const pinId = response.body.id;
+
+      const getResponse = await request(app)
+        .get(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(getResponse.body[0].description).toBe('A scenic overlook');
+    });
   });
 
   describe('GET /api/pins', () => {
@@ -95,6 +115,18 @@ describe('Pins', () => {
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBe(3);
+    });
+
+    it('should return pins from ALL users, not just the requester', async () => {
+      // Any authenticated user can see all pins — this is the documented behavior.
+      // The endpoint is a shared public map; auth only ensures you are logged in.
+      const response = await request(app)
+        .get('/api/pins')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      const emails = response.body.map((p: any) => p.email);
+      expect(emails).toContain('pinuser@example.com');
+      expect(emails).toContain('other@example.com');
     });
 
     it('should include email in pin data', async () => {

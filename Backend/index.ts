@@ -59,6 +59,10 @@ function rateLimiter(maxRequests: number, windowMs: number) {
 
 const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
 
+export function clearRateLimitStoreForTesting() {
+    rateLimitStore.clear();
+}
+
 // --- CORS ---
 const allowedOrigins = new Set<string>([
     "http://localhost:3000",

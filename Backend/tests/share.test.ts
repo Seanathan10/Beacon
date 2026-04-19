@@ -97,6 +97,21 @@ describe('Shared Itineraries', () => {
       expect(response.status).toBe(201);
     });
 
+    it('should reject payloads larger than 512 KB', async () => {
+      // Build JSON whose serialized size exceeds 512 KB.
+      // express.json() has a 100 KB default limit, so a request that large is
+      // rejected at the middleware level with 413 before our handler runs.
+      // Either rejection is acceptable — the important thing is that the server
+      // never stores an oversized itinerary.
+      const bigString = 'x'.repeat(600 * 1024);
+
+      const response = await request(app).post('/api/share').send({
+        itinerary: { blob: bigString },
+      });
+
+      expect(response.status).toBe(413);
+    });
+
     it('should generate unique IDs for each itinerary', async () => {
       const ids: string[] = [];
 

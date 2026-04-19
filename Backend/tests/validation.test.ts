@@ -243,38 +243,32 @@ describe('Request validation', () => {
 
   describe('Boundary Value Validation', () => {
     it('should accept email at maximum length', async () => {
-      // Typical email max is 254 characters
-      const longEmail = 'a'.repeat(240) + '@example.com';
-
+      // Schema allows up to 254 characters (RFC 5321 max)
+      const longEmail = 'a'.repeat(240) + '@example.com'; // 252 chars — within limit
       const response = await request(app).post('/api/register').send({
         email: longEmail,
         password: 'password123',
       });
-
-      // Should either succeed or fail gracefully
-      expect([201, 400]).toContain(response.status);
+      expect(response.status).toBe(201);
     });
 
     it('should accept password at minimum length', async () => {
+      // No minimum password length is enforced in the OpenAPI schema
       const response = await request(app).post('/api/register').send({
         email: 'minpass@example.com',
         password: '1',
       });
-
-      // No minimum enforced in schema, so should succeed
-      expect([201, 400]).toContain(response.status);
+      expect(response.status).toBe(201);
     });
 
-    it('should handle very long password', async () => {
+    it('should accept very long passwords', async () => {
+      // bcrypt silently truncates input at 72 bytes and still succeeds
       const longPassword = 'a'.repeat(1000);
-
       const response = await request(app).post('/api/register').send({
         email: 'longpass@example.com',
         password: longPassword,
       });
-
-      // Should handle gracefully
-      expect([201, 400]).toContain(response.status);
+      expect(response.status).toBe(201);
     });
 
     it('should accept pin coordinates at exact boundaries', async () => {
@@ -351,7 +345,9 @@ describe('Request validation', () => {
   });
 
   describe('Array Validation', () => {
-    it('should reject extremely large tag arrays', async () => {
+    it('should accept extremely large tag arrays (no maxItems constraint)', async () => {
+      // The OpenAPI spec has no maxItems on tags, and SQLite does not enforce
+      // VARCHAR(500), so large arrays are stored as a long CSV string.
       const hugeTags = Array(1000).fill('tag');
 
       const response = await request(app)
@@ -364,8 +360,7 @@ describe('Request validation', () => {
           tags: hugeTags,
         });
 
-      // Should either succeed or fail based on schema limits
-      expect([201, 400]).toContain(response.status);
+      expect(response.status).toBe(201);
     });
 
     it('should accept reasonable tag array sizes', async () => {
