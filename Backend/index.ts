@@ -6,15 +6,14 @@ import path from "node:path";
 import cors from "cors";
 import * as OpenApiValidator from "express-openapi-validator";
 
-import * as auth from "./routes/auth";
-import * as pins from "./routes/pins";
-import * as posts from "./routes/posts";
-import * as comments from "./routes/comments";
-import * as likes from "./routes/likes";
-import * as trip from "./routes/trip";
-import { shareRouter } from "./routes/share";
+import * as auth from "./routes/auth.ts";
+import * as pins from "./routes/pins.ts";
+import * as posts from "./routes/posts.ts";
+import * as comments from "./routes/comments.ts";
+import * as likes from "./routes/likes.ts";
+import * as trip from "./routes/trip.ts";
+import { shareRouter } from "./routes/share.ts";
 
-// --- Startup validation ---
 const REQUIRED_ENV_VARS = ["SECRET"];
 const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
 if (missing.length > 0) {
@@ -33,7 +32,6 @@ const apiSpec = path.join(__dirname, "./openapi.yml");
 
 app.use(express.json());
 
-// --- In-memory rate limiter ---
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Request) => string) {
@@ -61,10 +59,8 @@ function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Reques
 
 const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
 
-// Keyed by user ID so each account gets its own quota (requires auth.check to run first)
 const tripRateLimit = rateLimiter(20, 60 * 1000, (req) => `trip:${req.user?.id ?? req.ip}`);
 
-// Prune expired entries every 10 minutes to avoid unbounded growth
 if (process.env.NODE_ENV !== "test") {
     setInterval(() => {
         const now = Date.now();
@@ -78,7 +74,6 @@ export function clearRateLimitStoreForTesting() {
     rateLimitStore.clear();
 }
 
-// --- CORS ---
 const allowedOrigins = new Set<string>([
     "http://localhost:3000",
     "http://localhost:5173",
@@ -158,7 +153,6 @@ app.post("/api/trip/generate-itinerary", auth.check, tripRateLimit, trip.generat
 app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute);
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
 
-// Share routes (public - no auth required for viewing shared itineraries)
 app.use("/api/share", shareRouter);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

@@ -1,7 +1,5 @@
 /**
- * End-to-End Tests for Comments
- *
- * Tests for comment functionality including:
+ * Tests:
  * - Creating comments on pins
  * - Reading comments
  * - Updating comments

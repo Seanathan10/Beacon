@@ -1,5 +1,5 @@
 /**
- * End-to-End Tests for Likes
+ * Tests Likes
  *
  * Tests for the like system including:
  * - Adding likes to pins

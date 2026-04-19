@@ -2,7 +2,6 @@ import { DatabaseSync } from "node:sqlite";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Helper for ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -11,26 +10,20 @@ const dbPath = isTest ? ":memory:" : path.join(__dirname, "database.db");
 
 export const db = new DatabaseSync(dbPath);
 
-// SQLite does not enforce foreign key constraints by default; enable them explicitly
 db.exec('PRAGMA foreign_keys = ON');
 
 console.log(`Connected to SQLite database (${isTest ? "In-Memory" : "File"})`);
 
-// Helper function to run queries
 export function query(sql: string, params: any[] = []): any {
     const stmt = db.prepare(sql);
     const upperSql = sql.trim().toUpperCase();
-    // If it's a SELECT or has RETURNING clause, use .all() to get rows
     if (upperSql.startsWith("SELECT") || upperSql.includes("RETURNING")) {
-        // .all() returns an array of rows
         return stmt.all(...params);
     } else {
-        // .run() returns { changes, lastInsertRowid }
         return stmt.run(...params);
     }
 }
 
-// Initialize posts table if it doesn't exist
 function initPostsTable() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS post (
@@ -48,7 +41,6 @@ function initPostsTable() {
         );
     `);
 
-    // Check if table is empty and seed with initial data
     const count = db.prepare("SELECT COUNT(*) as count FROM post").get() as { count: number };
     if (count.count === 0) {
         db.exec(`
@@ -64,4 +56,3 @@ function initPostsTable() {
 if (!isTest) {
     initPostsTable();
 }
-
