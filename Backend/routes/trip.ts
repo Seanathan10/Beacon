@@ -119,22 +119,41 @@ function getNearbyPins(lat: number, lng: number, radiusKm: number = 50, userId?:
 }
 
 /**
- * Geocode a city name to coordinates using Google Geocoding
+ * Geocode a city name to coordinates.
+ * Tries Google Geocoding first (if key present), falls back to Nominatim.
  */
 async function geocodeCity(city: string): Promise<{ lat: number; lng: number } | null> {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return null;
 
-    const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`
-    );
+    if (apiKey) {
+        try {
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                const location = data.results?.[0]?.geometry?.location;
+                if (location) return { lat: location.lat, lng: location.lng };
+            }
+        } catch {
+            // fall through to Nominatim
+        }
+    }
 
-    if (!response.ok) return null;
+    // Fallback: Nominatim (OpenStreetMap) — no key required
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`,
+            { headers: { "User-Agent": "BeaconApp/1.0" } }
+        );
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    } catch {
+        // ignore
+    }
 
-    const data = await response.json();
-    const location = data.results?.[0]?.geometry?.location;
-
-    return location ? { lat: location.lat, lng: location.lng } : null;
+    return null;
 }
 
 /**
