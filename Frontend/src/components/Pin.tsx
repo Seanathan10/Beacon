@@ -3,7 +3,6 @@ import { Popup } from "react-map-gl/mapbox";
 import NewPinModal from "./NewPinModal";
 import "./styles/Pin.css";
 import { ReverseGeocodeResult } from "@/utils/geocoding";
-import { data } from "react-router";
 
 interface PinProps {
     address?: string;

@@ -22,8 +22,8 @@ export function getAllPins(req: Request, res: Response) {
 			p.address,
 			p.description,
 			p.image,
-            p.tags,
-            p.likes
+			p.tags,
+			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
 		FROM pin p
 		JOIN account a ON a.id = p.creatorID;
 	`);
@@ -212,3 +212,4 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
 
     res.json(filtered);
 }
+

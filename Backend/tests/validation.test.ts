@@ -167,7 +167,10 @@ describe('Request validation', () => {
     expect(response.body).toHaveProperty('message');
   });
 
-  it('should reject update post with invalid upvotes type', async () => {
+  it('should ignore upvotes field in post update body (field removed from schema)', async () => {
+    // upvotes is no longer an accepted field in PUT /api/posts/:id — it is derived
+    // from the post_upvote junction table and cannot be set directly.
+    // Unknown extra fields are silently ignored by the validator.
     const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
 
     const response = await request(app)
@@ -175,8 +178,8 @@ describe('Request validation', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ upvotes: 'not-a-number' });
 
-    expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('message');
+    expect(response.status).toBe(200);
+    expect(response.body.upvotes).toBe(0);
   });
 
   it('should reject create pin when required fields are missing', async () => {
@@ -308,39 +311,20 @@ describe('Request validation', () => {
       }
     });
 
-    it('should reject negative upvotes', async () => {
+    it('should ignore upvotes field entirely (not in schema, cannot be set directly)', async () => {
+      // upvotes was removed from the updatePost request schema because it is derived
+      // from the post_upvote junction table. Sending any upvotes value is a no-op.
       const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
 
-      const response = await request(app)
-        .put(`/api/posts/${postId}`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ upvotes: -5 });
+      for (const upvotes of [-5, 0, 999999]) {
+        const response = await request(app)
+          .put(`/api/posts/${postId}`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ upvotes });
 
-      // Should be rejected
-      expect(response.status).toBe(400);
-    });
-
-    it('should accept zero upvotes', async () => {
-      const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
-
-      const response = await request(app)
-        .put(`/api/posts/${postId}`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ upvotes: 0 });
-
-      expect(response.status).toBe(200);
-      expect(response.body.upvotes).toBe(0);
-    });
-
-    it('should handle very large upvote numbers', async () => {
-      const postId = createTestPost(userId, { title: 'T', location: 'L', message: 'M' });
-
-      const response = await request(app)
-        .put(`/api/posts/${postId}`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ upvotes: 999999 });
-
-      expect(response.status).toBe(200);
+        expect(response.status).toBe(200);
+        expect(response.body.upvotes).toBe(0);
+      }
     });
   });
 

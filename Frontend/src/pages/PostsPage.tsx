@@ -19,7 +19,7 @@ export function PostsPage() {
         setError(null);
         try {
             const token = getAuthToken();
-            const response = await fetch(`${BASE_API_URL}/api/pins`, {
+            const response = await fetch(`${BASE_API_URL}/api/posts`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -38,7 +38,8 @@ export function PostsPage() {
             // Backend returns posts without comments array, so we add empty comments
             const postsWithComments = data.map((post: any) => ({
                 ...post,
-                tags: JSON.parse(post.tags) || [],
+                // tags already parsed as an array by the backend
+                tags: Array.isArray(post.tags) ? post.tags : [],
                 comments: post.comments || [],
             }));
             setPosts(postsWithComments);
@@ -88,7 +89,7 @@ export function PostsPage() {
     const removePost = async (id: number) => {
         try {
             const token = getAuthToken();
-            const response = await fetch(`${BASE_API_URL}/api/pins/${id}`, {
+            const response = await fetch(`${BASE_API_URL}/api/posts/${id}`, {
                 method: "DELETE",
                 headers: {
                     Authorization: `Bearer ${token}`,

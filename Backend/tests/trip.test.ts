@@ -270,16 +270,18 @@ describe('Trip', () => {
       expect(response.text).toContain('"stage":"ready"');
     });
 
-    it('should emit an error stage when required fields are missing', async () => {
+    it('should return 400 when required fields are missing (validated by OpenAPI middleware)', async () => {
+      // The SSE endpoint now runs after the OpenAPI validator, so missing required
+      // fields (itineraryType is required) are rejected at the middleware level with
+      // a 400 rather than reaching the handler and emitting an SSE error stage.
       const token = makeToken();
       const response = await request(app)
         .post('/api/trip/plan/stream')
         .set('Authorization', `Bearer ${token}`)
         .send({ startLocation: 'San Francisco', endLocation: 'Los Angeles' });
 
-      expect(response.status).toBe(200);
-      expect(response.text).toContain('"stage":"error"');
-      expect(response.text).toContain('Missing required fields');
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('message');
     });
 
     it('should emit an error stage when geocoding fails', async () => {

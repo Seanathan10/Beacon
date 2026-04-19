@@ -40,10 +40,10 @@ export function LoginPage() {
                 throw new Error(data.message || "Login failed");
             }
 
-            // Store the token in localStorage
             localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
+            if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 
-            // Navigate to home page on successful login
             navigate("/home");
         } catch (err) {
             setError(

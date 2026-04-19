@@ -199,7 +199,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     };
 
     const isOwner =
-        currentUserEmail != null && selectedPoint.email == currentUserEmail;
+        currentUserEmail != null && selectedPoint.email === currentUserEmail;
 
     const titleText =
         selectedPoint.title?.trim() ||
@@ -275,10 +275,10 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                 });
                 setIsEditing(false);
             } else {
-                console.error("Failed to update pin");
+                alert("Failed to save changes. Please try again.");
             }
         } catch (error) {
-            console.error("Error updating pin:", error);
+            alert("Failed to save changes. Please check your connection and try again.");
         } finally {
             setIsSaving(false);
         }

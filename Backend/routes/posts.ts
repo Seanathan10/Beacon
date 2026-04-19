@@ -1,10 +1,24 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 
+function withUpvotes(post: any): any {
+    const [{ count }] = db.query(
+        "SELECT COUNT(*) as count FROM post_upvote WHERE postID = ?",
+        [post.id]
+    );
+    return {
+        ...post,
+        upvotes: count,
+        tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
+    };
+}
+
 export function getAllPosts(req: Request, res: Response) {
     const results = db.query(`
-        SELECT id, creatorID, title, location, category, tags, message, image, upvotes, createdAt
-        FROM post
+        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
+               p.message, p.image, p.createdAt,
+               (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
+        FROM post p
         ORDER BY createdAt DESC
     `);
 
@@ -18,7 +32,12 @@ export function getAllPosts(req: Request, res: Response) {
 
 export function getPost(req: Request, res: Response) {
     const postID = req.params.id;
-    const results = db.query(`SELECT * FROM post WHERE id = ?`, [postID]);
+    const results = db.query(`
+        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
+               p.message, p.image, p.createdAt,
+               (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
+        FROM post p WHERE p.id = ?
+    `, [postID]);
 
     if (results.length === 0) {
         return res.status(404).json({ message: "Post not found" });
@@ -41,7 +60,7 @@ export function createPost(req: Request, res: Response) {
             `
             INSERT INTO post (creatorID, title, location, category, tags, message, image)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, creatorID, title, location, category, tags, message, image, upvotes, createdAt;
+            RETURNING id, creatorID, title, location, category, tags, message, image, createdAt;
             `,
             [
                 req.user?.id || null,
@@ -61,6 +80,7 @@ export function createPost(req: Request, res: Response) {
 
         res.status(201).json({
             ...newPost,
+            upvotes: 0,
             tags: newPost.tags ? newPost.tags.split(',').map((t: string) => t.trim()) : [],
         });
     } catch (err) {
@@ -72,14 +92,15 @@ export function createPost(req: Request, res: Response) {
 export function updatePost(req: Request, res: Response) {
     const postID = req.params.id;
     const userID = req.user?.id;
-    const { title, location, category, tags, message, image, upvotes } = req.body;
+    const { title, location, category, tags, message, image } = req.body;
 
     const post = db.query("SELECT creatorID FROM post WHERE id = ?", [postID])[0];
     if (!post) {
         return res.status(404).json({ message: "Post not found" });
     }
 
-    if (post.creatorID && Number(post.creatorID) !== Number(userID)) {
+    // Null creatorID means no owner — no one can edit it
+    if (post.creatorID === null || Number(post.creatorID) !== Number(userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -110,10 +131,6 @@ export function updatePost(req: Request, res: Response) {
         updates.push("image = ?");
         params.push(image);
     }
-    if (upvotes !== undefined) {
-        updates.push("upvotes = ?");
-        params.push(upvotes);
-    }
 
     if (updates.length > 0) {
         params.push(postID);
@@ -121,7 +138,13 @@ export function updatePost(req: Request, res: Response) {
         db.query(sql, params);
     }
 
-    const updatedPost = db.query("SELECT * FROM post WHERE id = ?", [postID])[0];
+    const updatedPost = db.query(`
+        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
+               p.message, p.image, p.createdAt,
+               (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
+        FROM post p WHERE p.id = ?
+    `, [postID])[0];
+
     res.json({
         ...updatedPost,
         tags: updatedPost.tags ? updatedPost.tags.split(',').map((t: string) => t.trim()) : [],
@@ -137,7 +160,8 @@ export function deletePost(req: Request, res: Response) {
         return res.status(404).json({ message: "Post not found" });
     }
 
-    if (post.creatorID && Number(post.creatorID) !== Number(userID)) {
+    // Null creatorID means no owner — no one can delete it
+    if (post.creatorID === null || Number(post.creatorID) !== Number(userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -149,7 +173,7 @@ export function upvotePost(req: Request, res: Response) {
     const postID = req.params.id;
     const userID = req.user?.id;
 
-    const post = db.query("SELECT id, upvotes FROM post WHERE id = ?", [postID])[0];
+    const post = db.query("SELECT id FROM post WHERE id = ?", [postID])[0];
     if (!post) {
         return res.status(404).json({ message: "Post not found" });
     }
@@ -167,9 +191,13 @@ export function upvotePost(req: Request, res: Response) {
         return res.status(500).send();
     }
 
-    db.query("UPDATE post SET upvotes = upvotes + 1 WHERE id = ?", [postID]);
+    const updatedPost = db.query(`
+        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
+               p.message, p.image, p.createdAt,
+               (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
+        FROM post p WHERE p.id = ?
+    `, [postID])[0];
 
-    const updatedPost = db.query("SELECT * FROM post WHERE id = ?", [postID])[0];
     res.json({
         ...updatedPost,
         tags: updatedPost.tags ? updatedPost.tags.split(',').map((t: string) => t.trim()) : [],

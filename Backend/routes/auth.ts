@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as db from "../database/db";
@@ -88,13 +88,17 @@ export async function register(req: Request, res: Response) {
     }
 }
 
-export function check(req: Request, res: Response, next: Function) {
+export function check(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ message: "No token provided" });
     }
 
-    const token = authHeader.split(" ")[1];
+    const parts = authHeader.split(" ");
+    const token = parts.length === 2 && parts[0].toLowerCase() === "bearer" ? parts[1] : null;
+    if (!token) {
+        return res.status(401).json({ message: "Invalid token" });
+    }
 
     jwt.verify(token, process.env.SECRET as string, (err, decoded) => {
         if (err) {

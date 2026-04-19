@@ -249,14 +249,17 @@ describe('Posts', () => {
       expect(response.body.tags).toEqual(['new', 'tags']);
     });
 
-    it('should update upvotes directly', async () => {
+    it('should ignore upvotes field in body (not directly writable)', async () => {
+      // upvotes is derived from the post_upvote junction table and cannot be
+      // set directly via the update endpoint — the field is not in the schema.
       const response = await request(app)
         .put(`/api/posts/${postId}`)
         .set('Authorization', `Bearer ${userToken}`)
         .send({ upvotes: 100 });
 
       expect(response.status).toBe(200);
-      expect(response.body.upvotes).toBe(100);
+      // upvotes stays at 0 (no actual upvotes were cast)
+      expect(response.body.upvotes).toBe(0);
     });
 
     it('should reject update by non-owner', async () => {
@@ -278,7 +281,7 @@ describe('Posts', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should allow update of post with null creator by any user', async () => {
+    it('should reject update of post with null creator (no owner = no one can edit)', async () => {
       const nullCreatorPostId = createTestPost(null, { title: 'System Post' });
 
       const response = await request(app)
@@ -286,9 +289,9 @@ describe('Posts', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({ title: 'Updated System Post' });
 
-      // Posts with null creator can be updated by anyone
-      expect(response.status).toBe(200);
-      expect(response.body.title).toBe('Updated System Post');
+      // Null creatorID means the post has no owner — no one should be able to edit it.
+      // Allowing any authenticated user to edit ownerless posts was an IDOR vulnerability.
+      expect(response.status).toBe(403);
     });
   });
 
@@ -332,14 +335,15 @@ describe('Posts', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should allow deletion of post with null creator', async () => {
+    it('should reject deletion of post with null creator (no owner = no one can delete)', async () => {
       const nullCreatorPostId = createTestPost(null, { title: 'System Post' });
 
       const response = await request(app)
         .delete(`/api/posts/${nullCreatorPostId}`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(response.status).toBe(200);
+      // Null creatorID means the post has no owner — no one should be able to delete it.
+      expect(response.status).toBe(403);
     });
   });
 
@@ -356,7 +360,9 @@ describe('Posts', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.upvotes).toBe(6);
+      // upvotes is now derived from the post_upvote junction table, so it
+      // reflects the real count (1 upvote just cast), not the denormalized column.
+      expect(response.body.upvotes).toBe(1);
     });
 
     it('should prevent duplicate upvotes from same user', async () => {
@@ -383,7 +389,8 @@ describe('Posts', () => {
         .post(`/api/posts/${postId}/upvote`)
         .set('Authorization', `Bearer ${otherUserToken}`);
 
-      expect(response.body.upvotes).toBe(7);
+      // Two distinct upvotes → junction table count = 2
+      expect(response.body.upvotes).toBe(2);
     });
 
     it('should return 404 for non-existent post', async () => {

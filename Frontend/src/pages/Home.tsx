@@ -513,7 +513,7 @@ function HomePage() {
                     attributionControl={false}
                     transformRequest={(url, resourceType) => {
                         if (url.includes('events.mapbox.com')) {
-                            return { url: '' };
+                            return null as any;
                         }
                         return { url };
                     }}

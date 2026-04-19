@@ -33,17 +33,19 @@ const apiSpec = path.join(__dirname, "./openapi.yml");
 
 app.use(express.json());
 
-// --- Simple in-memory rate limiter ---
+// --- In-memory rate limiter ---
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-function rateLimiter(maxRequests: number, windowMs: number) {
+function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Request) => string) {
     return (req: Request, res: Response, next: NextFunction) => {
-        const ip = req.ip || req.socket.remoteAddress || "unknown";
+        const key = keyFn
+            ? keyFn(req)
+            : (req.ip || req.socket.remoteAddress || "unknown");
         const now = Date.now();
-        const entry = rateLimitStore.get(ip);
+        const entry = rateLimitStore.get(key);
 
         if (!entry || now > entry.resetAt) {
-            rateLimitStore.set(ip, { count: 1, resetAt: now + windowMs });
+            rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
             return next();
         }
 
@@ -58,6 +60,19 @@ function rateLimiter(maxRequests: number, windowMs: number) {
 }
 
 const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
+
+// Keyed by user ID so each account gets its own quota (requires auth.check to run first)
+const tripRateLimit = rateLimiter(20, 60 * 1000, (req) => `trip:${req.user?.id ?? req.ip}`);
+
+// Prune expired entries every 10 minutes to avoid unbounded growth
+if (process.env.NODE_ENV !== "test") {
+    setInterval(() => {
+        const now = Date.now();
+        for (const [key, entry] of rateLimitStore.entries()) {
+            if (now > entry.resetAt) rateLimitStore.delete(key);
+        }
+    }, 10 * 60 * 1000);
+}
 
 export function clearRateLimitStoreForTesting() {
     rateLimitStore.clear();
@@ -95,10 +110,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
-app.post("/api/trip/plan/stream", auth.check, trip.planTripStream);
-
-
 app.use(
     OpenApiValidator.middleware({
         apiSpec,
@@ -119,6 +130,7 @@ app.post("/api/register", authRateLimit, auth.register);
 
 app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
+app.post("/api/pins/nearby", auth.check, pins.getPinsNearCoordinate);
 app.get("/api/pins/:id", auth.check, pins.getPin);
 app.put("/api/pins/:id", auth.check, pins.updatePin);
 app.post("/api/pins", auth.check, pins.createPin);
@@ -140,11 +152,12 @@ app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);
 app.delete("/api/likes/:id", auth.check, likes.removeLike);
 
-app.post("/api/trip/plan", auth.check, trip.planTrip);
-app.post("/api/trip/ask", auth.check, trip.askQuestion);
-app.post("/api/trip/generate-itinerary", auth.check, trip.generateItineraryWithSelections);
-app.post("/api/trip/local-route", auth.check, trip.getLocalRoute);
-app.post("/api/trip/nearby-pins", auth.check, trip.getNearbyPinsForSelection);
+app.post("/api/trip/plan", auth.check, tripRateLimit, trip.planTrip);
+app.post("/api/trip/plan/stream", auth.check, tripRateLimit, trip.planTripStream);
+app.post("/api/trip/ask", auth.check, tripRateLimit, trip.askQuestion);
+app.post("/api/trip/generate-itinerary", auth.check, tripRateLimit, trip.generateItineraryWithSelections);
+app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute);
+app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
 
 // Share routes (public - no auth required for viewing shared itineraries)
 app.use("/api/share", shareRouter);

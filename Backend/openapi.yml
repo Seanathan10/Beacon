@@ -106,10 +106,10 @@ paths:
                   maxLength: 200
                   description: Title of the pin
                   example: "Golden Gate Overlook"
-                message:
+                description:
                   type: string
                   maxLength: 500
-                  description: Message content of the pin
+                  description: Description/message content of the pin
                   nullable: true
                 image:
                   type: string
@@ -181,6 +181,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/pins/nearby:
+    post:
+      tags: [Pins]
+      summary: Get pins near a coordinate
+      description: Returns all pins within 10 km of the given latitude/longitude, sorted by distance (closest first), using the Haversine formula for accurate great-circle distance.
+      operationId: getPinsNearCoordinate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                  description: Latitude of the search origin
+                  example: 37.7749
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                  description: Longitude of the search origin
+                  example: -122.4194
+      responses:
+        200:
+          description: Array of pins within 10 km, sorted nearest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pin'
+        400:
+          description: Bad request - missing or invalid coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/pins/{id}:
     get:
       tags: [Pins]
@@ -241,7 +291,7 @@ paths:
                   type: string
                   maxLength: 200
                   nullable: true
-                message:
+                description:
                   type: string
                   maxLength: 500
                   nullable: true
@@ -789,10 +839,6 @@ paths:
                   type: string
                   maxLength: 2000
                   nullable: true
-                upvotes:
-                  type: integer
-                  minimum: 0
-                  nullable: true
       responses:
         200:
           description: Post updated successfully
@@ -895,6 +941,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         404:
           description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Already upvoted
           content:
             application/json:
               schema:
@@ -1021,7 +1073,7 @@ paths:
                   type: object
                   description: Additional settings
       responses:
-        200:
+        201:
           description: Itinerary shared successfully
           content:
             application/json:

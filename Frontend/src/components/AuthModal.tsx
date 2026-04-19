@@ -19,6 +19,7 @@ export default function AuthModal({
     const [credentials, setCredentials] = useState({
         email: "",
         password: "",
+        name: "",
     });
 
     const [isClosing, setIsClosing] = useState(false);
@@ -69,6 +70,7 @@ export default function AuthModal({
                 body: JSON.stringify({
                     email: credentials.email,
                     password: credentials.password,
+                    ...(authMode === "register" && credentials.name ? { name: credentials.name } : {}),
                 }),
             });
 
@@ -88,7 +90,7 @@ export default function AuthModal({
             localStorage.setItem("userEmail", credentials.email);
             if (data.user?.id)
                 localStorage.setItem("userId", data.user.id.toString());
-            setCredentials({ email: "", password: "" });
+            setCredentials({ email: "", password: "", name: "" });
             onAuthSuccess();
         } catch (err) {
             setError(err instanceof Error ? err.message : "An error occurred");
@@ -100,7 +102,7 @@ export default function AuthModal({
     const switchAuthMode = () => {
         setAuthMode(authMode === "login" ? "register" : "login");
         setError("");
-        setCredentials({ email: "", password: "" });
+        setCredentials({ email: "", password: "", name: "" });
     };
 
     if (!isOpen) return null;
@@ -155,6 +157,22 @@ export default function AuthModal({
 
                 <form onSubmit={handleSubmit} className="auth-form">
                     {error && <div className="auth-error">{error}</div>}
+
+                    {authMode === "register" && (
+                        <div className="form-group">
+                            <label htmlFor="name">Name (optional)</label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                value={credentials.name}
+                                onChange={handleChange}
+                                placeholder="Your name"
+                                autoComplete="name"
+                                disabled={isLoading}
+                            />
+                        </div>
+                    )}
 
                     <div className="form-group">
                         <label htmlFor="email">Email</label>
