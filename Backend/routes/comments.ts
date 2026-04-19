@@ -85,7 +85,7 @@ export function deleteComment(req: Request, res: Response) {
     
     const comment = commentList[0];
 
-    if (comment.accountID !== userID) {
+    if (Number(comment.accountID) !== Number(userID)) {
         res.status(403).json({ message: "Unauthorized to delete this comment" });
         return;
     }
@@ -128,7 +128,7 @@ export function updateComment(req: Request, res: Response) {
         return;
     }
 
-    if (existingComment.accountID !== userID) {
+    if (Number(existingComment.accountID) !== Number(userID)) {
         res.status(403).json({ message: "Unauthorized to update this comment" });
         return;
     }
@@ -140,7 +140,7 @@ export function updateComment(req: Request, res: Response) {
 
     const updatedComment = db.query(
         `
-        SELECT 
+        SELECT
             c.id,
             c.pinID,
             c.accountID,
@@ -153,6 +153,10 @@ export function updateComment(req: Request, res: Response) {
         `,
         [commentID]
     )[0];
+
+    if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found" });
+    }
 
     res.json(updatedComment);
 }

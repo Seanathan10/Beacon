@@ -5,7 +5,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_MODEL = "gemini-3-flash-preview";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 // Lazy initialization - allow module to load even without API key
 let ai: GoogleGenAI | null = null;

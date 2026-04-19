@@ -31,7 +31,6 @@ export function getTestDb(): DatabaseSync {
 }
 
 export function initializeSchema(db: DatabaseSync) {
-  // Create all tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS account (
       id INTEGER PRIMARY KEY,
@@ -86,6 +85,14 @@ export function initializeSchema(db: DatabaseSync) {
       FOREIGN KEY (creatorID) REFERENCES account(id)
     );
 
+    CREATE TABLE IF NOT EXISTS post_upvote (
+      postID INTEGER,
+      accountID INTEGER,
+      PRIMARY KEY (postID, accountID),
+      FOREIGN KEY (postID) REFERENCES post(id),
+      FOREIGN KEY (accountID) REFERENCES account(id)
+    );
+
     CREATE TABLE IF NOT EXISTS itinerary (
       id TEXT PRIMARY KEY,
       data TEXT NOT NULL,
@@ -97,6 +104,7 @@ export function initializeSchema(db: DatabaseSync) {
 export function resetTestDb() {
   try {
     db.exec(`
+      DELETE FROM post_upvote;
       DELETE FROM likes;
       DELETE FROM comment;
       DELETE FROM pin;

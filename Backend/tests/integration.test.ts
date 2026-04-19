@@ -331,27 +331,31 @@ describe('Integration Tests', () => {
   });
 
   describe('Data Consistency', () => {
-    it('should maintain consistent state across rapid updates', async () => {
-      const user = await createTestUser('rapid@test.com', 'pass', 'Rapid');
-      const postId = createTestPost(user.userId, { title: 'Rapid Updates', upvotes: 0 });
+    it('should maintain consistent state across rapid updates from different users', async () => {
+      const creator = await createTestUser('rapid@test.com', 'pass', 'Rapid');
+      const postId = createTestPost(creator.userId, { title: 'Rapid Updates', upvotes: 0 });
 
-      // Rapid upvotes
-      const upvotePromises = Array(10)
-        .fill(null)
-        .map(() =>
+      // Create 10 different users and upvote concurrently
+      const voters = await Promise.all(
+        Array(10).fill(null).map((_, i) =>
+          createTestUser(`voter${i}@test.com`, 'pass', `Voter${i}`)
+        )
+      );
+
+      await Promise.all(
+        voters.map(voter =>
           request(app)
             .post(`/api/posts/${postId}/upvote`)
-            .set('Authorization', `Bearer ${user.token}`)
-        );
+            .set('Authorization', `Bearer ${voter.token}`)
+        )
+      );
 
-      await Promise.all(upvotePromises);
-
-      // Verify final count (should be at least 10, possibly more due to race conditions)
+      // All 10 distinct users should have their upvote counted
       const response = await request(app)
         .get(`/api/posts/${postId}`)
-        .set('Authorization', `Bearer ${user.token}`);
+        .set('Authorization', `Bearer ${creator.token}`);
 
-      expect(response.body.upvotes).toBeGreaterThanOrEqual(10);
+      expect(response.body.upvotes).toBe(10);
     });
 
     it('should handle rapid pin creation correctly', async () => {
@@ -428,7 +432,7 @@ describe('Integration Tests', () => {
 
       // Create share
       const createResponse = await request(app).post('/api/share').send(tripResult);
-      expect(createResponse.status).toBe(200);
+      expect(createResponse.status).toBe(201);
 
       const shareId = createResponse.body.id;
 

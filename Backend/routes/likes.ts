@@ -3,8 +3,8 @@ import * as db from "../database/db";
 
 export function getLikes(req: Request, res: Response) {
 	const results = db.query(`
-		SELECT 
-			p.likes + (SELECT COUNT(*) FROM likes WHERE pinID = ?) AS likes,
+		SELECT
+			(SELECT COUNT(*) FROM likes WHERE pinID = ?) AS likes,
 			EXISTS (SELECT 1 FROM likes WHERE accountID = ? AND pinID = ?) AS wasLiked
 		FROM pin p
 		WHERE p.id = ?;

@@ -359,22 +359,19 @@ describe('Posts', () => {
       expect(response.body.upvotes).toBe(6);
     });
 
-    it('should allow multiple upvotes from same user (current behavior)', async () => {
-      // Note: Unlike likes, posts allow unlimited upvotes from the same user
-      // This documents current behavior - may want to change to prevent duplicates
-
+    it('should prevent duplicate upvotes from same user', async () => {
       // First upvote
       await request(app)
         .post(`/api/posts/${postId}/upvote`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      // Second upvote
+      // Second upvote from same user should return 409
       const response = await request(app)
         .post(`/api/posts/${postId}/upvote`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.upvotes).toBe(7);
+      expect(response.status).toBe(409);
+      expect(response.body.message).toBe('Already upvoted');
     });
 
     it('should allow upvotes from different users', async () => {

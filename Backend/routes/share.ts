@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 export const shareRouter = express.Router();
 
 // Save itinerary
+const MAX_SHARE_PAYLOAD_BYTES = 512 * 1024; // 512 KB
+
 shareRouter.post('/', (req, res) => {
     try {
         const { itinerary, itineraryType, settings } = req.body;
@@ -15,17 +17,20 @@ shareRouter.post('/', (req, res) => {
         }
 
         const id = uuidv4();
-        // Store the complete state needed to reconstruct the view
         const data = JSON.stringify({
             itinerary,
             itineraryType,
             settings: settings || {}
         });
 
+        if (Buffer.byteLength(data, 'utf8') > MAX_SHARE_PAYLOAD_BYTES) {
+            return res.status(413).json({ error: 'Itinerary payload too large' });
+        }
+
         const stmt = db.prepare('INSERT INTO itinerary (id, data) VALUES (?, ?)');
         stmt.run(id, data);
 
-        res.json({ id });
+        res.status(201).json({ id });
     } catch (error) {
         console.error('Error sharing itinerary:', error);
         res.status(500).json({ error: 'Failed to share itinerary' });

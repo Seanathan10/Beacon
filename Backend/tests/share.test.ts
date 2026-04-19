@@ -51,7 +51,7 @@ describe('Shared Itineraries', () => {
 
       const response = await request(app).post('/api/share').send(itineraryData);
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
       // UUID format validation
       expect(response.body.id).toMatch(
@@ -65,7 +65,7 @@ describe('Shared Itineraries', () => {
         itineraryType: 'Relaxation',
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
     });
 
@@ -74,7 +74,7 @@ describe('Shared Itineraries', () => {
         itinerary: { days: [], tips: [] },
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
     });
 
@@ -94,7 +94,7 @@ describe('Shared Itineraries', () => {
         itinerary: { days: [] },
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
     });
 
     it('should generate unique IDs for each itinerary', async () => {

@@ -113,14 +113,11 @@ function estimateFlightCarbon(durationMinutes: number): number {
     // Based on ICAO Carbon Emissions Calculator methodology
     let factor: number;
     if (distanceKm < 1500) {
-        // Short-haul: higher emissions due to takeoff/landing proportion
-        factor = 0.07;
+        factor = 0.115; // Short-haul: higher per-km due to takeoff/landing proportion
     } else if (distanceKm < 4000) {
-        // Medium-haul
-        factor = 0.07;
+        factor = 0.10;  // Medium-haul
     } else {
-        // Long-haul: more efficient per km
-        factor = 0.07;
+        factor = 0.09;  // Long-haul: more efficient per km
     }
 
     return Math.round(distanceKm * factor);

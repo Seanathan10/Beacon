@@ -14,9 +14,17 @@ import * as likes from "./routes/likes";
 import * as trip from "./routes/trip";
 import { shareRouter } from "./routes/share";
 
+// --- Startup validation ---
+const REQUIRED_ENV_VARS = ["SECRET"];
+const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+if (missing.length > 0) {
+    console.error(`Missing required environment variables: ${missing.join(", ")}`);
+    process.exit(1);
+}
+
 const app = express();
 export { app };
-const PORT = 3000;
+const PORT = parseInt(process.env.PORT || "3000", 10);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,7 +33,33 @@ const apiSpec = path.join(__dirname, "./openapi.yml");
 
 app.use(express.json());
 
-// --- CORS (FIXED) ---
+// --- Simple in-memory rate limiter ---
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimiter(maxRequests: number, windowMs: number) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const ip = req.ip || req.socket.remoteAddress || "unknown";
+        const now = Date.now();
+        const entry = rateLimitStore.get(ip);
+
+        if (!entry || now > entry.resetAt) {
+            rateLimitStore.set(ip, { count: 1, resetAt: now + windowMs });
+            return next();
+        }
+
+        if (entry.count >= maxRequests) {
+            res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000));
+            return res.status(429).json({ message: "Too many requests, please try again later" });
+        }
+
+        entry.count++;
+        next();
+    };
+}
+
+const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
+
+// --- CORS ---
 const allowedOrigins = new Set<string>([
     "http://localhost:3000",
     "http://localhost:5173",
@@ -43,14 +77,11 @@ app.use(
     cors({
         origin: (origin, cb) => {
             if (!origin) return cb(null, true);
-
             if (isAllowedOrigin(origin)) return cb(null, true);
-
-            return cb(new Error(`CORS blocked for origin: ${origin}`), false);
+            return cb(null, false);
         },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
-        // If you use cookies/sessions, set this true AND avoid "*" origins.
         credentials: false,
     }),
 );
@@ -73,15 +104,14 @@ app.use(
 );
 
 app.get("/heartbeat", (req, res) => {
-    console.log("[Server-side] Server received conn");
     res.json({
         status: "ok",
         timestamp: Date.now(),
     });
 });
 
-app.post("/api/login", auth.login);
-app.post("/api/register", auth.register);
+app.post("/api/login", authRateLimit, auth.login);
+app.post("/api/register", authRateLimit, auth.register);
 
 app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
@@ -116,6 +146,10 @@ app.post("/api/trip/nearby-pins", auth.check, trip.getNearbyPinsForSelection);
 app.use("/api/share", shareRouter);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err.type === 'cors') {
+        return res.status(403).json({ message: "Forbidden" });
+    }
+
     if (err.status) {
         return res.status(err.status).json({
             message: err.message,
@@ -123,7 +157,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             error: err.message
         });
     }
-    
+
     if (err.name === 'UnauthorizedError') {
         return res.status(401).json({ message: "Unauthorized" });
     }

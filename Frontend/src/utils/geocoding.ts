@@ -144,8 +144,6 @@ export async function reverseGeocode(
     url.searchParams.set("lon", lon.toString());
     url.searchParams.set("format", "json");
     url.searchParams.set("addressdetails", "1"); // Include detailed address breakdown
-    console.log("Reverse geocoding URL:", url.toString());
-
     const response = await fetch(url.toString());
 
     if (!response.ok) {

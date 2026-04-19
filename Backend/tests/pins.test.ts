@@ -168,13 +168,12 @@ describe('Pins', () => {
       });
     });
 
-    it('should return empty array for non-existent pin', async () => {
+    it('should return 404 for non-existent pin', async () => {
       const response = await request(app)
         .get('/api/pins/99999')
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual([]);
+      expect(response.status).toBe(404);
     });
   });
 
@@ -198,11 +197,11 @@ describe('Pins', () => {
       expect(response.body.title).toBe('Updated Title');
     });
 
-    it('should update pin description via message field', async () => {
+    it('should update pin description via description field', async () => {
       const response = await request(app)
         .put(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ message: 'Updated description' });
+        .send({ description: 'Updated description' });
 
       expect(response.status).toBe(200);
       expect(response.body.description).toBe('Updated description');
@@ -214,7 +213,7 @@ describe('Pins', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           title: 'New Title',
-          message: 'New description',
+          description: 'New description',
           address: 'New Address',
           image: 'https://example.com/new.jpg',
         });
@@ -267,7 +266,7 @@ describe('Pins', () => {
         .get(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(getResponse.body).toEqual([]);
+      expect(getResponse.status).toBe(404);
     });
 
     it('should reject deletion by non-owner', async () => {

@@ -35,7 +35,7 @@ describe('Likes', () => {
     otherUserToken = otherUser.token;
     otherUserId = otherUser.userId;
 
-    pinId = createTestPin(userId, { title: 'Likeable Pin', likes: 5 });
+    pinId = createTestPin(userId, { title: 'Likeable Pin' });
   });
 
   describe('GET /api/likes/:id', () => {
@@ -46,7 +46,7 @@ describe('Likes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
-        likes: 5, // From pin.likes column
+        likes: 0,
         wasLiked: false,
       });
     });
@@ -62,7 +62,7 @@ describe('Likes', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(response.body.wasLiked).toBe(true);
-      expect(response.body.likes).toBe(6); // 5 base + 1 from likes table
+      expect(response.body.likes).toBe(1);
     });
 
     it('should return 404 for non-existent pin', async () => {
@@ -112,7 +112,7 @@ describe('Likes', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(likesResponse.body.wasLiked).toBe(true);
-      expect(likesResponse.body.likes).toBe(6);
+      expect(likesResponse.body.likes).toBe(1);
     });
 
     it('should allow multiple users to like the same pin', async () => {
@@ -131,7 +131,7 @@ describe('Likes', () => {
         .get(`/api/likes/${pinId}`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(response.body.likes).toBe(7); // 5 base + 2 likes
+      expect(response.body.likes).toBe(2);
     });
 
     it('should reject duplicate likes from same user', async () => {
@@ -184,7 +184,7 @@ describe('Likes', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(likesResponse.body.wasLiked).toBe(false);
-      expect(likesResponse.body.likes).toBe(5); // Back to base
+      expect(likesResponse.body.likes).toBe(0);
     });
 
     it('should return 404 when trying to remove non-existent like', async () => {
@@ -212,7 +212,7 @@ describe('Likes', () => {
         .set('Authorization', `Bearer ${otherUserToken}`);
 
       expect(response.body.wasLiked).toBe(true);
-      expect(response.body.likes).toBe(6); // 5 base + 1 remaining
+      expect(response.body.likes).toBe(1);
     });
 
     it('should require authentication', async () => {
@@ -222,9 +222,8 @@ describe('Likes', () => {
   });
 
   describe('Like Count Calculations', () => {
-    it('should correctly sum base likes and likes table entries', async () => {
-      // Pin has 5 base likes
-      // Add 3 more likes from different users
+    it('should correctly count likes from the likes table', async () => {
+      // Add 3 likes from different users
       const user2 = await createTestUser('u2@example.com', 'pass', 'U2');
       const user3 = await createTestUser('u3@example.com', 'pass', 'U3');
 
@@ -242,7 +241,7 @@ describe('Likes', () => {
         .get(`/api/likes/${pinId}`)
         .set('Authorization', `Bearer ${userToken}`);
 
-      expect(response.body.likes).toBe(8); // 5 + 3
+      expect(response.body.likes).toBe(3);
     });
 
     it('should handle pins with zero base likes', async () => {

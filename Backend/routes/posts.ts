@@ -3,28 +3,27 @@ import * as db from "../database/db";
 
 export function getAllPosts(req: Request, res: Response) {
     const results = db.query(`
-        SELECT id, creatorID, title, location, category, tags, message, image, upvotes, createdAt 
-        FROM post 
+        SELECT id, creatorID, title, location, category, tags, message, image, upvotes, createdAt
+        FROM post
         ORDER BY createdAt DESC
     `);
-    
-    // Parse tags from comma-separated string to array
+
     const posts = results.map((post: any) => ({
         ...post,
         tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
     }));
-    
+
     res.json(posts);
 }
 
 export function getPost(req: Request, res: Response) {
     const postID = req.params.id;
     const results = db.query(`SELECT * FROM post WHERE id = ?`, [postID]);
-    
+
     if (results.length === 0) {
         return res.status(404).json({ message: "Post not found" });
     }
-    
+
     const post = results[0];
     res.json({
         ...post,
@@ -34,10 +33,9 @@ export function getPost(req: Request, res: Response) {
 
 export function createPost(req: Request, res: Response) {
     const { title, location, category, tags, message, image } = req.body;
-    
-    // Convert tags array to comma-separated string for storage
+
     const tagsString = Array.isArray(tags) ? tags.join(',') : (tags || '');
-    
+
     try {
         const results = db.query(
             `
@@ -50,12 +48,12 @@ export function createPost(req: Request, res: Response) {
                 title,
                 location,
                 category || 'New',
-                tagsString, 
-                message, 
+                tagsString,
+                message,
                 image || null,
             ]
         );
-        
+
         const newPost = results[0];
         if (!newPost) {
             throw new Error("Failed to retrieve created post");
@@ -80,9 +78,8 @@ export function updatePost(req: Request, res: Response) {
     if (!post) {
         return res.status(404).json({ message: "Post not found" });
     }
-    
-    // Only allow updates by creator (if post has a creator)
-    if (post.creatorID && post.creatorID !== userID) {
+
+    if (post.creatorID && Number(post.creatorID) !== Number(userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -140,8 +137,7 @@ export function deletePost(req: Request, res: Response) {
         return res.status(404).json({ message: "Post not found" });
     }
 
-    // Only allow deletion by creator (if post has a creator)
-    if (post.creatorID && post.creatorID !== userID) {
+    if (post.creatorID && Number(post.creatorID) !== Number(userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -151,14 +147,28 @@ export function deletePost(req: Request, res: Response) {
 
 export function upvotePost(req: Request, res: Response) {
     const postID = req.params.id;
-    
+    const userID = req.user?.id;
+
     const post = db.query("SELECT id, upvotes FROM post WHERE id = ?", [postID])[0];
     if (!post) {
         return res.status(404).json({ message: "Post not found" });
     }
-    
+
+    try {
+        db.query(
+            "INSERT INTO post_upvote (postID, accountID) VALUES (?, ?)",
+            [postID, userID]
+        );
+    } catch (error: any) {
+        if (error.code === 'SQLITE_CONSTRAINT' || error.message?.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ message: "Already upvoted" });
+        }
+        console.error("Upvote error:", error);
+        return res.status(500).send();
+    }
+
     db.query("UPDATE post SET upvotes = upvotes + 1 WHERE id = ?", [postID]);
-    
+
     const updatedPost = db.query("SELECT * FROM post WHERE id = ?", [postID])[0];
     res.json({
         ...updatedPost,

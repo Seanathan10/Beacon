@@ -40,9 +40,9 @@ describe('CORS', () => {
         .get('/heartbeat')
         .set('Origin', 'http://malicious.example.com');
 
-      expect(response.status).toBe(500);
-      expect(response.body.message).toBe('Internal Server Error');
-      expect(response.body.error).toContain('CORS blocked for origin');
+      // CORS blocks by omitting the Access-Control-Allow-Origin header;
+      // browsers enforce the block client-side, server returns no CORS header.
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
     });
 
     it('should block requests from similar but different origins', async () => {
@@ -50,8 +50,7 @@ describe('CORS', () => {
         .get('/heartbeat')
         .set('Origin', 'http://localhost:5174');
 
-      expect(response.status).toBe(500);
-      expect(response.body.error).toContain('CORS blocked for origin');
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
     });
   });
 

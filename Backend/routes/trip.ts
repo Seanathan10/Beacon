@@ -207,7 +207,9 @@ interface ProgressUpdate {
 }
 
 function sendSSE(res: Response, update: ProgressUpdate) {
-    res.write(`data: ${JSON.stringify(update)}\n\n`);
+    if (!res.writableEnded && !res.destroyed) {
+        res.write(`data: ${JSON.stringify(update)}\n\n`);
+    }
 }
 
 /**
@@ -224,11 +226,10 @@ function stageDelay(): Promise<void> {
  * Plan a trip with streaming progress - SSE endpoint
  */
 export async function planTripStream(req: Request, res: Response) {
-    // Set up SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
     try {
@@ -560,8 +561,8 @@ export async function planTripStream(req: Request, res: Response) {
         const bestOption = transitOptions[0] || { mode: "n/a", carbonKg: 0 };
         const worstOption = transitOptions[transitOptions.length - 1] || bestOption;
         const typicalTouristKg = calculateTypicalTouristCarbon(distanceKm, durationDays);
-        const savingsVsTypical = bestOption.carbonKg > 0
-            ? Math.round((1 - typicalTouristKg / bestOption.carbonKg) * 100)
+        const savingsVsTypical = typicalTouristKg > 0
+            ? Math.round((1 - bestOption.carbonKg / typicalTouristKg) * 100)
             : 0;
 
         // Send all options to frontend for user selection (no itinerary yet)
@@ -862,8 +863,8 @@ export async function planTrip(req: Request, res: Response) {
         const bestOption = transitOptions[0] || { mode: "n/a", carbonKg: 0 };
         const worstOption = transitOptions[transitOptions.length - 1] || bestOption;
         const typicalTouristKg = calculateTypicalTouristCarbon(distanceKm, durationDays);
-        const savingsVsTypical = bestOption.carbonKg > 0
-            ? Math.round((1 - typicalTouristKg / bestOption.carbonKg) * 100)
+        const savingsVsTypical = typicalTouristKg > 0
+            ? Math.round((1 - bestOption.carbonKg / typicalTouristKg) * 100)
             : 0;
 
         const response: TripPlanResponse = {
@@ -1071,7 +1072,8 @@ export async function getLocalRoute(req: Request, res: Response) {
  */
 export async function getNearbyPinsForSelection(req: Request, res: Response) {
     try {
-        const { lat, lng, radiusKm = 50 } = req.body;
+        const { lat, lng } = req.body;
+        const radiusKm = Math.min(Number(req.body.radiusKm ?? 50), 500);
 
         if (lat === undefined || lng === undefined) {
             return res.status(400).json({ error: "Missing required fields: lat, lng" });

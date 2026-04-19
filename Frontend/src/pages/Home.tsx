@@ -566,7 +566,7 @@ function HomePage() {
                                                 location: typeof pinData.address === "object" ? pinData.address?.name : pinData.address,
                                                 description: data.description,
                                                 image: data.image || "",
-                                                color: localStorage.getItem("email") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
+                                                color: localStorage.getItem("userEmail") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
                                                 email: userEmail,
                                             },
                                         },
