@@ -2,7 +2,7 @@ import { CircleLayerSpecification } from "react-map-gl/mapbox";
 
 
 const API_URL_DEV = "http://localhost:3000";
-const API_URL_PROD = "https://api.truthnuke.tech";
+const API_URL_PROD = "https://api.beaconapp.live";
 
 export const BASE_API_URL = import.meta.env.VITE_API_BASE !== undefined
     ? import.meta.env.VITE_API_BASE
