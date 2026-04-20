@@ -87,7 +87,6 @@ export default function Pin({
                     // locationName={name}
                     onClose={() => setModalOpen(false)}
                     onSubmit={(data) => {
-                        console.log("Pin onSubmit called", data);
                         onPinCreated?.(data);
                         setModalOpen(false);
                     }}

@@ -236,7 +236,13 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         try {
             let finalImageUrl = image;
             if (imageFile) {
-                finalImageUrl = await uploadImage(imageFile);
+                try {
+                    finalImageUrl = await uploadImage(imageFile);
+                } catch {
+                    alert("Image upload is not available. Save your changes with a URL instead, or remove the image.");
+                    setIsSaving(false);
+                    return;
+                }
             }
 
             const response = await fetch(

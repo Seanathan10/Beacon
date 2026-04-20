@@ -9,13 +9,13 @@ export function getLikes(req: Request, res: Response) {
 		FROM pin p
 		WHERE p.id = ?;
 	`, [req.params.id, req.user.id, req.params.id, req.params.id]);
-    if (results.length == 0) {
+    if (results.length === 0) {
         return res.status(404).send();
     }
 
     res.json({
 		likes: results[0].likes,
-		wasLiked: results[0].wasLiked == 1
+		wasLiked: results[0].wasLiked === 1
 	});
 }
 
@@ -24,7 +24,7 @@ export function addLike(req: Request, res: Response) {
         const results = db.query(`INSERT INTO likes(pinID, accountID) VALUES(?, ?);`, [req.params.id, req.user.id]);
         
         // This won't be reached if duplicate (throws error)
-        if (results.changes == 0) {
+        if (results.changes === 0) {
             return res.status(404).send();
         }
 
@@ -48,7 +48,7 @@ export function addLike(req: Request, res: Response) {
 export function removeLike(req: Request, res: Response) {
     const results = db.query(`DELETE FROM likes WHERE pinID = ? AND accountID = ?;`, [req.params.id, req.user.id]);
 
-	if (results.changes == 0) {
+	if (results.changes === 0) {
 		return res.status(404).send();
 	}
 

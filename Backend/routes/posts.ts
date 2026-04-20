@@ -101,7 +101,7 @@ export function createPost(req: Request, res: Response) {
             RETURNING id, creatorID, title, location, category, tags, message, image, createdAt;
             `,
             [
-                req.user?.id || null,
+                req.user.id,
                 titleStr,
                 locationStr,
                 categoryStr,

@@ -68,7 +68,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 
 	useEffect(() => {
 		// Check if pin is bookmarked
-		const saved = JSON.parse(localStorage.getItem("savedPins") ?? '{}');
+		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
 		const email = localStorage.getItem("userEmail")!;
 		const userSavedPins = saved[email] || [];
 		setIsBookmarked(userSavedPins.includes(selectedPoint.id));
@@ -90,26 +90,28 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	}, [selectedPoint]);
 
 	const toggleLike = () => {
+		const prevLiked = isLiked;
+		const prevLikes = likes;
 		const newLikedState = !isLiked;
 		setIsLiked(newLikedState);
+		setLikes(prev => prev + (newLikedState ? 1 : -1));
 
-		if (newLikedState) {
-			setLikes(prev => prev + 1);
-			fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-				method: 'POST',
-				credentials: "include",
-			});
-		} else {
-			setLikes(prev => prev - 1);
-			fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-				method: 'DELETE',
-				credentials: "include",
-			});
-		}
+		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
+			method: newLikedState ? 'POST' : 'DELETE',
+			credentials: "include",
+		}).then(res => {
+			if (!res.ok && res.status !== 409) {
+				setIsLiked(prevLiked);
+				setLikes(prevLikes);
+			}
+		}).catch(() => {
+			setIsLiked(prevLiked);
+			setLikes(prevLikes);
+		});
 	};
 
 	const toggleBookmark = () => {
-		const saved = JSON.parse(localStorage.getItem("savedPins") ?? '{}');
+		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
 		const email = localStorage.getItem("userEmail")!;
 		const newSavedState = !isBookmarked;
 		setIsBookmarked(newSavedState);

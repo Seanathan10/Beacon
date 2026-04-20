@@ -126,6 +126,19 @@ function HomePage() {
                         address: result.fullAddress,
                     });
                     setShowDetailedModal(true);
+                }).catch(() => {
+                    setSelectedPoint({
+                        id: feature.properties.id,
+                        longitude: coords[0],
+                        latitude: coords[1],
+                        title: feature.properties.title || "",
+                        description: feature.properties.description || "",
+                        image: feature.properties.image || "",
+                        color: feature.properties.color || PIN_COLOR,
+                        email: feature.properties.email || "",
+                        address: "",
+                    });
+                    setShowDetailedModal(true);
                 });
                 // Clear the URL parameter
                 setSearchParams({});
@@ -140,7 +153,7 @@ function HomePage() {
                     credentials: "include",
                 });
 
-                if (res.status == 401) {
+                if (res.status === 401) {
                     handleLogout();
                     return;
                 }
@@ -165,7 +178,7 @@ function HomePage() {
                             title: p.title,
                             description: p.description,
                             image: p.image,
-                            color: localStorage.getItem("userEmail") == p.email ? USER_PIN_COLOR : PIN_COLOR,
+                            color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
                             address: p.address,
                             likes: p.likes || 0,
                         },
@@ -178,7 +191,7 @@ function HomePage() {
         };
 
         const fetchSavedPlaces = () => {
-            const savedPins = JSON.parse(localStorage.getItem("savedPins") || '{}');
+            const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
             const email = localStorage.getItem("userEmail")!;
             const savedPinIDs = savedPins[email] || [];
 
@@ -213,7 +226,13 @@ function HomePage() {
         });
 
         const { lat, lng } = e.lngLat;
-        const result = await reverseGeocode(lat, lng);
+        let geocodeResult = { fullAddress: "Unknown Location" };
+        try {
+            geocodeResult = await reverseGeocode(lat, lng);
+        } catch {
+            // geocoding failure is non-fatal; fallback to "Unknown Location"
+        }
+
         if (features && features.length > 0) {
             const feature = features[0];
             const coords = (feature.geometry as any).coordinates;
@@ -227,7 +246,7 @@ function HomePage() {
                 image: feature.properties?.image || "",
                 color: feature.properties?.color || PIN_COLOR,
                 email: feature.properties?.email || "",
-                address: result.fullAddress,
+                address: geocodeResult.fullAddress,
             });
 
             setPinData(null); // Close any existing pin
@@ -239,7 +258,7 @@ function HomePage() {
             lat,
             lng,
             isLoading: false,
-            address: result.fullAddress || "Unknown Location",
+            address: geocodeResult.fullAddress || "Unknown Location",
             email: userEmail || "",
         });
     };
@@ -574,7 +593,7 @@ function HomePage() {
                                                 location: typeof pinData.address === "object" ? pinData.address?.name : pinData.address,
                                                 description: data.description,
                                                 image: data.image || "",
-                                                color: localStorage.getItem("userEmail") == pinData.email ? USER_PIN_COLOR : PIN_COLOR,
+                                                color: localStorage.getItem("userEmail") === pinData.email ? USER_PIN_COLOR : PIN_COLOR,
                                                 email: userEmail,
                                             },
                                         },
@@ -591,7 +610,7 @@ function HomePage() {
                             setSelectedPoint={setSelectedPoint}
                             onShowDetails={() => setShowDetailedModal(true)}
                             onBookmarkChange={(pinId, isBookmarked) => {
-                                const savedPins = JSON.parse(localStorage.getItem("savedPins") || '{}');
+                                const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
                                 const email = localStorage.getItem("userEmail")!;
                                 const savedPinIDs = savedPins[email] || [];
 
