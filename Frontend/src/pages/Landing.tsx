@@ -135,7 +135,6 @@ function Landing() {
                     <NavLink
                         to="/home"
                         className="button button--primary"
-                        style={{ backgroundColor: "#5cbd51" }}
                         prefetch="intent"
                     >
                         Open Map
@@ -156,15 +155,15 @@ function Landing() {
                                 cx="40"
                                 cy="40"
                                 r="36"
-                                stroke="#2d6a4f"
+                                stroke="var(--color-green)"
                                 strokeWidth="2"
-                                fill="#e9f5e9"
+                                fill="var(--color-green-bg)"
                             />
                             <path
                                 d="M40 20C32 20 26 28 26 36C26 48 40 60 40 60C40 60 54 48 54 36C54 28 48 20 40 20Z"
-                                fill="#2d6a4f"
+                                fill="var(--color-green)"
                             />
-                            <circle cx="40" cy="35" r="6" fill="#faf9f7" />
+                            <circle cx="40" cy="35" r="6" fill="var(--color-bg)" />
                         </svg>
                         <h1>Map the world's local gems.</h1>
                         <p>
