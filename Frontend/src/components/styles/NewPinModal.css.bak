@@ -74,7 +74,7 @@
 }
 
 .pin-modal {
-    background: var(--color-bg-secondary);
+    background: #faf9f7;
     border-radius: 24px;
     max-width: 600px;
     width: 80%;
@@ -82,7 +82,7 @@
     box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.15),
         0 0 40px rgba(45, 106, 79, 0.08);
-    border: 1px solid var(--color-border-primary);
+    border: 1px solid #e5e3df;
     animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     display: flex;
@@ -95,8 +95,8 @@
     flex-direction: column;
     align-items: center;
     padding: 1.25rem 2rem 1rem;
-    background: linear-gradient(180deg, #e9f5e9 0%, var(--color-bg-secondary) 100%);
-    border-bottom: 1px solid var(--color-border-primary);
+    background: linear-gradient(180deg, #e9f5e9 0%, #faf9f7 100%);
+    border-bottom: 1px solid #e5e3df;
     position: relative;
     flex-shrink: 0;
 }
@@ -111,7 +111,7 @@
     font-family: "Playfair Display", Georgia, serif;
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     margin: 0;
     letter-spacing: -0.02em;
 }
@@ -124,7 +124,7 @@
         "Segoe UI",
         sans-serif;
     font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    color: #5c5c5c;
     margin-top: 0.25rem;
 }
 
@@ -133,7 +133,7 @@
     top: 0.75rem;
     right: 0.75rem;
     background: rgba(255, 255, 255, 0.8);
-    border: 1px solid var(--color-border-primary);
+    border: 1px solid #e5e3df;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -142,14 +142,14 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: var(--color-text-secondary);
+    color: #5c5c5c;
     padding: 0;
 }
 
 .pin-modal__close:hover {
-    background: var(--color-bg-primary);
-    border-color: var(--color-text-primary);
-    color: var(--color-text-primary);
+    background: #ffffff;
+    border-color: #1a1a1a;
+    color: #1a1a1a;
 }
 
 /* ===== Modal Form ===== */
@@ -187,7 +187,7 @@
         sans-serif;
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -195,7 +195,7 @@
 
 .pin-modal__label-hint {
     font-weight: 400;
-    color: var(--color-text-light);
+    color: #8a8a8a;
     font-size: 0.8rem;
 }
 
@@ -208,17 +208,17 @@
         "Segoe UI",
         sans-serif;
     padding: 0.875rem 1rem;
-    border: 1.5px solid var(--color-border-primary);
+    border: 1.5px solid #e5e3df;
     border-radius: 12px;
     font-size: 0.95rem;
-    background: var(--color-bg-primary);
-    color: var(--color-text-primary);
+    background: #ffffff;
+    color: #1a1a1a;
     transition: all 0.2s ease;
 }
 
 .pin-modal__input::placeholder,
 .pin-modal__textarea::placeholder {
-    color: var(--color-text-light);
+    color: #8a8a8a;
 }
 
 .pin-modal__input:hover,
@@ -229,7 +229,7 @@
 .pin-modal__input:focus,
 .pin-modal__textarea:focus {
     outline: none;
-    border-color: var(--color-green-primary);
+    border-color: #2d6a4f;
     box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
@@ -266,7 +266,7 @@
         "Segoe UI",
         sans-serif;
     font-size: 0.75rem;
-    color: var(--color-text-light);
+    color: #8a8a8a;
     margin-left: auto;
 }
 
@@ -299,19 +299,19 @@
 }
 
 .pin-modal__color-input::-webkit-color-swatch {
-    border: 2px solid var(--color-border-primary);
+    border: 2px solid #e5e3df;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.2s ease;
 }
 
 .pin-modal__color-input:hover::-webkit-color-swatch {
-    border-color: var(--color-text-primary);
+    border-color: #1a1a1a;
     transform: scale(1.05);
 }
 
 .pin-modal__color-input::-moz-color-swatch {
-    border: 2px solid var(--color-border-primary);
+    border: 2px solid #e5e3df;
     border-radius: 10px;
 }
 
@@ -336,7 +336,7 @@
 }
 
 .pin-modal__color-preset--active {
-    border-color: var(--color-text-primary);
+    border-color: #1a1a1a;
     box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.2);
 }
 
@@ -346,7 +346,7 @@
     gap: 0.75rem;
     margin-top: 0.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--color-border-primary);
+    border-top: 1px solid #e5e3df;
 }
 
 .pin-modal__btn {
@@ -372,23 +372,23 @@
 
 .pin-modal__btn--secondary {
     background: transparent;
-    border: 1.5px solid var(--color-border-primary);
-    color: var(--color-text-primary);
+    border: 1.5px solid #e5e3df;
+    color: #1a1a1a;
 }
 
 .pin-modal__btn--secondary:hover {
-    border-color: var(--color-text-primary);
-    background: var(--color-bg-tertiary);
+    border-color: #1a1a1a;
+    background: #f4f2ef;
 }
 
 .pin-modal__btn--primary {
-    background: var(--color-text-primary);
-    color: var(--color-bg-primary);
+    background: #1a1a1a;
+    color: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .pin-modal__btn--primary:hover {
-    background: var(--color-text-primary)333;
+    background: #333333;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
@@ -406,7 +406,7 @@
     background: #e9f5e9;
     border-radius: 999px;
     font-size: 0.75rem;
-    color: var(--color-green-primary);
+    color: #2d6a4f;
     font-weight: 500;
     margin-top: 0.375rem;
 }
@@ -425,7 +425,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem 1.5rem;
-    border: 2px dashed var(--color-border-primary);
+    border: 2px dashed #e5e3df;
     border-radius: 12px;
     background: #fafafa;
     cursor: pointer;
@@ -434,12 +434,12 @@
 }
 
 .pin-modal__upload-area:hover {
-    border-color: var(--color-green-primary);
+    border-color: #2d6a4f;
     background: #f5faf7;
 }
 
 .pin-modal__upload-area--dragging {
-    border-color: var(--color-green-primary);
+    border-color: #2d6a4f;
     background: #e9f5e9;
     border-style: solid;
 }
@@ -451,13 +451,13 @@
 .pin-modal__upload-icon {
     width: 32px;
     height: 32px;
-    color: var(--color-text-light);
+    color: #8a8a8a;
     margin-bottom: 0.25rem;
 }
 
 .pin-modal__upload-area:hover .pin-modal__upload-icon,
 .pin-modal__upload-area--dragging .pin-modal__upload-icon {
-    color: var(--color-green-primary);
+    color: #2d6a4f;
 }
 
 .pin-modal__upload-text {
@@ -468,11 +468,11 @@
         "Segoe UI",
         sans-serif;
     font-size: 0.85rem;
-    color: var(--color-text-secondary);
+    color: #5c5c5c;
 }
 
 .pin-modal__upload-text strong {
-    color: var(--color-green-primary);
+    color: #2d6a4f;
 }
 
 .pin-modal__upload-hint {
@@ -483,7 +483,7 @@
         "Segoe UI",
         sans-serif;
     font-size: 0.75rem;
-    color: var(--color-text-light);
+    color: #8a8a8a;
 }
 
 /* ===== Image Preview ===== */
@@ -510,7 +510,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.6);
     border: none;
-    color: var(--color-bg-primary);
+    color: #ffffff;
     cursor: pointer;
     display: flex;
     align-items: center;

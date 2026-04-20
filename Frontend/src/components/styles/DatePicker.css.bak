@@ -2,11 +2,11 @@
 
 /* Trigger Button */
 .date-picker-trigger {
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-primary);
+    background: #ffffff;
+    border: 1px solid #e5e3df;
     border-radius: 10px;
     padding: 12px 14px;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     font-size: 14px;
     font-family: inherit;
     transition: all 0.2s;
@@ -21,13 +21,13 @@
 
 .date-picker-trigger:hover {
     background-color: #fcfcfc;
-    border-color: var(--color-border-secondary);
+    border-color: #d1cfc9;
 }
 
 .date-picker-trigger:focus-visible,
 .date-picker-trigger[data-state="open"] {
     outline: none;
-    border-color: var(--color-green-primary);
+    border-color: #2d6a4f;
     box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.1);
 }
 
@@ -37,8 +37,8 @@
 
 /* Popover Content */
 .date-picker-content {
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-primary);
+    background: #ffffff;
+    border: 1px solid #e5e3df;
     border-radius: 14px;
     padding: 16px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -62,7 +62,7 @@
 /* Custom DayPicker Styles to match theme */
 .rdp-root {
     --rdp-cell-size: 40px;
-    --rdp-accent-color: var(--color-green-primary) !important;
+    --rdp-accent-color: #2d6a4f !important;
     --rdp-accent-background-color: #e9f5e9 !important;
     --rdp-background-color: #e9f5e9;
     --rdp-outline: 2px solid var(--rdp-accent-color);
@@ -71,7 +71,7 @@
 }
 
 .rdp-caption_label {
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     font-weight: 600;
 }
 
@@ -79,22 +79,22 @@
 .rdp-nav_button,
 .rdp-button_reset,
 .rdp-button {
-    color: var(--color-green-primary) !important;
+    color: #2d6a4f !important;
 }
 
 .rdp-chevron {
-    fill: var(--color-green-primary) !important;
+    fill: #2d6a4f !important;
 }
 
 .rdp-nav_button:hover,
 .rdp-button:hover:not([disabled]):not(.rdp-selected) {
     background-color: #f0ede8 !important;
-    color: var(--color-green-secondary) !important;
+    color: #1b4332 !important;
 }
 
 /* Days */
 .rdp-day {
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     border-radius: 8px;
     font-size: 0.9rem;
 }
@@ -106,8 +106,8 @@
 /* Selected Day - targeting multiple possible classes */
 .rdp-selected,
 .rdp-day_selected {
-    background-color: var(--color-green-primary) !important;
-    color: var(--color-bg-primary) !important;
+    background-color: #2d6a4f !important;
+    color: #ffffff !important;
     font-weight: 600;
     border: none !important;
 }
@@ -115,13 +115,13 @@
 /* Ensure the circle/outline isn't blue */
 .rdp-selected::after,
 .rdp-day_selected::after {
-    border-color: var(--color-green-primary) !important;
+    border-color: #2d6a4f !important;
 }
 
 /* Today's highlighting */
 .rdp-today,
 .rdp-day_today {
-    color: var(--color-green-primary) !important;
+    color: #2d6a4f !important;
     font-weight: 700;
 }
 
@@ -131,7 +131,7 @@
 }
 
 .rdp-weekday {
-    color: var(--color-text-light);
+    color: #8a8a8a;
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;

@@ -1,15 +1,17 @@
 import "./Landing.css";
 import { NavLink, useNavigate } from "react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASE_API_URL } from "../../constants";
+import { getMapBoxStyleUrl, onThemeChange } from "@/utils/theme";
 
 
 function Landing() {
     const navigate = useNavigate();
     const mapPreviewRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
+    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl('light'));
 
     console.log("[Landing.tsx] Here.");
     console.log("[Landing.tsx] Using server address: ", BASE_API_URL);
@@ -28,6 +30,20 @@ function Landing() {
         heartbeat();
     }, []);
 
+    // Listen for theme changes
+    useEffect(() => {
+        const unsubscribe = onThemeChange((theme) => {
+            const newStyle = getMapBoxStyleUrl(theme);
+            setMapStyle(newStyle);
+            
+            // Update map style if map is already loaded
+            if (mapRef.current) {
+                mapRef.current.setStyle(newStyle);
+            }
+        });
+        return unsubscribe;
+    }, []);
+
     useEffect(() => {
         const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
         if (!token || !mapPreviewRef.current || mapRef.current) return;
@@ -36,16 +52,16 @@ function Landing() {
 
         mapRef.current = new mapboxgl.Map({
             container: mapPreviewRef.current,
-            style: "mapbox://styles/mapbox/streets-v12",
+            style: mapStyle,
             center: [-122, 37],
             zoom: 9,
             interactive: false, // Disable interactions for preview
             attributionControl: false,
-            transformRequest: (url, resourceType) => {
-                if (url.includes("events.mapbox.com")) {
+            transformRequest: (_url, _resourceType) => {
+                if (_url.includes("events.mapbox.com")) {
                     return { url: "" };
                 }
-                return { url };
+                return { url: _url };
             },
         });
 
@@ -57,16 +73,16 @@ function Landing() {
 
         const preloaderMap = new mapboxgl.Map({
             container: preloaderContainer,
-            style: "mapbox://styles/mapbox/streets-v12",
+            style: mapStyle,
             center: [-122, 37],
             zoom: 9,
             interactive: false,
             attributionControl: false,
-            transformRequest: (url, resourceType) => {
-                if (url.includes("events.mapbox.com")) {
+            transformRequest: (_url, _resourceType) => {
+                if (_url.includes("events.mapbox.com")) {
                     return { url: "" };
                 }
-                return { url };
+                return { url: _url };
             },
         });
 
@@ -99,7 +115,7 @@ function Landing() {
                 mapRef.current = null;
             }
         };
-    }, []);
+    }, [mapStyle]);
 
     const handleMapPreviewClick = () => {
         navigate("/home");

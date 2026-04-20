@@ -10,9 +10,9 @@ body {
     margin: 0;
     /* Full-page background so right side never looks "cut off" */
     background: radial-gradient(1200px 500px at 50% -10%,
-            rgba(74, 222, 128, 0.08),
+            rgba(45, 106, 79, 0.12),
             transparent 60%),
-        linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+        linear-gradient(135deg, #faf9f7 0%, #f4f2ef 100%);
 }
 
 
@@ -35,7 +35,7 @@ body {
     inset: 0;
     pointer-events: none;
     opacity: 0.35;
-    background-image: radial-gradient(rgba(52, 211, 153, 0.06) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(27, 67, 50, 0.08) 1px, transparent 1px);
     background-size: 22px 22px;
     mask-image: radial-gradient(circle at 30% 20%, black, transparent 60%);
 }
@@ -92,7 +92,7 @@ body {
     border: 1px solid rgba(229, 227, 223, 0.9);
     border-radius: 14px;
 
-    color: var(--color-text-primary);
+    color: #111827;
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
@@ -138,7 +138,7 @@ body {
     font-weight: 800;
     letter-spacing: -0.02em;
 
-    background: linear-gradient(135deg, var(--color-green-primary) 0%, var(--color-green-secondary) 100%);
+    background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -147,7 +147,7 @@ body {
 .posts-subtitle {
     margin: 6px 0 0;
     font-size: 0.95rem;
-    color: var(--color-text-secondary);
+    color: #64748b;
     font-weight: 500;
 }
 
@@ -171,9 +171,9 @@ body {
 
     background: linear-gradient(135deg,
             rgba(45, 106, 79, 0.15),
-            rgba(52, 211, 153, 0.06));
+            rgba(27, 67, 50, 0.08));
 
-    color: var(--color-green-secondary);
+    color: #14532d;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
@@ -221,7 +221,7 @@ body {
     border: 1px solid rgba(239, 68, 68, 0.18);
 
     background: rgba(255, 255, 255, 0.78);
-    color: var(--color-red-error);
+    color: #b91c1c;
 
     font-weight: 700;
     font-size: 0.85rem;
@@ -278,7 +278,7 @@ body {
 .posts-empty {
     text-align: center;
     padding: 72px 20px;
-    color: var(--color-text-secondary);
+    color: #64748b;
 
     background: rgba(255, 255, 255, 0.65);
     border: 1px solid rgba(229, 227, 223, 0.9);
@@ -295,20 +295,20 @@ body {
 .posts-empty-title {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--color-text-primary);
+    color: #0f172a;
     margin-bottom: 8px;
 }
 
 .posts-empty-description {
     font-size: 1rem;
-    color: var(--color-text-secondary);
+    color: #64748b;
 }
 
 /* Loading state */
 .posts-loading {
     text-align: center;
     padding: 72px 20px;
-    color: var(--color-text-secondary);
+    color: #64748b;
 
     background: rgba(255, 255, 255, 0.65);
     border: 1px solid rgba(229, 227, 223, 0.9);
@@ -320,7 +320,7 @@ body {
     width: 48px;
     height: 48px;
     border: 4px solid rgba(45, 106, 79, 0.2);
-    border-top-color: var(--color-green-primary);
+    border-top-color: #2d6a4f;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -335,7 +335,7 @@ body {
 .posts-loading p {
     font-size: 1rem;
     font-weight: 500;
-    color: var(--color-text-secondary);
+    color: #64748b;
     margin: 0;
 }
 
@@ -351,7 +351,7 @@ body {
     background: rgba(239, 68, 68, 0.08);
     border: 1px solid rgba(239, 68, 68, 0.2);
     border-radius: 12px;
-    color: var(--color-red-error);
+    color: #b91c1c;
 }
 
 .posts-error p {
@@ -365,7 +365,7 @@ body {
     border-radius: 8px;
     border: 1px solid rgba(239, 68, 68, 0.3);
     background: rgba(255, 255, 255, 0.8);
-    color: var(--color-red-error);
+    color: #b91c1c;
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;

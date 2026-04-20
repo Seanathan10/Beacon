@@ -25,7 +25,7 @@
     width: 70px;
     height: 70px;
     border-radius: 50px;
-    background: var(--color-green-primary);
+    background: #2d6a4f;
     color: white;
     border: none;
     font-size: 28px;
@@ -40,7 +40,7 @@
 }
 
 .panel-toggle:hover {
-    background: var(--color-green-secondary);
+    background: #1b4332;
     transform: scale(1.02);
     box-shadow: 0 4px 20px rgba(45, 106, 79, 0.15);
 }
@@ -54,8 +54,8 @@
     bottom: 80px;
     left: 0;
     width: 100%;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-primary);
+    background: #faf9f7;
+    border: 1px solid #e5e3df;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     padding: 14px;
@@ -80,7 +80,7 @@
     margin: 0 0 12px 0;
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
 }
 
 .places-list {
@@ -94,16 +94,16 @@
 
 .place-item {
     padding: 12px 14px;
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-primary);
+    background: #ffffff;
+    border: 1px solid #e5e3df;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
 .place-item:hover {
-    background: var(--color-bg-tertiary);
-    border-color: var(--color-green-primary);
+    background: #f4f2ef;
+    border-color: #2d6a4f;
 }
 
 .place-item:active {
@@ -121,7 +121,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--color-bg-primary);
+    border: 2px solid #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     flex-shrink: 0;
 }
@@ -129,14 +129,14 @@
 .place-coords {
     display: block;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     font-size: 0.85rem;
 }
 
 .place-name {
     display: block;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     font-size: 0.95rem;
     margin-bottom: 3px;
 }
@@ -144,7 +144,7 @@
 .place-message {
     display: block;
     font-size: 0.8rem;
-    color: var(--color-text-secondary);
+    color: #5c5c5c;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -170,7 +170,7 @@
 .empty {
     text-align: center;
     padding: 14px;
-    color: var(--color-text-light);
+    color: #8a8a8a;
     font-size: 0.85rem;
     margin: 0;
 }
@@ -181,7 +181,7 @@
 }
 
 .panel-content::-webkit-scrollbar-track {
-    background: var(--color-bg-tertiary);
+    background: #f4f2ef;
     border-radius: 3px;
 }
 
@@ -191,5 +191,5 @@
 }
 
 .panel-content::-webkit-scrollbar-thumb:hover {
-    background: var(--color-green-primary);
+    background: #2d6a4f;
 }

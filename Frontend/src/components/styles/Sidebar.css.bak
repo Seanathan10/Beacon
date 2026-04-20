@@ -38,7 +38,7 @@
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     letter-spacing: -0.5px;
 }
 
@@ -94,13 +94,13 @@
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: var(--color-text-light);
+    color: #666;
     gap: 4px;
 }
 
 .tab-button.active {
     background: rgba(0, 0, 0, 0.05);
-    color: var(--color-text-primary);
+    color: #000;
 }
 
 .tab-button:hover:not(.active) {
@@ -159,7 +159,7 @@
 .sidebar-pin-card-title {
     font-weight: 600;
     font-size: 0.95rem;
-    color: var(--color-text-primary);
+    color: #1a1a1a;
     line-height: 1.4;
 }
 
@@ -173,7 +173,7 @@
 
 .sidebar-pin-card-distance {
     font-size: 0.75rem;
-    color: var(--color-text-light);
+    color: #666;
     background: rgba(0, 0, 0, 0.04);
     padding: 2px 8px;
     border-radius: 100px;
@@ -181,7 +181,7 @@
 
 .sidebar-pin-card-message {
     font-size: 0.85rem;
-    color: var(--color-text-secondary);
+    color: #444;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -204,7 +204,7 @@
     align-items: center;
     justify-content: center;
     height: 200px;
-    color: var(--color-text-light);
+    color: #888;
     text-align: center;
     gap: 12px;
 }
@@ -229,11 +229,11 @@
     align-items: center;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--color-text-secondary);
+    color: #444;
 }
 
 .slider-value {
-    color: var(--color-green-light);
+    color: #4db688;
     font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
 }
@@ -260,7 +260,7 @@
     height: 16px;
     border-radius: 50%;
     background: white;
-    border: 2px solid var(--color-green-light);
+    border: 2px solid #4db688;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
@@ -275,7 +275,7 @@
 
 .sidebar-range-input::-webkit-slider-thumb:active {
     transform: scale(0.95);
-    background: var(--color-green-light);
+    background: #4db688;
 }
 
 /* Firefox Thumb */
@@ -284,7 +284,7 @@
     height: 16px;
     border-radius: 50%;
     background: white;
-    border: 2px solid var(--color-green-light);
+    border: 2px solid #4db688;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
