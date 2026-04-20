@@ -38,19 +38,11 @@
         --color-primary-hover: var(--color-text-primary);
         --color-green-light: rgba(74, 222, 128, 0.15);
         --color-green-bg: rgba(74, 222, 128, 0.1);
-        
+
         --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
         --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
         --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
         --shadow-glow: 0 0 40px rgba(74, 222, 128, 0.2);
-    }
-
-    .landing__header {
-        background: rgba(26, 26, 26, 0.85);
-    }
-
-    .button--primary {
-        color: var(--color-bg-primary);
     }
 }
 
@@ -1115,5 +1107,17 @@
     .map-preview-cta svg {
         width: 16px;
         height: 16px;
+    }
+}
+
+/* ===== Dark Mode Overrides (must come after base styles) ===== */
+@media (prefers-color-scheme: dark) {
+    .landing__header {
+        background: rgba(26, 26, 26, 0.85);
+    }
+
+    .button--primary {
+        background: var(--color-green-primary);
+        color: #0f0f0f;
     }
 }
