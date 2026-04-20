@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import * as OpenApiValidator from "express-openapi-validator";
 
 import * as auth from "./routes/auth.ts";
@@ -31,7 +32,8 @@ const __dirname = path.dirname(__filename);
 
 const apiSpec = path.join(__dirname, "./openapi.yml");
 
-app.use(express.json());
+app.use(helmet());
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -42,7 +44,8 @@ function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Reques
             ? keyFn(req)
             : (req.ip || req.socket.remoteAddress || "unknown");
         const now = Date.now();
-        const entry = rateLimitStore.get(key);
+        
+        let entry = rateLimitStore.get(key);
 
         if (!entry || now > entry.resetAt) {
             rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
@@ -62,6 +65,8 @@ function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Reques
 const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
 
 const tripRateLimit = rateLimiter(20, 60 * 1000, (req) => `trip:${req.user?.id ?? req.ip}`);
+
+const shareRateLimit = rateLimiter(100, 60 * 1000, (req) => `share:${req.ip}`); // 100 per minute per IP
 
 if (process.env.NODE_ENV !== "test") {
     setInterval(() => {
@@ -150,9 +155,9 @@ app.post("/api/trip/generate-itinerary", auth.check, tripRateLimit, trip.generat
 app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute);
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
 
-app.use("/api/share", shareRouter);
+app.use("/api/share", shareRateLimit, shareRouter);
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     if (err.type === 'cors') {
         return res.status(403).json({ message: "Forbidden" });
     }

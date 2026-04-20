@@ -123,16 +123,16 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
 
     // Helper to parse response
     const parseResponse = (response: any): ItineraryResult | null => {
-        if (response.parsed) {
-            return response.parsed as ItineraryResult;
-        } else if (response.text) {
-            try {
+        try {
+            if (response.parsed) {
+                return response.parsed as ItineraryResult;
+            } else if (response.text) {
                 return JSON.parse(response.text) as ItineraryResult;
-            } catch {
-                return null;
             }
+        } catch (e) {
+            console.error("Failed to parse Gemini response:", e);
         }
-        return null; // Ensure a return value even if neither condition is met
+        return null;
     };
 
     // First attempt: with grounding (may fail with empty content on some model versions)
@@ -163,27 +163,31 @@ Generate a detailed itinerary with sustainability tips and carbon offset suggest
     }
 
     // Fallback: without grounding (more reliable for structured JSON output)
-    const fallbackResponse = await getAiClient().models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [
-            {
-                role: "user",
-                parts: [{ text: prompt }],
+    try {
+        const fallbackResponse = await getAiClient().models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {
+                    role: "user",
+                    parts: [{ text: prompt }],
+                },
+            ],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: itinerarySchema,
+                // No grounding - more reliable for structured output
             },
-        ],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: itinerarySchema,
-            // No grounding - more reliable for structured output
-        },
-    });
+        });
 
-    const fallbackResult = parseResponse(fallbackResponse);
-    if (fallbackResult) {
-        return fallbackResult;
+        const fallbackResult = parseResponse(fallbackResponse);
+        if (fallbackResult) {
+            return fallbackResult;
+        }
+    } catch (err) {
+        console.error("Fallback itinerary generation failed:", err);
     }
 
-    throw new Error(`Failed to generate valid itinerary JSON. Response: ${JSON.stringify(fallbackResponse)}`);
+    throw new Error(`Failed to generate valid itinerary JSON.`);
 }
 
 /**
@@ -209,32 +213,36 @@ Best transit option: ${lowestTransit.mode} at ${lowestTransit.carbonKg} kg CO2
 
 Calculate savings and provide a recommendation.`;
 
-    const response = await getAiClient().models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [
-            {
-                role: "user",
-                parts: [{ text: prompt }],
+    try {
+        const response = await getAiClient().models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {
+                    role: "user",
+                    parts: [{ text: prompt }],
+                },
+            ],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: carbonComparisonSchema,
+                // No grounding needed for math/comparison of provided data
             },
-        ],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: carbonComparisonSchema,
-            // No grounding needed for math/comparison of provided data
-        },
-    });
+        });
 
-    if ((response as any).parsed) {
-        return (response as any).parsed as {
-            comparison: string;
-            savingsPercent: number;
-            recommendation: string;
-        };
-    } else if (response.text) {
-        return JSON.parse(response.text);
-    } else {
-        throw new Error("Failed to generate carbon comparison JSON");
+        if ((response as any).parsed) {
+            return (response as any).parsed as {
+                comparison: string;
+                savingsPercent: number;
+                recommendation: string;
+            };
+        } else if (response.text) {
+            return JSON.parse(response.text);
+        }
+    } catch (err) {
+        console.error("Carbon comparison generation failed:", err);
     }
+
+    throw new Error("Failed to generate carbon comparison");
 }
 
 /**
@@ -259,18 +267,26 @@ Question: ${question}
 
 Provide a helpful, concise answer focused on sustainability and local experiences.`;
 
-    const response = await getAiClient().models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [
-            {
-                role: "user",
-                parts: [{ text: prompt }],
+    try {
+        const response = await getAiClient().models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [
+                {
+                    role: "user",
+                    parts: [{ text: prompt }],
+                },
+            ],
+            config: {
+                tools: [{ googleSearch: {} }], // Enable Grounding for questions
             },
-        ],
-        config: {
-            tools: [{ googleSearch: {} }], // Enable Grounding for questions
-        },
-    });
+        });
 
-    return response.text || "I'm sorry, I couldn't generate an answer at this time.";
+        if (response.text) {
+            return response.text;
+        }
+    } catch (err) {
+        console.error("Trip question answering failed:", err);
+    }
+
+    return "I'm sorry, I couldn't generate an answer at this time. Please try again later.";
 }

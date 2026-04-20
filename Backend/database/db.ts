@@ -24,6 +24,27 @@ export function query(sql: string, params: any[] = []): any {
     }
 }
 
+function createIndexes() {
+    try {
+        // Indexes on foreign keys and common query patterns
+        db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_pin_creatorID ON pin(creatorID);
+            CREATE INDEX IF NOT EXISTS idx_pin_coordinates ON pin(latitude, longitude);
+            CREATE INDEX IF NOT EXISTS idx_comment_pinID ON comment(pinID);
+            CREATE INDEX IF NOT EXISTS idx_comment_accountID ON comment(accountID);
+            CREATE INDEX IF NOT EXISTS idx_likes_pinID ON likes(pinID);
+            CREATE INDEX IF NOT EXISTS idx_likes_accountID ON likes(accountID);
+            CREATE INDEX IF NOT EXISTS idx_post_creatorID ON post(creatorID);
+            CREATE INDEX IF NOT EXISTS idx_post_upvote_postID ON post_upvote(postID);
+            CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID);
+            CREATE INDEX IF NOT EXISTS idx_account_email ON account(email);
+        `);
+        console.log("Database indexes created/verified");
+    } catch (err) {
+        console.error("Failed to create indexes:", err);
+    }
+}
+
 function initPostsTable() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS post (
@@ -55,4 +76,5 @@ function initPostsTable() {
 
 if (!isTest) {
     initPostsTable();
+    createIndexes();
 }

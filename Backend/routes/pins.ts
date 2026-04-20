@@ -1,6 +1,19 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 
+const MAX_TITLE_LENGTH = 200;
+const MAX_ADDRESS_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 5000;
+
+function isValidUrl(url: string): boolean {
+    try {
+        const urlObj = new URL(url);
+        return ['http:', 'https:'].includes(urlObj.protocol);
+    } catch {
+        return false;
+    }
+}
+
 export function splitTags(tags: string | null): string[] {
     if (!tags) return [];
     try {
@@ -66,6 +79,30 @@ export function createPin(req: Request, res: Response) {
         return res.status(400).json({ error: "Invalid coordinates" });
     }
 
+    const title = req.body.title ? String(req.body.title).trim() : null;
+    if (title && title.length > MAX_TITLE_LENGTH) {
+        return res.status(400).json({ error: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
+    }
+
+    const address = req.body.address ? String(req.body.address).trim() : null;
+    if (address && address.length > MAX_ADDRESS_LENGTH) {
+        return res.status(400).json({ error: `Address must be ${MAX_ADDRESS_LENGTH} characters or less` });
+    }
+
+    const description = req.body.description || req.body.message;
+    const descriptionStr = description ? String(description).trim() : null;
+    if (descriptionStr && descriptionStr.length > MAX_DESCRIPTION_LENGTH) {
+        return res.status(400).json({ error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less` });
+    }
+
+    let image = null;
+    if (req.body.image) {
+        image = String(req.body.image).trim();
+        if (!isValidUrl(image)) {
+            return res.status(400).json({ error: "Invalid image URL" });
+        }
+    }
+
     let tags = '[]';
     if (typeof req.body.tags === 'string') {
         tags = req.body.tags;
@@ -79,19 +116,19 @@ export function createPin(req: Request, res: Response) {
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, 0)
 		RETURNING id;
 	`,
-        [
-            req.user.id,
-            req.body.latitude,
-            req.body.longitude,
-            req.body.title ?? null,
-            req.body.address ?? null,
-            req.body.description ?? req.body.message ?? null,
-            req.body.image ?? null,
-            tags,
-        ],
-    );
+            [
+                req.user.id,
+                lat,
+                lng,
+                title,
+                address,
+                descriptionStr,
+                image,
+                tags,
+            ],
+        );
 
-    res.status(201).json(results[0]);
+        res.status(201).json(results[0]);
     } catch (e) {
         console.error('Create Pin Error:', e);
         res.status(400).json({ error: "Failed to create pin" });
@@ -118,25 +155,50 @@ export function updatePin(req: Request, res: Response) {
     const params: any[] = [];
 
     if (description !== undefined) {
-        updates.push("description = ?");
-        params.push(description);
+        const descStr = String(description).trim();
+        if (descStr.length > MAX_DESCRIPTION_LENGTH) {
+            return res.status(400).json({ error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less` });
+        }
+        updates.push("description");
+        params.push(descStr);
     }
+
     if (title !== undefined) {
-        updates.push("title = ?");
-        params.push(title);
+        const titleStr = String(title).trim();
+        if (titleStr.length > MAX_TITLE_LENGTH) {
+            return res.status(400).json({ error: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
+        }
+        updates.push("title");
+        params.push(titleStr);
     }
+
     if (image !== undefined) {
-        updates.push("image = ?");
-        params.push(image);
+        if (image) {
+            const imageStr = String(image).trim();
+            if (!isValidUrl(imageStr)) {
+                return res.status(400).json({ error: "Invalid image URL" });
+            }
+            updates.push("image");
+            params.push(imageStr);
+        } else {
+            updates.push("image");
+            params.push(null);
+        }
     }
+
     if (address !== undefined) {
-        updates.push("address = ?");
-        params.push(address);
+        const addressStr = String(address).trim();
+        if (addressStr.length > MAX_ADDRESS_LENGTH) {
+            return res.status(400).json({ error: `Address must be ${MAX_ADDRESS_LENGTH} characters or less` });
+        }
+        updates.push("address");
+        params.push(addressStr);
     }
 
     if (updates.length > 0) {
+        const updateClauses = updates.map((field) => `${field} = ?`).join(', ');
         params.push(pinID);
-        const sql = `UPDATE pin SET ${updates.join(", ")} WHERE id = ?`;
+        const sql = `UPDATE pin SET ${updateClauses} WHERE id = ?`;
         db.query(sql, params);
     }
 

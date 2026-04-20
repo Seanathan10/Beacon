@@ -6,20 +6,15 @@ import * as db from "../database/db";
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    sameSite: "strict" as const,
     maxAge: 60 * 60 * 1000,
     path: "/",
 };
 
-// Use the type defined in types/express/index.d.ts or redefine locally if not automatically picked up
-// To be safe and avoid compilation/test errors, we can use the specific type or any temporarily, 
-// but let's try to do it right. The types should be picked up if tsconfig is correct.
-// However, since we are in a 'commonjs' style migration chaos, let's just use 'any' cast if the global isn't found
-// OR explicitly define it here to mirror the global one for safety.
+const BCRYPT_ROUNDS = 12;
 
 interface SessionUser {
-    id: string; // or number, depends on your DB implementation. sqlite integer -> number usually, but jsonwebtoken might return string in some configs?
-    // Looking at login, it signs { id: user.id }
+    id: string;
 }
 
 export interface User {
@@ -73,7 +68,7 @@ export async function register(req: Request, res: Response) {
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
         db.query(
             `INSERT INTO account (email, password, name) VALUES (?, ?, ?)`,
@@ -91,7 +86,7 @@ export async function register(req: Request, res: Response) {
         res.status(201).json({
             user: { id, name: name || null, email },
         });
-    } catch (err) {
+    } catch (_err) {
         res.status(500).json({ message: "Registration failed" });
     }
 }
@@ -101,9 +96,11 @@ export function check(req: Request, res: Response, next: NextFunction) {
 
     if (!token) {
         const authHeader = req.headers.authorization;
-        if (authHeader) {
+        if (authHeader && typeof authHeader === "string") {
             const parts = authHeader.split(" ");
-            token = parts.length === 2 && parts[0].toLowerCase() === "bearer" ? parts[1] : null;
+            if (parts.length === 2 && parts[0].toLowerCase() === "bearer" && parts[1].length > 0) {
+                token = parts[1];
+            }
         }
     }
 

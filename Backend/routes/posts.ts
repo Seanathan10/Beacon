@@ -1,16 +1,18 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 
-function withUpvotes(post: any): any {
-    const [{ count }] = db.query(
-        "SELECT COUNT(*) as count FROM post_upvote WHERE postID = ?",
-        [post.id]
-    );
-    return {
-        ...post,
-        upvotes: count,
-        tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
-    };
+const MAX_TITLE_LENGTH = 300;
+const MAX_LOCATION_LENGTH = 500;
+const MAX_MESSAGE_LENGTH = 10000;
+const MAX_CATEGORY_LENGTH = 50;
+
+function isValidUrl(url: string): boolean {
+    try {
+        const urlObj = new URL(url);
+        return ['http:', 'https:'].includes(urlObj.protocol);
+    } catch {
+        return false;
+    }
 }
 
 export function getAllPosts(req: Request, res: Response) {
@@ -53,6 +55,42 @@ export function getPost(req: Request, res: Response) {
 export function createPost(req: Request, res: Response) {
     const { title, location, category, tags, message, image } = req.body;
 
+    if (!title || String(title).trim().length === 0) {
+        return res.status(400).json({ message: "Title is required" });
+    }
+
+    if (!message || String(message).trim().length === 0) {
+        return res.status(400).json({ message: "Message is required" });
+    }
+
+    const titleStr = String(title).trim();
+    if (titleStr.length > MAX_TITLE_LENGTH) {
+        return res.status(400).json({ message: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
+    }
+
+    const locationStr = location ? String(location).trim() : '';
+    if (locationStr.length > MAX_LOCATION_LENGTH) {
+        return res.status(400).json({ message: `Location must be ${MAX_LOCATION_LENGTH} characters or less` });
+    }
+
+    const messageStr = String(message).trim();
+    if (messageStr.length > MAX_MESSAGE_LENGTH) {
+        return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
+    }
+
+    const categoryStr = category ? String(category).trim() : 'New';
+    if (categoryStr.length > MAX_CATEGORY_LENGTH) {
+        return res.status(400).json({ message: `Category must be ${MAX_CATEGORY_LENGTH} characters or less` });
+    }
+
+    let imageStr = null;
+    if (image) {
+        imageStr = String(image).trim();
+        if (!isValidUrl(imageStr)) {
+            return res.status(400).json({ message: "Invalid image URL" });
+        }
+    }
+
     const tagsString = Array.isArray(tags) ? tags.join(',') : (tags || '');
 
     try {
@@ -64,12 +102,12 @@ export function createPost(req: Request, res: Response) {
             `,
             [
                 req.user?.id || null,
-                title,
-                location,
-                category || 'New',
+                titleStr,
+                locationStr,
+                categoryStr,
                 tagsString,
-                message,
-                image || null,
+                messageStr,
+                imageStr,
             ]
         );
 

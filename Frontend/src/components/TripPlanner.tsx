@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import './styles/TripPlanner.css';
 import { DatePicker } from './DatePicker';
 import { BASE_API_URL } from '../../constants';
@@ -1309,7 +1311,12 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             </div>
                             {aiAnswer && (
                                 <div className="ai-answer">
-                                    <ReactMarkdown>{aiAnswer}</ReactMarkdown>
+                                    <ReactMarkdown 
+                                        remarkPlugins={[remarkGfm]}
+                                        rehypePlugins={[rehypeSanitize]}
+                                    >
+                                        {aiAnswer}
+                                    </ReactMarkdown>
                                 </div>
                             )}
                         </div>

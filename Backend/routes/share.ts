@@ -27,8 +27,8 @@ shareRouter.post('/', check, (req, res) => {
             return res.status(413).json({ error: 'Itinerary payload too large' });
         }
 
-        const stmt = db.prepare('INSERT INTO itinerary (id, data) VALUES (?, ?)');
-        stmt.run(id, data);
+        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, data) VALUES (?, ?, ?)');
+        stmt.run(id, req.user?.id || null, data);
 
         res.status(201).json({ id });
     } catch (error) {
@@ -37,7 +37,7 @@ shareRouter.post('/', check, (req, res) => {
     }
 });
 
-// Get shared itinerary
+// Get shared itinerary (public, but rate-limited)
 shareRouter.get('/:id', (req, res) => {
     try {
         const { id } = req.params;
@@ -62,3 +62,31 @@ shareRouter.get('/:id', (req, res) => {
         res.status(500).json({ error: 'Failed to fetch itinerary' });
     }
 });
+
+// Delete shared itinerary (only by creator)
+shareRouter.delete('/:id', check, (req, res) => {
+    try {
+        const id = String(req.params.id);
+        const userId = req.user?.id;
+
+        const stmt = db.prepare('SELECT creatorID FROM itinerary WHERE id = ?');
+        const result = stmt.get(id) as { creatorID: number | null } | undefined;
+
+        if (!result) {
+            return res.status(404).json({ error: 'Itinerary not found' });
+        }
+
+        if (result.creatorID !== Number(userId)) {
+            return res.status(403).json({ error: 'Unauthorized to delete this itinerary' });
+        }
+
+        const deleteStmt = db.prepare('DELETE FROM itinerary WHERE id = ?');
+        deleteStmt.run(id);
+
+        res.status(200).json({ message: 'Itinerary deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting shared itinerary:', error);
+        res.status(500).json({ error: 'Failed to delete itinerary' });
+    }
+});
+
