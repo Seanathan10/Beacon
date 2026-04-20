@@ -75,22 +75,16 @@ export function clearRateLimitStoreForTesting() {
 }
 
 const allowedOrigins = new Set<string>([
-    "http://localhost:3000",
     "http://localhost:5173",
-    "http://localhost:4173",
     "https://ch2026.vercel.app",
     "https://www.beaconapp.live"
 ]);
-
-const isAllowedOrigin = (origin: string) =>
-    allowedOrigins.has(origin) ||
-    /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
 
 app.use(
     cors({
         origin: (origin, cb) => {
             if (!origin) return cb(null, true);
-            if (isAllowedOrigin(origin)) return cb(null, true);
+            if (allowedOrigins.has(origin)) return cb(null, true);
             return cb(null, false);
         },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
