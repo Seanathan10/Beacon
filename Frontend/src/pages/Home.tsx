@@ -19,7 +19,7 @@ import { BASE_API_URL, PIN_COLOR, USER_PIN_COLOR, PIN_LAYER_STYLE, HEATMAP_LAYER
 import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
-import { getMapBoxStyleUrl, onThemeChange } from "@/utils/theme";
+import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
 
 interface PinData {
     lat: number;
@@ -83,7 +83,7 @@ function HomePage() {
     const [flightLine, setFlightLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [hotelLine, setHotelLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [transferPoints, setTransferPoints] = useState<GeoJSON.FeatureCollection | null>(null);
-    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl('light'));
+    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
 
     // Listen for theme changes and update map style
     useEffect(() => {

@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASE_API_URL } from "../../constants";
-import { getMapBoxStyleUrl, onThemeChange } from "@/utils/theme";
+import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
 
 
 function Landing() {
     const navigate = useNavigate();
     const mapPreviewRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
-    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl('light'));
+    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
 
     console.log("[Landing.tsx] Here.");
     console.log("[Landing.tsx] Using server address: ", BASE_API_URL);
