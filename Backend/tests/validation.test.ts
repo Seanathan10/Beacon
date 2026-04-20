@@ -246,8 +246,7 @@ describe('Request validation', () => {
 
   describe('Boundary Value Validation', () => {
     it('should accept email at maximum length', async () => {
-      // Schema allows up to 254 characters (RFC 5321 max)
-      const longEmail = 'a'.repeat(240) + '@example.com'; // 252 chars — within limit
+      const longEmail = 'a'.repeat(240) + '@example.com'; // 252 chars — within 254-char limit
       const response = await request(app).post('/api/register').send({
         email: longEmail,
         password: 'password123',
@@ -255,23 +254,49 @@ describe('Request validation', () => {
       expect(response.status).toBe(201);
     });
 
-    it('should accept password at minimum length', async () => {
-      // No minimum password length is enforced in the OpenAPI schema
+    it('should reject emails exceeding 254 characters', async () => {
+      const longEmail = 'a'.repeat(245) + '@example.com'; // 257 chars — over limit
       const response = await request(app).post('/api/register').send({
-        email: 'minpass@example.com',
-        password: '1',
+        email: longEmail,
+        password: 'password123',
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it('should reject passwords shorter than 8 characters', async () => {
+      for (const short of ['1', 'abc', '1234567']) {
+        const response = await request(app).post('/api/register').send({
+          email: `short-${short.length}@example.com`,
+          password: short,
+        });
+        expect(response.status).toBe(400);
+      }
+    });
+
+    it('should accept passwords of exactly 8 characters', async () => {
+      const response = await request(app).post('/api/register').send({
+        email: 'minpass8@example.com',
+        password: '12345678',
       });
       expect(response.status).toBe(201);
     });
 
-    it('should accept very long passwords', async () => {
-      // bcrypt silently truncates input at 72 bytes and still succeeds
-      const longPassword = 'a'.repeat(1000);
+    it('should accept passwords up to 72 bytes', async () => {
       const response = await request(app).post('/api/register').send({
-        email: 'longpass@example.com',
-        password: longPassword,
+        email: 'maxpass72@example.com',
+        password: 'a'.repeat(72),
       });
       expect(response.status).toBe(201);
+    });
+
+    it('should reject passwords longer than 72 bytes to prevent bcrypt truncation', async () => {
+      // bcrypt silently truncates at 72 bytes, making 'a'.repeat(72) and
+      // 'a'.repeat(73)+'X' hash the same — a password collision risk.
+      const response = await request(app).post('/api/register').send({
+        email: 'longpass@example.com',
+        password: 'a'.repeat(73),
+      });
+      expect(response.status).toBe(400);
     });
 
     it('should accept pin coordinates at exact boundaries', async () => {
@@ -325,6 +350,39 @@ describe('Request validation', () => {
         expect(response.status).toBe(200);
         expect(response.body.upvotes).toBe(0);
       }
+    });
+  });
+
+  describe('Email Edge Cases', () => {
+    it('should reject SQL injection attempts in email (invalid format)', async () => {
+      const injectionAttempts = [
+        "'; DROP TABLE account; --",
+        "admin'--",
+        "user@'; DELETE FROM account WHERE '1'='1",
+      ];
+      for (const email of injectionAttempts) {
+        const response = await request(app).post('/api/register').send({
+          email,
+          password: 'password123',
+        });
+        expect(response.status).toBe(400);
+      }
+    });
+
+    it('should reject emails with null bytes', async () => {
+      const response = await request(app).post('/api/register').send({
+        email: 'user\x00@example.com',
+        password: 'password123',
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it('should reject multi-line email strings', async () => {
+      const response = await request(app).post('/api/register').send({
+        email: 'user@example.com\nX-Injected: header',
+        password: 'password123',
+      });
+      expect(response.status).toBe(400);
     });
   });
 

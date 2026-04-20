@@ -270,7 +270,7 @@ paths:
     put:
       tags: [Pins]
       summary: Update a specific pin by ID
-      description: Updates title/message/image/address for a pin (owner only)
+      description: Updates title/message/image/address for a pin (owner only). Returns 404 for both missing pins and pins owned by another user to prevent ID enumeration.
       operationId: updatePin
       parameters:
         - in: path
@@ -587,10 +587,13 @@ paths:
                   type: string
                   description: The user's email
                   format: email
+                  maxLength: 254
                   example: "user@example.com"
                 password:
                   type: string
                   description: The user's password
+                  minLength: 8
+                  maxLength: 72
                   example: "securepassword"
       responses:
         '200':
@@ -633,10 +636,13 @@ paths:
                   type: string
                   description: The user's email
                   format: email
+                  maxLength: 254
                   example: "newuser@example.com"
                 password:
                   type: string
                   description: The user's password
+                  minLength: 8
+                  maxLength: 72
                   example: "securepassword"
                 name:
                   type: string

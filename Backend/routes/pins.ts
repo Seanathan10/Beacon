@@ -5,6 +5,10 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
 
+function stripHtml(str: string): string {
+    return str.replace(/<[^>]*>/g, '');
+}
+
 function isValidUrl(url: string): boolean {
     try {
         const urlObj = new URL(url);
@@ -79,18 +83,18 @@ export function createPin(req: Request, res: Response) {
         return res.status(400).json({ error: "Invalid coordinates" });
     }
 
-    const title = req.body.title ? String(req.body.title).trim() : null;
+    const title = req.body.title ? stripHtml(String(req.body.title).trim()) : null;
     if (title && title.length > MAX_TITLE_LENGTH) {
         return res.status(400).json({ error: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
     }
 
-    const address = req.body.address ? String(req.body.address).trim() : null;
+    const address = req.body.address ? stripHtml(String(req.body.address).trim()) : null;
     if (address && address.length > MAX_ADDRESS_LENGTH) {
         return res.status(400).json({ error: `Address must be ${MAX_ADDRESS_LENGTH} characters or less` });
     }
 
     const description = req.body.description || req.body.message;
-    const descriptionStr = description ? String(description).trim() : null;
+    const descriptionStr = description ? stripHtml(String(description).trim()) : null;
     if (descriptionStr && descriptionStr.length > MAX_DESCRIPTION_LENGTH) {
         return res.status(400).json({ error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less` });
     }
@@ -141,21 +145,15 @@ export function updatePin(req: Request, res: Response) {
     const { title, address, description, image } = req.body;
 
     const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0) {
+    if (pinResult.length === 0 || Number(pinResult[0].creatorID) !== Number(userID)) {
         return res.status(404).json({ message: "Pin not found" });
-    }
-
-    const pin = pinResult[0];
-
-    if (Number(pin.creatorID) !== Number(userID)) {
-        return res.status(403).json({ message: "Unauthorized" });
     }
 
     const updates: string[] = [];
     const params: any[] = [];
 
     if (description !== undefined) {
-        const descStr = String(description).trim();
+        const descStr = stripHtml(String(description).trim());
         if (descStr.length > MAX_DESCRIPTION_LENGTH) {
             return res.status(400).json({ error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less` });
         }
@@ -164,7 +162,7 @@ export function updatePin(req: Request, res: Response) {
     }
 
     if (title !== undefined) {
-        const titleStr = String(title).trim();
+        const titleStr = stripHtml(String(title).trim());
         if (titleStr.length > MAX_TITLE_LENGTH) {
             return res.status(400).json({ error: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
         }
@@ -187,7 +185,7 @@ export function updatePin(req: Request, res: Response) {
     }
 
     if (address !== undefined) {
-        const addressStr = String(address).trim();
+        const addressStr = stripHtml(String(address).trim());
         if (addressStr.length > MAX_ADDRESS_LENGTH) {
             return res.status(400).json({ error: `Address must be ${MAX_ADDRESS_LENGTH} characters or less` });
         }
@@ -220,14 +218,8 @@ export function deletePin(req: Request, res: Response) {
     const userID = req.user.id;
 
     const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0) {
+    if (pinResult.length === 0 || Number(pinResult[0].creatorID) !== Number(userID)) {
         return res.status(404).send();
-    }
-
-    const pin = pinResult[0];
-
-    if (Number(pin.creatorID) !== Number(userID)) {
-        return res.status(403).json({ message: "Unauthorized" });
     }
 
     db.query("DELETE FROM pin WHERE id = ?", [pinID]);

