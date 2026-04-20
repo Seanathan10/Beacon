@@ -97,6 +97,7 @@ app.use(
             if (allowedOrigins.has(origin)) return cb(null, true);
             return cb(null, false);
         },
+        credentials: true,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
     }),
