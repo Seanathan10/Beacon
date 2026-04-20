@@ -26,19 +26,44 @@ export function query(sql: string, params: any[] = []): any {
 
 function createIndexes() {
     try {
-        // Indexes on foreign keys and common query patterns
-        db.exec(`
-            CREATE INDEX IF NOT EXISTS idx_pin_creatorID ON pin(creatorID);
-            CREATE INDEX IF NOT EXISTS idx_pin_coordinates ON pin(latitude, longitude);
-            CREATE INDEX IF NOT EXISTS idx_comment_pinID ON comment(pinID);
-            CREATE INDEX IF NOT EXISTS idx_comment_accountID ON comment(accountID);
-            CREATE INDEX IF NOT EXISTS idx_likes_pinID ON likes(pinID);
-            CREATE INDEX IF NOT EXISTS idx_likes_accountID ON likes(accountID);
-            CREATE INDEX IF NOT EXISTS idx_post_creatorID ON post(creatorID);
-            CREATE INDEX IF NOT EXISTS idx_post_upvote_postID ON post_upvote(postID);
-            CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID);
-            CREATE INDEX IF NOT EXISTS idx_account_email ON account(email);
-        `);
+        // Create indexes on foreign keys and common query patterns
+        // Only create indexes for tables that actually exist
+        const indexStatements = [
+            // Pin table indexes
+            { table: 'pin', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_creatorID ON pin(creatorID)' },
+            { table: 'pin', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_coordinates ON pin(latitude, longitude)' },
+            // Comment table indexes
+            { table: 'comment', sql: 'CREATE INDEX IF NOT EXISTS idx_comment_pinID ON comment(pinID)' },
+            { table: 'comment', sql: 'CREATE INDEX IF NOT EXISTS idx_comment_accountID ON comment(accountID)' },
+            // Likes table indexes
+            { table: 'likes', sql: 'CREATE INDEX IF NOT EXISTS idx_likes_pinID ON likes(pinID)' },
+            { table: 'likes', sql: 'CREATE INDEX IF NOT EXISTS idx_likes_accountID ON likes(accountID)' },
+            // Post table indexes
+            { table: 'post', sql: 'CREATE INDEX IF NOT EXISTS idx_post_creatorID ON post(creatorID)' },
+            // Post upvote table indexes (only if table exists)
+            { table: 'post_upvote', sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_postID ON post_upvote(postID)' },
+            { table: 'post_upvote', sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID)' },
+            // Account table indexes
+            { table: 'account', sql: 'CREATE INDEX IF NOT EXISTS idx_account_email ON account(email)' },
+        ];
+
+        // Get list of existing tables
+        const existingTables = db.prepare(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).all() as { name: string }[];
+        const tableNames = new Set(existingTables.map(t => t.name));
+
+        // Create indexes only for tables that exist
+        for (const { table, sql } of indexStatements) {
+            if (tableNames.has(table)) {
+                try {
+                    db.exec(sql);
+                } catch (err) {
+                    // If a specific index fails, log it but continue with others
+                    console.warn(`Failed to create index on ${table}:`, err instanceof Error ? err.message : err);
+                }
+            }
+        }
         console.log("Database indexes created/verified");
     } catch (err) {
         console.error("Failed to create indexes:", err);
