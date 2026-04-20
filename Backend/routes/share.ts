@@ -8,7 +8,7 @@ export const shareRouter = express.Router();
 
 const MAX_SHARE_PAYLOAD_BYTES = 512 * 1024; // 512 KB
 
-shareRouter.post('/', check, (req, res) => {
+shareRouter.post('/', (req, res) => {
     try {
         const { itinerary, itineraryType, settings } = req.body;
 
@@ -28,7 +28,8 @@ shareRouter.post('/', check, (req, res) => {
         }
 
         const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, data) VALUES (?, ?, ?)');
-        stmt.run(id, req.user?.id || null, data);
+        const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id, 10) : (req.user?.id || null);
+        stmt.run(id, userId, data);
 
         res.status(201).json({ id });
     } catch (error) {

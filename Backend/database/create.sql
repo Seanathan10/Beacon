@@ -68,8 +68,10 @@ CREATE TABLE post_upvote (
 
 CREATE TABLE itinerary (
 	id TEXT PRIMARY KEY,
+	creatorID INTEGER,
 	data TEXT NOT NULL,
-	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );
 
 -- Indexes for common query patterns

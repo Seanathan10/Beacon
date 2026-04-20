@@ -95,8 +95,10 @@ export function initializeSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS itinerary (
       id TEXT PRIMARY KEY,
+      creatorID INTEGER,
       data TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
     );
   `);
 }

@@ -51,6 +51,7 @@ export async function login(req: Request, res: Response) {
 
     res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
     res.status(200).json({
+        accessToken,
         user: { id: user.id, name: user.name, email: user.email },
     });
 }
@@ -84,6 +85,7 @@ export async function register(req: Request, res: Response) {
 
         res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
         res.status(201).json({
+            accessToken,
             user: { id, name: name || null, email },
         });
     } catch (_err) {
