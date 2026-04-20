@@ -25,9 +25,8 @@ export function LoginPage() {
         try {
             const response = await fetch(`${BASE_API_URL}/api/login`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     email: credentials.email,
                     password: credentials.password,
@@ -40,7 +39,7 @@ export function LoginPage() {
                 throw new Error(data.message || "Login failed");
             }
 
-            localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
             if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 

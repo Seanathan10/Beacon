@@ -24,16 +24,8 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
     useEffect(() => {
         const fetchSavedPlaces = async () => {
             try {
-                const token = localStorage.getItem("accessToken");
-                if (!token) {
-                    setIsLoading(false);
-                    return;
-                }
-
                 const res = await fetch(`${BASE_API_URL}/api/pins/user`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    credentials: "include",
                 });
 
                 if (res.ok) {
@@ -58,8 +50,8 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
         fetchSavedPlaces();
     }, []);
 
-    if (!localStorage.getItem("accessToken")) {
-        return null; // Don't show if not logged in
+    if (!isLoading && savedPlaces.length === 0) {
+        return null;
     }
 
     return (

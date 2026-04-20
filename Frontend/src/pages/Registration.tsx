@@ -27,6 +27,7 @@ export function RegistrationPage() {
             const response = await fetch(`${BASE_API_URL}/api/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     email: credentials.email,
                     password: credentials.password,
@@ -40,7 +41,7 @@ export function RegistrationPage() {
                 throw new Error(data.message || "Registration failed");
             }
 
-            localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
             if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 

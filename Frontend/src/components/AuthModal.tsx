@@ -64,9 +64,8 @@ export default function AuthModal({
 
             const response = await fetch(`${BASE_API_URL}${endpoint}`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     email: credentials.email,
                     password: credentials.password,
@@ -85,8 +84,7 @@ export default function AuthModal({
                 );
             }
 
-            // Store the token and user email
-            localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", credentials.email);
             if (data.user?.id)
                 localStorage.setItem("userId", data.user.id.toString());

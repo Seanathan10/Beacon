@@ -56,6 +56,16 @@ export function getPin(req: Request, res: Response) {
 }
 
 export function createPin(req: Request, res: Response) {
+    const lat = parseFloat(req.body.latitude);
+    const lng = parseFloat(req.body.longitude);
+    if (
+        isNaN(lat) || isNaN(lng) ||
+        lat < -90 || lat > 90 ||
+        lng < -180 || lng > 180
+    ) {
+        return res.status(400).json({ error: "Invalid coordinates" });
+    }
+
     let tags = '[]';
     if (typeof req.body.tags === 'string') {
         tags = req.body.tags;
@@ -184,31 +194,35 @@ function distBetweenCoordinates(lat1: number, lon1: number, lat2: number, lon2: 
 }
 
 export function getPinsNearCoordinate(req: Request, res: Response) {
-    const latitude = req.body.latitude;
-    const longitude = req.body.longitude;
+    const latitude = parseFloat(req.body.latitude);
+    const longitude = parseFloat(req.body.longitude);
     const MAX_RADIUS_KM = 10;
 
-    const results: any[] = db.query(`SELECT * FROM pin;`);
+    if (
+        isNaN(latitude) || isNaN(longitude) ||
+        latitude < -90 || latitude > 90 ||
+        longitude < -180 || longitude > 180
+    ) {
+        return res.status(400).json({ error: "Invalid coordinates" });
+    }
+
+    // Bounding box pre-filter to avoid loading all pins into memory
+    const latDelta = MAX_RADIUS_KM / 111.0;
+    const lngDelta = MAX_RADIUS_KM / (111.0 * Math.cos(latitude * Math.PI / 180));
+
+    const results: any[] = db.query(
+        `SELECT * FROM pin WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?`,
+        [latitude - latDelta, latitude + latDelta, longitude - lngDelta, longitude + lngDelta]
+    );
+
     const filtered = results
-        .map((p: any) => {
-            return {
-                ...p,
-                distance: distBetweenCoordinates(
-                    p.latitude,
-                    p.longitude,
-                    latitude,
-                    longitude,
-                ),
-            };
-        })
-        .sort((a: any, b: any) => {
-            return a.distance - b.distance;
-        })
+        .map((p: any) => ({
+            ...p,
+            distance: distBetweenCoordinates(p.latitude, p.longitude, latitude, longitude),
+        }))
         .filter((d: any) => d.distance < MAX_RADIUS_KM)
-        .map((c: any) => {
-            const { distance, ...everythingElse } = c;
-            return everythingElse;
-        });
+        .sort((a: any, b: any) => a.distance - b.distance)
+        .map(({ distance: _d, ...rest }: any) => rest);
 
     res.json(filtered);
 }

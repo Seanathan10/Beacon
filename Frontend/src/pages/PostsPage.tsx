@@ -12,17 +12,12 @@ export function PostsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const getAuthToken = () => localStorage.getItem("accessToken");
-
     const fetchPosts = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const token = getAuthToken();
             const response = await fetch(`${BASE_API_URL}/api/posts`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                credentials: "include",
             });
             
             if (response.status === 401) {
@@ -88,12 +83,9 @@ export function PostsPage() {
 
     const removePost = async (id: number) => {
         try {
-            const token = getAuthToken();
             const response = await fetch(`${BASE_API_URL}/api/posts/${id}`, {
                 method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                credentials: "include",
             });
 
             if (response.status === 401) {

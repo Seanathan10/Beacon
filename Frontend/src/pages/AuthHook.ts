@@ -1,30 +1,31 @@
 import { useState } from "react";
+import { BASE_API_URL } from "../../constants";
 
 export default function AuthHook() {
 	const [userEmail, setUserEmail] = useState<string>(() => {
-        const email = localStorage.getItem("userEmail");
-        return email || "";
+        return localStorage.getItem("userEmail") || "";
     });
     const [userId, setUserId] = useState<number | null>(() => {
         const id = localStorage.getItem("userId");
         return id ? parseInt(id) : null;
     });
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-        return !!localStorage.getItem("accessToken");
+        return localStorage.getItem("isLoggedIn") === "true";
     });
 
 	const logout = () => {
-        localStorage.removeItem("accessToken");
+        fetch(`${BASE_API_URL}/api/logout`, { method: "POST", credentials: "include" }).catch(() => {});
+        localStorage.removeItem("isLoggedIn");
         localStorage.removeItem("userEmail");
         localStorage.removeItem("userId");
         setIsLoggedIn(false);
         setUserEmail("");
         setUserId(null);
-    }; 
+    };
 
-	
-    const authSuccess = () => {
+	const authSuccess = () => {
         setIsLoggedIn(true);
+        localStorage.setItem("isLoggedIn", "true");
         setUserEmail(localStorage.getItem("userEmail") || "");
         const storedId = localStorage.getItem("userId");
         if (storedId) setUserId(parseInt(storedId));

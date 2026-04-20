@@ -3,6 +3,14 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as db from "../database/db";
 
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge: 60 * 60 * 1000,
+    path: "/",
+};
+
 // Use the type defined in types/express/index.d.ts or redefine locally if not automatically picked up
 // To be safe and avoid compilation/test errors, we can use the specific type or any temporarily, 
 // but let's try to do it right. The types should be picked up if tsconfig is correct.
@@ -46,8 +54,8 @@ export async function login(req: Request, res: Response) {
         },
     );
 
+    res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
     res.status(200).json({
-        accessToken: accessToken,
         user: { id: user.id, name: user.name, email: user.email },
     });
 }
@@ -79,8 +87,8 @@ export async function register(req: Request, res: Response) {
             algorithm: "HS256",
         });
 
+        res.cookie("accessToken", accessToken, COOKIE_OPTIONS);
         res.status(201).json({
-            accessToken: accessToken,
             user: { id, name: name || null, email },
         });
     } catch (err) {
@@ -89,23 +97,30 @@ export async function register(req: Request, res: Response) {
 }
 
 export function check(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).json({ message: "No token provided" });
+    let token: string | null = req.cookies?.accessToken ?? null;
+
+    if (!token) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const parts = authHeader.split(" ");
+            token = parts.length === 2 && parts[0].toLowerCase() === "bearer" ? parts[1] : null;
+        }
     }
 
-    const parts = authHeader.split(" ");
-    const token = parts.length === 2 && parts[0].toLowerCase() === "bearer" ? parts[1] : null;
     if (!token) {
-        return res.status(401).json({ message: "Invalid token" });
+        return res.status(401).json({ message: "No token provided" });
     }
 
     jwt.verify(token, process.env.SECRET as string, (err, decoded) => {
         if (err) {
             return res.status(401).json({ message: "Invalid token" });
         }
-
         req.user = decoded as SessionUser;
         next();
     });
+}
+
+export function logout(_req: Request, res: Response) {
+    res.clearCookie("accessToken", { ...COOKIE_OPTIONS, maxAge: 0 });
+    res.status(200).json({ message: "Logged out" });
 }

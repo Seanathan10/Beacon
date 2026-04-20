@@ -4,6 +4,7 @@ import express, { Request, Response, NextFunction } from "express";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import * as OpenApiValidator from "express-openapi-validator";
 
 import * as auth from "./routes/auth.ts";
@@ -31,6 +32,7 @@ const __dirname = path.dirname(__filename);
 const apiSpec = path.join(__dirname, "./openapi.yml");
 
 app.use(express.json());
+app.use(cookieParser());
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
@@ -89,7 +91,7 @@ app.use(
         },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
-        credentials: false,
+        credentials: true,
     }),
 );
 
@@ -115,6 +117,7 @@ app.get("/heartbeat", (req, res) => {
 
 app.post("/api/login", authRateLimit, auth.login);
 app.post("/api/register", authRateLimit, auth.register);
+app.post("/api/logout", auth.logout);
 
 app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);

@@ -109,11 +109,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         try {
             const response = await fetch(
                 `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                    },
-                }
+                { credentials: "include" }
             );
 
             if (response.ok) {
@@ -143,10 +139,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                 `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                    },
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
                     body: JSON.stringify({ comment: newComment.trim() }),
                 }
             );
@@ -179,12 +173,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         try {
             const response = await fetch(
                 `${BASE_API_URL}/api/comments/${commentId}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                    },
-                }
+                { method: "DELETE", credentials: "include" }
             );
 
             if (response.ok) {
@@ -254,10 +243,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                 `${BASE_API_URL}/api/pins/${selectedPoint.id}`,
                 {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                    },
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
                     body: JSON.stringify({
                         description,
                         image: finalImageUrl,
@@ -292,12 +279,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         try {
             const response = await fetch(
                 `${BASE_API_URL}/api/pins/${selectedPoint.id}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                    },
-                }
+                { method: "DELETE", credentials: "include" }
             );
 
             if (response.ok) {

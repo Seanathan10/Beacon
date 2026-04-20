@@ -2,13 +2,13 @@
 import express from 'express';
 import { db } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
+import { check } from './auth.ts';
 
 export const shareRouter = express.Router();
 
-// Save itinerary
 const MAX_SHARE_PAYLOAD_BYTES = 512 * 1024; // 512 KB
 
-shareRouter.post('/', (req, res) => {
+shareRouter.post('/', check, (req, res) => {
     try {
         const { itinerary, itineraryType, settings } = req.body;
 

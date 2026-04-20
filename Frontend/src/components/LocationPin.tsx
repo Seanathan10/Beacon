@@ -76,9 +76,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		// Fetch likes
 		setLikesLoading(true);
 		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-			headers: {
-				Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-			}
+			credentials: "include",
 		})
 			.then(res => res.json())
 			.then(res => {
@@ -99,17 +97,13 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 			setLikes(prev => prev + 1);
 			fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
 				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-				}
+				credentials: "include",
 			});
 		} else {
 			setLikes(prev => prev - 1);
 			fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
 				method: 'DELETE',
-				headers: {
-					Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-				}
+				credentials: "include",
 			});
 		}
 	};

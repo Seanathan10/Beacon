@@ -127,9 +127,7 @@ function HomePage() {
         const fetchPins = async () => {
             try {
                 const res = await fetch(`${BASE_API_URL}/api/pins`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-                    }
+                    credentials: "include",
                 });
 
                 if (res.status == 401) {

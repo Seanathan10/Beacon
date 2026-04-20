@@ -325,10 +325,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         try {
             const response = await fetch(`${BASE_API_URL}/api/trip/plan/stream`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     startLocation: startCity,
                     endLocation: endCity,
@@ -439,10 +437,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
             const response = await fetch(`${BASE_API_URL}/api/trip/generate-itinerary`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     destination: optionsData.destination,
                     itineraryType: optionsData.itineraryType,
@@ -483,10 +479,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         try {
             const response = await fetch(`${BASE_API_URL}/api/trip/ask`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     question: aiQuestion,
                     origin: startCity,
@@ -639,10 +633,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
                 const response = await fetch(`${BASE_API_URL}/api/trip/local-route`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({
                         // Pass addresses for transit search (more reliable)
                         originAddress: airportAddress,
