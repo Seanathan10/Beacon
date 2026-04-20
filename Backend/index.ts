@@ -84,7 +84,9 @@ export function clearRateLimitStoreForTesting() {
 const allowedOrigins = new Set<string>([
     "http://localhost:5173",
     "https://ch2026.vercel.app",
-    "https://www.beaconapp.live"
+    "https://www.beaconapp.live",
+    "https://beaconapp.live",
+    "https://api.beaconapp.live"
 ]);
 
 app.use(
