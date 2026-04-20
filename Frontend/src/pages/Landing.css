@@ -5,19 +5,29 @@
 
     --color-bg: var(--color-bg-secondary);
     --color-bg-alt: var(--color-bg-tertiary);
-    --color-bg-accent: #e8f3e8;
+    --color-bg-accent: rgba(45, 106, 79, 0.08);
     --color-text: var(--color-text-primary);
     --color-text-muted: var(--color-text-secondary);
     --color-text-light: var(--color-text-light);
     --color-primary: var(--color-text-primary);
-    --color-primary-hover: #333;
+    --color-primary-hover: var(--color-text-primary);
     --color-green: var(--color-green-primary);
-    --color-green-light: #d8f3dc;
-    --color-green-bg: #e9f5e9;
+    --color-green-light: rgba(45, 106, 79, 0.15);
+    --color-green-bg: rgba(45, 106, 79, 0.1);
     --color-border: var(--color-border-primary);
     --color-card: var(--color-bg-primary);
 
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 2px 8px var(--color-shadow-sm);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg-accent: rgba(74, 222, 128, 0.08);
+        --color-primary-hover: var(--color-text-primary);
+        --color-green-light: rgba(74, 222, 128, 0.15);
+        --color-green-bg: rgba(74, 222, 128, 0.1);
+    }
+}
     --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.1);
     --shadow-glow: 0 0 40px rgba(45, 106, 79, 0.15);
@@ -409,15 +419,15 @@
 }
 
 .dot--red {
-    background: #ff5f57;
+    background: #ff6b6b;
 }
 
 .dot--yellow {
-    background: #febc2e;
+    background: #ffd93d;
 }
 
 .dot--green {
-    background: #28c840;
+    background: #4ade80;
 }
 
 .map-preview-title {
@@ -452,7 +462,8 @@
     inset: 0;
     top: 45px;
     /* Account for header */
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--color-overlay);
+
     opacity: 0;
     transition: opacity var(--transition-base);
     display: flex;

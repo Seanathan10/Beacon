@@ -107,7 +107,7 @@
 }
 
 .place-item:active {
-    background: #ede9e4;
+    background: var(--color-bg-tertiary);
 }
 
 .place-header {
@@ -186,7 +186,7 @@
 }
 
 .panel-content::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: var(--color-text-light);
     border-radius: 3px;
 }
 

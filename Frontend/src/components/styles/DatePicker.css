@@ -20,7 +20,7 @@
 }
 
 .date-picker-trigger:hover {
-    background-color: #fcfcfc;
+    background-color: var(--color-bg-tertiary);
     border-color: var(--color-border-secondary);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .date-picker-placeholder {
-    color: #a0a0a0;
+    color: var(--color-text-light);
 }
 
 /* Popover Content */
@@ -63,11 +63,18 @@
 .rdp-root {
     --rdp-cell-size: 40px;
     --rdp-accent-color: var(--color-green-primary) !important;
-    --rdp-accent-background-color: #e9f5e9 !important;
-    --rdp-background-color: #e9f5e9;
+    --rdp-accent-background-color: rgba(45, 106, 79, 0.15) !important;
+    --rdp-background-color: rgba(45, 106, 79, 0.1);
     --rdp-outline: 2px solid var(--rdp-accent-color);
     --rdp-outline-selected: 2px solid rgba(0, 0, 0, 0);
     margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .rdp-root {
+        --rdp-accent-background-color: rgba(74, 222, 128, 0.15) !important;
+        --rdp-background-color: rgba(74, 222, 128, 0.08);
+    }
 }
 
 .rdp-caption_label {
@@ -88,7 +95,7 @@
 
 .rdp-nav_button:hover,
 .rdp-button:hover:not([disabled]):not(.rdp-selected) {
-    background-color: #f0ede8 !important;
+    background-color: var(--color-bg-tertiary) !important;
     color: var(--color-green-secondary) !important;
 }
 
@@ -100,7 +107,7 @@
 }
 
 .rdp-day:hover:not(.rdp-selected):not(.rdp-day_selected) {
-    background-color: #f0ede8 !important;
+    background-color: var(--color-bg-tertiary) !important;
 }
 
 /* Selected Day - targeting multiple possible classes */
@@ -127,7 +134,15 @@
 
 .rdp-today:not(.rdp-selected):not(.rdp-day_selected),
 .rdp-day_today:not(.rdp-selected):not(.rdp-day_selected) {
+    background-color: var(--color-green-primary);
     background-color: rgba(45, 106, 79, 0.08) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .rdp-today:not(.rdp-selected):not(.rdp-day_selected),
+    .rdp-day_today:not(.rdp-selected):not(.rdp-day_selected) {
+        background-color: rgba(74, 222, 128, 0.15) !important;
+    }
 }
 
 .rdp-weekday {

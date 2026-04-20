@@ -94,7 +94,7 @@
 }
 
 .pin-add-btn:hover {
-    background: #255a41;
+    background: var(--color-green-secondary);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md, 0 8px 30px rgba(0, 0, 0, 0.08));
 }

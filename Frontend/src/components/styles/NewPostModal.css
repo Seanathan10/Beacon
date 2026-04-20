@@ -4,7 +4,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(26, 26, 26, 0.5);
+    background-color: var(--color-overlay);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
@@ -76,7 +76,7 @@
 }
 
 .new-post-modal-close:hover {
-    background-color: #f0ede8;
+    background-color: var(--color-bg-tertiary);
     color: var(--color-text-primary);
 }
 
@@ -107,7 +107,7 @@
 }
 
 .required {
-    color: #e63946;
+    color: var(--color-red-error);
 }
 
 .label-hint {
@@ -125,7 +125,8 @@
     border-radius: 10px;
     font-size: 0.95rem;
     font-family: inherit;
-    background: white;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
     transition: all 0.2s ease;
     box-sizing: border-box;
 }
@@ -146,7 +147,8 @@
     font-size: 0.95rem;
     resize: vertical;
     font-family: inherit;
-    background: white;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
     transition: all 0.2s ease;
     box-sizing: border-box;
 }
@@ -160,7 +162,7 @@
 .form-file-input {
     width: 100%;
     padding: 10px;
-    background: #f0ede8;
+    background: var(--color-bg-tertiary);
     border-radius: 8px;
     border: 1px solid var(--color-border-primary);
     cursor: pointer;
@@ -209,8 +211,8 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
+    background: var(--color-shadow-lg);
+    color: var(--color-bg-primary);
     border: none;
     padding: 6px 12px;
     border-radius: 6px;
@@ -222,17 +224,17 @@
 }
 
 .remove-image-btn:hover {
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--color-shadow-xl);
 }
 
 .error-message {
-    color: #e63946;
-    background: #ffe3e3;
+    color: var(--color-red-error);
+    background: var(--color-red-error-bg);
     padding: 12px;
     border-radius: 8px;
     font-size: 0.9rem;
     text-align: center;
-    border: 1px solid #ffcccb;
+    border: 1px solid var(--color-red-error-border);
 }
 
 .new-post-modal-actions {
@@ -277,7 +279,7 @@
 }
 
 .action-button.secondary {
-    background-color: #f0ede8;
+    background-color: var(--color-bg-tertiary);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-primary);
 }
