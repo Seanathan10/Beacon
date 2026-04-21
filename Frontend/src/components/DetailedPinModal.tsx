@@ -13,6 +13,7 @@ interface DetailedPinModalProps {
         image: string;
         email?: string;
         address?: string;
+        tags?: string | string[];
     };
     currentUserId: number | null;
     currentUserEmail: string | null;
@@ -24,6 +25,12 @@ interface DetailedPinModalProps {
         color?: string;
     }) => void;
     onDelete?: (id: number) => void;
+    onClone?: (data: {
+        title: string;
+        description: string;
+        image: string;
+        tags: string[];
+    }) => void;
 }
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -49,7 +56,18 @@ function ModalSection({ header, content }: { header: string, content: any }) {
     )
 }
 
-export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate, onDelete }: DetailedPinModalProps) {
+function parseTags(raw: string | string[] | undefined): string[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return raw.split(",").map(t => t.trim()).filter(Boolean);
+    }
+}
+
+export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate, onDelete, onClone }: DetailedPinModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [description, setDescription] = useState(selectedPoint.description);
@@ -275,6 +293,16 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleClone = () => {
+        onClone?.({
+            title: selectedPoint.title?.trim() || "",
+            description: selectedPoint.description?.trim() || "",
+            image: selectedPoint.image || "",
+            tags: parseTags(selectedPoint.tags),
+        });
+        handleClose();
     };
 
     const handleDelete = async () => {
@@ -625,6 +653,14 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                             <>
 
 
+                                {onClone && (
+                                    <button
+                                        className="action-button secondary"
+                                        onClick={handleClone}
+                                    >
+                                        Create Similar
+                                    </button>
+                                )}
                                 {isOwner ? (
                                     <>
                                         <button

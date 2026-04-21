@@ -155,10 +155,8 @@
     background: rgba(45, 106, 79, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-    .trip-stage-item.loading {
-        background: rgba(74, 222, 128, 0.08);
-    }
+[data-theme="dark"] .trip-stage-item.loading {
+    background: rgba(74, 222, 128, 0.08);
 }
 
 .trip-stage-item.done {

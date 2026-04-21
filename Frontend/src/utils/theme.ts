@@ -1,88 +1,83 @@
-/**
- * Theme utilities for system dark mode detection and application
- */
-
 export type Theme = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
-/**
- * Get the current system theme preference
- */
+const STORAGE_KEY = 'beacon-theme';
+
+export function getStoredMode(): ThemeMode {
+    if (typeof window === 'undefined') return 'system';
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+        return stored;
+    }
+    return 'system';
+}
+
+export function setStoredMode(mode: ThemeMode): void {
+    if (typeof window === 'undefined') return;
+    if (mode === 'system') {
+        window.localStorage.removeItem(STORAGE_KEY);
+    } else {
+        window.localStorage.setItem(STORAGE_KEY, mode);
+    }
+    const resolved = resolveTheme(mode);
+    applyTheme(resolved);
+    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: resolved } }));
+}
+
 export function getSystemTheme(): Theme {
     if (typeof window === 'undefined') return 'light';
-    
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
     }
     return 'light';
 }
 
-/**
- * Get the appropriate MapBox style URL based on theme
- */
+export function resolveTheme(mode: ThemeMode = getStoredMode()): Theme {
+    return mode === 'system' ? getSystemTheme() : mode;
+}
+
 export function getMapBoxStyleUrl(theme: Theme): string {
-    // Mapbox provides these official styles
     if (theme === 'dark') {
         return 'mapbox://styles/mapbox/dark-v11';
     }
     return 'mapbox://styles/mapbox/streets-v12';
 }
 
-/**
- * Initialize theme detection and set up listeners
- * Applies theme immediately and listens for system preference changes
- */
 export function initializeTheme(): void {
-    applyTheme(getSystemTheme());
-    
-    // Listen for system theme changes
-    if (window.matchMedia) {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        
-        // Modern API: addEventListener
-        if (mediaQuery.addEventListener) {
-            mediaQuery.addEventListener('change', (e) => {
-                applyTheme(e.matches ? 'dark' : 'light');
-                // Dispatch custom event for components to react to theme change
-                window.dispatchEvent(new CustomEvent('theme-changed', { 
-                    detail: { theme: e.matches ? 'dark' : 'light' } 
-                }));
-            });
-        }
-        // Fallback for older browsers
-        else if (mediaQuery.addListener) {
-            mediaQuery.addListener((e) => {
-                applyTheme(e.matches ? 'dark' : 'light');
-                window.dispatchEvent(new CustomEvent('theme-changed', { 
-                    detail: { theme: e.matches ? 'dark' : 'light' } 
-                }));
-            });
-        }
+    applyTheme(resolveTheme());
+
+    if (!window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemChange = () => {
+        // Only react to system changes when the user hasn't picked a manual mode
+        if (getStoredMode() !== 'system') return;
+        const next = getSystemTheme();
+        applyTheme(next);
+        window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: next } }));
+    };
+
+    if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', handleSystemChange);
+    } else {
+        // Safari < 14 fallback: pre-standard addListener
+        const legacy = mediaQuery as MediaQueryList & {
+            addListener?: (listener: (ev: MediaQueryListEvent) => void) => void;
+        };
+        legacy.addListener?.(handleSystemChange);
     }
 }
 
-/**
- * Apply theme to the document
- * CSS media queries will automatically pick up the prefers-color-scheme change
- */
 function applyTheme(theme: Theme): void {
-    // Set data attribute for CSS targeting if needed
     document.documentElement.setAttribute('data-theme', theme);
-    
-    // CSS variables are automatically applied via @media (prefers-color-scheme)
-    // No need to manually set them as the browser will handle it
 }
 
-/**
- * Listen for theme changes and execute callback
- */
 export function onThemeChange(callback: (theme: Theme) => void): () => void {
     const handleThemeChange = (event: Event) => {
         const customEvent = event as CustomEvent;
         callback(customEvent.detail.theme);
     };
-    
+
     window.addEventListener('theme-changed', handleThemeChange);
-    
-    // Return unsubscribe function
     return () => window.removeEventListener('theme-changed', handleThemeChange);
 }

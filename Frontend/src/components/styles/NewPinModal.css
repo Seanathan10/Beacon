@@ -101,10 +101,8 @@
     flex-shrink: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-    .pin-modal__header {
-        background: linear-gradient(180deg, rgba(74, 222, 128, 0.08) 0%, var(--color-bg-secondary) 100%);
-    }
+[data-theme="dark"] .pin-modal__header {
+    background: linear-gradient(180deg, rgba(74, 222, 128, 0.08) 0%, var(--color-bg-secondary) 100%);
 }
 
 .pin-modal__logo {
@@ -417,10 +415,8 @@
     margin-top: 0.375rem;
 }
 
-@media (prefers-color-scheme: dark) {
-    .pin-modal__location {
-        background: rgba(74, 222, 128, 0.15);
-    }
+[data-theme="dark"] .pin-modal__location {
+    background: rgba(74, 222, 128, 0.15);
 }
 
 .pin-modal__location svg {
@@ -450,10 +446,8 @@
     background: rgba(45, 106, 79, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-    .pin-modal__upload-area:hover {
-        background: rgba(74, 222, 128, 0.08);
-    }
+[data-theme="dark"] .pin-modal__upload-area:hover {
+    background: rgba(74, 222, 128, 0.08);
 }
 
 .pin-modal__upload-area--dragging {
@@ -462,10 +456,8 @@
     border-style: solid;
 }
 
-@media (prefers-color-scheme: dark) {
-    .pin-modal__upload-area--dragging {
-        background: rgba(74, 222, 128, 0.15);
-    }
+[data-theme="dark"] .pin-modal__upload-area--dragging {
+    background: rgba(74, 222, 128, 0.15);
 }
 
 .pin-modal__file-input {
@@ -614,4 +606,46 @@
     .pin-modal__btn {
         width: 100%;
     }
+}
+
+/* ===== Saved Draft Banner ===== */
+.pin-modal__draft-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-primary);
+    border-left: 3px solid var(--color-green-primary);
+    border-radius: 10px;
+}
+
+.pin-modal__draft-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.pin-modal__draft-banner-text strong {
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+}
+
+.pin-modal__draft-banner-hint {
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+}
+
+.pin-modal__draft-banner-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.pin-modal__btn--small {
+    padding: 6px 12px;
+    font-size: 0.82rem;
 }

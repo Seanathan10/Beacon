@@ -15,12 +15,49 @@ interface NewPinModalProps {
     latitude: number;
     longitude: number;
     address?: string;
+    initialValues?: {
+        title?: string;
+        message?: string;
+        tags?: string[];
+        image?: string;
+    };
 }
 
 const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit for Vercel Blob
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_TITLE_LENGTH = 200;
 const MAX_MESSAGE_LENGTH = 500;
+const DRAFT_STORAGE_KEY = "beacon-pin-draft";
+const DRAFT_SAVE_DEBOUNCE_MS = 400;
+
+interface PinDraft {
+    title: string;
+    message: string;
+    tags: string[];
+    savedAt: string;
+}
+
+function readDraft(): PinDraft | null {
+    try {
+        const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as PinDraft;
+        if (!parsed.title && !parsed.message && (!parsed.tags || parsed.tags.length === 0)) {
+            return null;
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function clearDraft(): void {
+    try {
+        window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+        // ignore quota / access errors
+    }
+}
 
 export default function NewPinModal({
     onClose,
@@ -28,19 +65,26 @@ export default function NewPinModal({
     latitude,
     longitude,
     address,
+    initialValues,
 }: NewPinModalProps) {
-    const [title, setTitle] = useState("");
-    const [message, setMessage] = useState("");
+    const [title, setTitle] = useState(initialValues?.title ?? "");
+    const [message, setMessage] = useState(initialValues?.message ?? "");
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.image ?? null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [titleError, setTitleError] = useState<string | null>(null);
     const [messageError, setMessageError] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>(initialValues?.tags ?? []);
     const [isClosing, setIsClosing] = useState(false);
+
+    // Saved Drafts: offer to restore a prior draft when opening the modal with no prefilled values.
+    const [pendingDraft, setPendingDraft] = useState<PinDraft | null>(() => {
+        if (initialValues) return null;
+        return readDraft();
+    });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +102,45 @@ export default function NewPinModal({
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
     }, []);
+
+    // Debounce-save draft whenever text/tag state changes. Skip while the restore banner
+    // is still showing so we don't overwrite the stored draft before the user decides.
+    useEffect(() => {
+        if (pendingDraft) return;
+        const hasContent = title.trim() || message.trim() || selectedTags.length > 0;
+        const timer = window.setTimeout(() => {
+            if (!hasContent) {
+                clearDraft();
+                return;
+            }
+            try {
+                const draft: PinDraft = {
+                    title,
+                    message,
+                    tags: selectedTags,
+                    savedAt: new Date().toISOString(),
+                };
+                window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+            } catch {
+                // ignore quota errors
+            }
+        }, DRAFT_SAVE_DEBOUNCE_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [title, message, selectedTags, pendingDraft]);
+
+    const handleRestoreDraft = () => {
+        if (!pendingDraft) return;
+        setTitle(pendingDraft.title);
+        setMessage(pendingDraft.message);
+        setSelectedTags(pendingDraft.tags || []);
+        setPendingDraft(null);
+    };
+
+    const handleDiscardDraft = () => {
+        clearDraft();
+        setPendingDraft(null);
+    };
 
     const handleFileSelect = (file: File) => {
         setUploadError(null);
@@ -200,6 +283,7 @@ export default function NewPinModal({
                 tags: selectedTags,
                 image: imageUrl || undefined,
             });
+            clearDraft();
             setTitle("");
             setMessage("");
             setImageFile(null);
@@ -281,6 +365,32 @@ export default function NewPinModal({
                 </header>
 
                 <form onSubmit={handleSubmit} className="pin-modal__form">
+                    {pendingDraft && (
+                        <div className="pin-modal__draft-banner" role="status">
+                            <div className="pin-modal__draft-banner-text">
+                                <strong>Restore previous draft?</strong>
+                                <span className="pin-modal__draft-banner-hint">
+                                    Saved {new Date(pendingDraft.savedAt).toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="pin-modal__draft-banner-actions">
+                                <button
+                                    type="button"
+                                    className="pin-modal__btn pin-modal__btn--secondary pin-modal__btn--small"
+                                    onClick={handleDiscardDraft}
+                                >
+                                    Discard
+                                </button>
+                                <button
+                                    type="button"
+                                    className="pin-modal__btn pin-modal__btn--primary pin-modal__btn--small"
+                                    onClick={handleRestoreDraft}
+                                >
+                                    Restore
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="pin-modal__field">
                         <label htmlFor="title" className="pin-modal__label">
                             Title

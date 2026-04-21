@@ -54,8 +54,7 @@
 }
 
 /* Dark Mode Theme */
-@media (prefers-color-scheme: dark) {
-    :root {
+:root[data-theme="dark"] {
         /* Dark Theme Colors */
         --color-bg-primary: #0f0f0f;
         --color-bg-secondary: #1a1a1a;
@@ -92,7 +91,6 @@
                 rgba(74, 222, 128, 0.08),
                 transparent 60%),
             linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-    }
 }
 
 *,

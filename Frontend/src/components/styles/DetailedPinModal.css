@@ -137,10 +137,8 @@
     color: var(--color-green-primary);
 }
 
-@media (prefers-color-scheme: dark) {
-    .detailed-modal-share:hover {
-        background-color: rgba(74, 222, 128, 0.15);
-    }
+[data-theme="dark"] .detailed-modal-share:hover {
+    background-color: rgba(74, 222, 128, 0.15);
 }
 
 .detailed-modal-content {

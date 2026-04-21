@@ -17,6 +17,13 @@ interface PinProps {
         image?: string;
         color?: string;
     }) => void;
+    initialValues?: {
+        title?: string;
+        message?: string;
+        tags?: string[];
+        image?: string;
+    };
+    autoOpenModal?: boolean;
 }
 
 export default function Pin({
@@ -27,9 +34,11 @@ export default function Pin({
     onClose,
     onDetails,
     onPinCreated,
+    initialValues,
+    autoOpenModal,
 }: PinProps) {
 
-    const [modalIsOpen, setModalOpen] = useState<boolean>(false);
+    const [modalIsOpen, setModalOpen] = useState<boolean>(Boolean(autoOpenModal));
 
     const onAdd = () => {
         setModalOpen(true);
@@ -84,7 +93,7 @@ export default function Pin({
                     latitude={latitude}
                     longitude={longitude}
                     address={address}
-                    // locationName={name}
+                    initialValues={initialValues}
                     onClose={() => setModalOpen(false)}
                     onSubmit={(data) => {
                         onPinCreated?.(data);

@@ -20,6 +20,8 @@ import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
 import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
 
 interface PinData {
     lat: number;
@@ -40,6 +42,14 @@ export interface SelectedPoint {
     image: string;
     color: string;
     email?: string;
+    tags?: string;
+}
+
+interface CloneValues {
+    title: string;
+    message: string;
+    image: string;
+    tags: string[];
 }
 
 function HomePage() {
@@ -84,6 +94,8 @@ function HomePage() {
     const [hotelLine, setHotelLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [transferPoints, setTransferPoints] = useState<GeoJSON.FeatureCollection | null>(null);
     const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
+    const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
+    const [cloneValues, setCloneValues] = useState<CloneValues | null>(null);
 
     // Listen for theme changes and update map style
     useEffect(() => {
@@ -95,6 +107,34 @@ function HomePage() {
 
     const onMouseEnter = useCallback(() => setCursor("pointer"), []);
     const onMouseLeave = useCallback(() => setCursor("auto"), []);
+
+    useKeyboardShortcuts({
+        enabled: isLoggedIn && !showShortcutsHelp,
+        onSearch: () => {
+            const input = document.querySelector<HTMLInputElement>(".search-input");
+            input?.focus();
+            input?.select();
+        },
+        onCreate: async () => {
+            if (!mapRef.current) return;
+            const center = mapRef.current.getCenter();
+            let geocode = { fullAddress: "Unknown Location" };
+            try {
+                geocode = await reverseGeocode(center.lat, center.lng);
+            } catch {
+                // non-fatal
+            }
+            setSelectedPoint(null);
+            setPinData({
+                lat: center.lat,
+                lng: center.lng,
+                isLoading: false,
+                address: geocode.fullAddress || "Unknown Location",
+                email: userEmail || "",
+            });
+        },
+        onHelp: () => setShowShortcutsHelp(true),
+    });
 
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -181,6 +221,7 @@ function HomePage() {
                             color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
                             address: p.address,
                             likes: p.likes || 0,
+                            tags: p.tags,
                         },
                     })),
                 };
@@ -245,6 +286,7 @@ function HomePage() {
                 color: feature.properties?.color || PIN_COLOR,
                 email: feature.properties?.email || "",
                 address: geocodeResult.fullAddress,
+                tags: feature.properties?.tags,
             });
 
             setPinData(null); // Close any existing pin
@@ -570,7 +612,17 @@ function HomePage() {
                             latitude={pinData.lat}
                             longitude={pinData.lng}
                             isLoading={pinData.isLoading}
-                            onClose={() => setPinData(null)}
+                            initialValues={cloneValues ? {
+                                title: cloneValues.title,
+                                message: cloneValues.message,
+                                tags: cloneValues.tags,
+                                image: cloneValues.image,
+                            } : undefined}
+                            autoOpenModal={Boolean(cloneValues)}
+                            onClose={() => {
+                                setPinData(null);
+                                setCloneValues(null);
+                            }}
                             onDetails={() => { }}
                             onPinCreated={(data) => {
                                 setAllPins((prev) => ({
@@ -598,6 +650,7 @@ function HomePage() {
                                     ],
                                 }));
                                 setPinData(null);
+                                setCloneValues(null);
                             }}
                         />
                     )}
@@ -635,6 +688,17 @@ function HomePage() {
                             currentUserId={userId}
                             currentUserEmail={localStorage.getItem("userEmail")}
                             onClose={() => setShowDetailedModal(false)}
+                            onClone={(data) => {
+                                setCloneValues({
+                                    title: data.title,
+                                    message: data.description,
+                                    image: data.image,
+                                    tags: data.tags,
+                                });
+                                setShowDetailedModal(false);
+                                setSelectedPoint(null);
+                                setPinData(null);
+                            }}
                             onDelete={(deletedId) => {
                                 setAllPins((prev) => ({
                                     type: "FeatureCollection",
@@ -750,6 +814,25 @@ function HomePage() {
                     )}
                 </Map>
             </div>
+
+            {showShortcutsHelp && (
+                <ShortcutsHelpModal onClose={() => setShowShortcutsHelp(false)} />
+            )}
+
+            {cloneValues && !pinData && (
+                <div className="clone-banner" role="status">
+                    <span className="clone-banner-text">
+                        Click the map to place a similar pin.
+                    </span>
+                    <button
+                        type="button"
+                        className="clone-banner-cancel"
+                        onClick={() => setCloneValues(null)}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
