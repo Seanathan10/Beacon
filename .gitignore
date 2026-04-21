@@ -110,6 +110,9 @@ dist
 # Serverless directories
 .serverless/
 
+CLAUDE.md
+feature_plans.md
+
 # FuseBox cache
 .fusebox/
 
