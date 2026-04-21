@@ -13,17 +13,12 @@ function Landing() {
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
 
-    console.log("[Landing.tsx] Here.");
-    console.log("[Landing.tsx] Using server address: ", BASE_API_URL);
-
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/heartbeat`);
-                const data = await res.json();
-                console.log("[Landing.tsx] Server reachable");
-            } catch (err) {
-                console.error("[Landing.tsx] Server unreachable:", err);
+                await fetch(`${BASE_API_URL}/heartbeat`);
+            } catch {
+                // server unreachable on initial load — non-fatal
             }
         };
 

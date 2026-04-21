@@ -33,7 +33,8 @@ export function PostsPage() {
             // Backend returns posts without comments array, so we add empty comments
             const postsWithComments = data.map((post: any) => ({
                 ...post,
-                // tags already parsed as an array by the backend
+                description: post.message,
+                address: post.location,
                 tags: Array.isArray(post.tags) ? post.tags : [],
                 comments: post.comments || [],
             }));

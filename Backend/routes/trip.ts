@@ -1019,27 +1019,9 @@ export async function getLocalRoute(req: Request, res: Response) {
             return res.status(400).json({ error: "Missing origin or destination (provide addresses or coordinates)" });
         }
 
-        console.log("[LocalRoute] Request:", {
-            origin,
-            destination,
-            departureTime,
-        });
-
         // Try public transit first (any mode: metro, train, bus, etc.)
         try {
-            // Pass departureTime if available, otherwise it defaults to now
-            console.log("[LocalRoute] Searching for transit routes...");
             const transitResults = await searchTransit(origin, destination, departureTime);
-            console.log("[LocalRoute] Transit results:", {
-                count: transitResults.length,
-                firstRoute: transitResults[0] ? {
-                    duration: transitResults[0].duration,
-                    distanceKm: transitResults[0].distanceKm,
-                    segmentCount: transitResults[0].segments.length,
-                    hasPolyline: !!transitResults[0].polyline,
-                    segmentsWithPolylines: transitResults[0].segments.filter(s => s.polyline).length,
-                } : null,
-            });
             if (transitResults.length > 0) {
                 const bestRoute = transitResults[0];
                 // Return segments for multi-colored rendering
@@ -1058,8 +1040,8 @@ export async function getLocalRoute(req: Request, res: Response) {
                     })),
                 });
             }
-        } catch (transitError) {
-            console.log("Transit route not available, falling back to driving");
+        } catch {
+            // transit unavailable, fall through to driving
         }
 
         // Fall back to driving

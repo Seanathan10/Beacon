@@ -53,8 +53,8 @@ function HomePage() {
                 }
 
                 const text = await res.text();
-            } catch (err) {
-                console.log("[CloudFlare] Tunnel unreachable:", err);
+            } catch {
+                // tunnel unreachable on initial load — non-fatal
             }
         };
 
@@ -185,33 +185,31 @@ function HomePage() {
                     })),
                 };
                 setAllPins(geojson);
+
+                if (isLoggedIn) {
+                    const savedPinsData = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
+                    const email = localStorage.getItem("userEmail")!;
+                    const savedPinIDs = savedPinsData[email] || [];
+                    const saved = geojson.features
+                        .filter((f: any) => savedPinIDs.includes(f.properties.id))
+                        .map((f: any) => ({
+                            id: f.properties.id,
+                            latitude: f.geometry.coordinates[1],
+                            longitude: f.geometry.coordinates[0],
+                            title: f.properties.title,
+                            description: f.properties.description,
+                            image: f.properties.image,
+                            color: f.properties.color,
+                            email: f.properties.email
+                        }));
+                    setSavedPlaces(saved as any);
+                }
             } catch (error) {
                 console.error("Error fetching pins:", error);
             }
         };
 
-        const fetchSavedPlaces = () => {
-            const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
-            const email = localStorage.getItem("userEmail")!;
-            const savedPinIDs = savedPins[email] || [];
-
-            const saved = allPins.features
-                .filter(f => savedPinIDs.includes(f.properties.id))
-                .map(f => ({
-                    id: f.properties.id,
-                    latitude: f.geometry.coordinates[1],
-                    longitude: f.geometry.coordinates[0],
-                    title: f.properties.title,
-                    description: f.properties.description,
-                    image: f.properties.image,
-                    color: f.properties.color,
-                    email: f.properties.email
-                }));
-            setSavedPlaces(saved as any);
-        };
-
         fetchPins();
-        if (isLoggedIn) fetchSavedPlaces();
     }, [isLoggedIn]);
 
     const handleLogout = () => {
@@ -272,7 +270,7 @@ function HomePage() {
                     latitude: f.geometry.coordinates[1],
                     longitude: f.geometry.coordinates[0],
                     title: f.properties.title,
-                    description: f.properties.description,
+                    message: f.properties.description,
                     image: f.properties.image,
                     color: f.properties.color,
                     email: f.properties.email
@@ -281,8 +279,8 @@ function HomePage() {
                     id: p.id,
                     latitude: p.latitude,
                     longitude: p.longitude,
-                    title: p.title || p.message, // Use message as fallback title
-                    description: p.description,
+                    title: p.title,
+                    message: p.description,
                     image: p.image,
                     color: p.color || PIN_COLOR
                 }))}

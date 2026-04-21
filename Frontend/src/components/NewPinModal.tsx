@@ -163,12 +163,15 @@ export default function NewPinModal({
         try {
             let imageUrl: string | null = null;
 
-            // Upload image if one is selected
             if (imageFile) {
-                imageUrl = await uploadImage(imageFile);
+                try {
+                    imageUrl = await uploadImage(imageFile);
+                } catch {
+                    setUploadError("Image upload is not available. Remove the image or paste a URL directly.");
+                    setIsUploading(false);
+                    return;
+                }
             }
-
-            console.log("Submitting pin with tags:", selectedTags);
 
             const response = await fetch(`${BASE_API_URL}/api/pins`, {
                 method: "POST",
@@ -185,23 +188,26 @@ export default function NewPinModal({
                 }),
             });
 
-
-            if (response.ok) {
-                onSubmit({
-                    title,
-                    message,
-                    tags: selectedTags,
-                    image: imageUrl || undefined,
-                });
-                setTitle("");
-                setMessage("");
-                setImageFile(null);
-                setImagePreview(null);
-                onClose();
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                setUploadError(err.message || err.error || "Failed to create pin. Please try again.");
+                return;
             }
+
+            onSubmit({
+                title,
+                message,
+                tags: selectedTags,
+                image: imageUrl || undefined,
+            });
+            setTitle("");
+            setMessage("");
+            setImageFile(null);
+            setImagePreview(null);
+            onClose();
         } catch (error) {
             console.error("Error creating pin:", error);
-            setUploadError("Failed to upload image. Please try again.");
+            setUploadError("An unexpected error occurred. Please check your connection.");
         } finally {
             setIsUploading(false);
         }

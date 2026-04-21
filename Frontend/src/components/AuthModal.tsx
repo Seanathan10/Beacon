@@ -85,7 +85,7 @@ export default function AuthModal({
             }
 
             localStorage.setItem("isLoggedIn", "true");
-            localStorage.setItem("userEmail", credentials.email);
+            localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
             if (data.user?.id)
                 localStorage.setItem("userId", data.user.id.toString());
             setCredentials({ email: "", password: "", name: "" });
