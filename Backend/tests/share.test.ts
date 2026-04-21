@@ -9,7 +9,7 @@
  */
 
 import request from 'supertest';
-import { createTestApp } from './helpers/testApp';
+import { createTestApp, createTestUser } from './helpers/testApp';
 
 let app: any;
 
@@ -392,6 +392,85 @@ describe('Shared Itineraries', () => {
       const now = Date.now();
       const created = date.getTime();
       expect(now - created).toBeLessThan(60000);
+    });
+  });
+
+  describe('Public Collections', () => {
+    let testPin: any;
+    let testFolderId: string;
+
+    beforeAll(async () => {
+      const user = await createTestUser('collectiontest@example.com', 'pass', 'CollectionTest');
+
+      // Create a pin
+      const pinRes = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${user.token}`)
+        .send({
+          title: 'Collection Test Pin',
+          latitude: 37.7749,
+          longitude: -122.4194,
+          address: 'San Francisco, CA',
+          description: 'Test pin for collection',
+          tags: ['test'],
+        });
+      testPin = pinRes.body;
+
+      // Create a public folder
+      const folderRes = await request(app)
+        .post('/api/bookmarks/folders')
+        .set('Authorization', `Bearer ${user.token}`)
+        .send({ name: 'Public Collection', isPublic: true });
+      testFolderId = folderRes.body.id;
+
+      // Bookmark the pin to the folder
+      await request(app)
+        .post('/api/bookmarks')
+        .set('Authorization', `Bearer ${user.token}`)
+        .send({ pinID: testPin.id, folderID: testFolderId });
+    });
+
+    it('should return public collection without auth', async () => {
+      const res = await request(app).get(`/api/share/collection/${testFolderId}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('folder');
+      expect(res.body).toHaveProperty('pins');
+      expect(res.body.folder.name).toBe('Public Collection');
+      expect(Array.isArray(res.body.pins)).toBe(true);
+      expect(res.body.pins.length).toBeGreaterThan(0);
+    });
+
+    it('should return 404 for non-existent collection', async () => {
+      const res = await request(app).get(
+        '/api/share/collection/00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 403 for private collection', async () => {
+      const user = await createTestUser('privatecol@example.com', 'pass', 'PrivateCol');
+
+      const privateFolder = await request(app)
+        .post('/api/bookmarks/folders')
+        .set('Authorization', `Bearer ${user.token}`)
+        .send({ name: 'Private Collection', isPublic: false });
+
+      const res = await request(app).get(
+        `/api/share/collection/${privateFolder.body.id}`
+      );
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should include folder metadata in response', async () => {
+      const res = await request(app).get(`/api/share/collection/${testFolderId}`);
+
+      expect(res.body.folder).toHaveProperty('id');
+      expect(res.body.folder).toHaveProperty('name');
+      expect(res.body.folder).toHaveProperty('createdAt');
+      expect(res.body.folder).toHaveProperty('pinCount');
     });
   });
 });

@@ -4,6 +4,7 @@ import { initializeTheme } from "./utils/theme";
 
 import Landing from "./pages/Landing";
 import SharedItinerary from "./pages/SharedItinerary";
+import PublicCollection from "./pages/PublicCollection";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { PostsPage } from "./pages/PostsPage";
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
     {
         path: '/shared/:id',
         element: <SharedItinerary />,
+    },
+    {
+        path: '/collection/:folderID',
+        element: <PublicCollection />,
     }
 ]);
 

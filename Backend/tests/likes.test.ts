@@ -331,4 +331,138 @@ describe('Likes', () => {
       expect(response.body.wasLiked).toBe(true);
     });
   });
+
+  describe('GET /api/likes/user', () => {
+    let user1Token: string;
+    let user1Id: number;
+    let user2Token: string;
+    let pin1: number;
+    let pin2: number;
+
+    beforeAll(async () => {
+      const user1 = await createTestUser('liker1@example.com', 'pass', 'Liker1');
+      const user2 = await createTestUser('creator@example.com', 'pass', 'Creator');
+
+      user1Token = user1.token;
+      user1Id = user1.userId;
+      user2Token = user2.token;
+
+      // User2 creates pins
+      const pinRes1 = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${user2Token}`)
+        .send({
+          title: 'Pin 1',
+          latitude: 37.7749,
+          longitude: -122.4194,
+          address: 'SF',
+          description: 'First pin',
+        });
+      pin1 = pinRes1.body.id;
+
+      const pinRes2 = await request(app)
+        .post('/api/pins')
+        .set('Authorization', `Bearer ${user2Token}`)
+        .send({
+          title: 'Pin 2',
+          latitude: 34.0522,
+          longitude: -118.2437,
+          address: 'LA',
+          description: 'Second pin',
+        });
+      pin2 = pinRes2.body.id;
+
+      // User1 likes both pins
+      await request(app)
+        .post(`/api/likes/${pin1}`)
+        .set('Authorization', `Bearer ${user1Token}`);
+      await request(app)
+        .post(`/api/likes/${pin2}`)
+        .set('Authorization', `Bearer ${user1Token}`);
+    });
+
+    it('should return all liked pins for authenticated user', async () => {
+      const response = await request(app)
+        .get('/api/likes/user')
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThanOrEqual(2);
+
+      // Should contain the pins we liked
+      const pinIds = response.body.map((p: any) => p.id);
+      expect(pinIds).toContain(pin1);
+      expect(pinIds).toContain(pin2);
+    });
+
+    it('should include pin details in response', async () => {
+      const response = await request(app)
+        .get('/api/likes/user')
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      const pin = response.body.find((p: any) => p.id === pin1);
+      expect(pin).toBeDefined();
+      expect(pin).toHaveProperty('title');
+      expect(pin).toHaveProperty('latitude');
+      expect(pin).toHaveProperty('longitude');
+      expect(pin).toHaveProperty('address');
+      expect(pin).toHaveProperty('description');
+      expect(pin).toHaveProperty('likes');
+      expect(pin).toHaveProperty('createdAt');
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app).get('/api/likes/user');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return empty array if user has not liked anything', async () => {
+      const newUser = await createTestUser('noLikes@example.com', 'pass', 'NoLikes');
+
+      const response = await request(app)
+        .get('/api/likes/user')
+        .set('Authorization', `Bearer ${newUser.token}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBe(0);
+    });
+
+    it('should only return pins liked by authenticated user', async () => {
+      // Different user
+      const otherUser = await createTestUser('other@example.com', 'pass', 'Other');
+
+      // Other user likes pin1
+      await request(app)
+        .post(`/api/likes/${pin1}`)
+        .set('Authorization', `Bearer ${otherUser.token}`);
+
+      // User1's likes should still be only pin1 and pin2
+      const response = await request(app)
+        .get('/api/likes/user')
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      const pinIds = response.body.map((p: any) => p.id);
+      expect(pinIds).toContain(pin1);
+      expect(pinIds).toContain(pin2);
+      expect(pinIds.length).toBe(2); // Should not include other users' pins
+    });
+
+    it('should maintain consistency when likes are removed', async () => {
+      // Remove a like
+      await request(app)
+        .delete(`/api/likes/${pin1}`)
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      const response = await request(app)
+        .get('/api/likes/user')
+        .set('Authorization', `Bearer ${user1Token}`);
+
+      const pinIds = response.body.map((p: any) => p.id);
+      expect(pinIds).not.toContain(pin1);
+      expect(pinIds).toContain(pin2);
+    });
+  });
 });

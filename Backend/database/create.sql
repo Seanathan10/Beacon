@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS bookmark;
+DROP TABLE IF EXISTS bookmark_folder;
 DROP TABLE IF EXISTS search_history;
 DROP TABLE IF EXISTS pin_status;
 DROP TABLE IF EXISTS post_upvote;
@@ -95,6 +97,26 @@ CREATE TABLE itinerary (
 	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );
 
+CREATE TABLE bookmark_folder (
+	id TEXT PRIMARY KEY,
+	accountID INTEGER NOT NULL,
+	name VARCHAR(80) NOT NULL,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	isPublic INTEGER DEFAULT 0,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+);
+
+CREATE TABLE bookmark (
+	pinID INTEGER NOT NULL,
+	accountID INTEGER NOT NULL,
+	folderID TEXT,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (pinID, accountID),
+	FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE,
+	FOREIGN KEY (folderID) REFERENCES bookmark_folder(id) ON DELETE SET NULL
+);
+
 -- Indexes for common query patterns
 CREATE INDEX idx_pin_creatorID ON pin(creatorID);
 CREATE INDEX idx_comment_pinID ON comment(pinID);
@@ -107,3 +129,6 @@ CREATE INDEX idx_post_upvote_postID ON post_upvote(postID);
 CREATE INDEX idx_pin_createdAt ON pin(createdAt);
 CREATE INDEX idx_pin_status_accountID ON pin_status(accountID);
 CREATE INDEX idx_search_history_user_time ON search_history(accountID, createdAt DESC);
+CREATE INDEX idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC);
+CREATE INDEX idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC);
+CREATE INDEX idx_bookmark_folder_public ON bookmark_folder(isPublic);

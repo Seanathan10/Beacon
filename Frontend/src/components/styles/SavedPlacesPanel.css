@@ -83,6 +83,107 @@
     color: var(--color-text-primary);
 }
 
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-primary);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--color-text-primary);
+}
+
+.tab.active {
+    color: var(--color-green-primary);
+    border-bottom-color: var(--color-green-primary);
+}
+
+.tab-content {
+    min-height: 50px;
+}
+
+/* Bookmarks */
+.bookmarks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bookmark-folder {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.folder-name {
+    margin: 0;
+    padding: 0 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+.share-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 6px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+
+.share-button:hover {
+    opacity: 1;
+}
+
+.place-title {
+    display: block;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.place-address {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 3px;
+}
+
 .places-list {
     list-style: none;
     padding: 0;

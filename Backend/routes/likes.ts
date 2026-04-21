@@ -55,3 +55,34 @@ export function removeLike(req: Request, res: Response) {
     res.status(204).send();
 }
 
+/**
+ * GET /api/likes/user - Get all pins liked by the authenticated user
+ */
+export function getLikedPins(req: Request, res: Response) {
+	if (!req.user?.id) {
+		return res.status(401).json({ message: "Unauthorized" });
+	}
+
+	const results = db.query(`
+		SELECT
+			p.id,
+			p.creatorID,
+			a.email,
+			p.latitude,
+			p.longitude,
+			p.title,
+			p.address,
+			p.description,
+			p.image,
+			p.tags,
+			p.createdAt,
+			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
+		FROM likes l
+		JOIN pin p ON p.id = l.pinID
+		JOIN account a ON a.id = p.creatorID
+		WHERE l.accountID = ?
+		ORDER BY p.createdAt DESC
+	`, [req.user.id]);
+
+	res.json(results);
+}

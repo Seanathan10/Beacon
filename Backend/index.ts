@@ -16,6 +16,7 @@ import * as likes from "./routes/likes.ts";
 import * as trip from "./routes/trip.ts";
 import * as pinStatus from "./routes/pinStatus.ts";
 import * as search from "./routes/search.ts";
+import * as bookmarks from "./routes/bookmarks.ts";
 import { shareRouter } from "./routes/share.ts";
 
 const REQUIRED_ENV_VARS = ["SECRET"];
@@ -153,6 +154,7 @@ app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
 app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);
 app.delete("/api/likes/:id", auth.check, likes.removeLike);
+app.get("/api/likes/user", auth.check, likes.getLikedPins);
 
 app.get("/api/pin-status", auth.check, pinStatus.getUserPinStatuses);
 app.put("/api/pins/:id/status", auth.check, pinStatus.setPinStatus);
@@ -171,6 +173,16 @@ app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute)
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
 
 app.use("/api/share", shareRateLimit, shareRouter);
+
+app.get("/api/bookmarks", auth.check, bookmarks.getBookmarks);
+app.post("/api/bookmarks", auth.check, bookmarks.addBookmark);
+app.delete("/api/bookmarks/:pinID", auth.check, bookmarks.deleteBookmark);
+app.patch("/api/bookmarks/:pinID", auth.check, bookmarks.updateBookmark);
+
+app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
+app.post("/api/bookmarks/folders", auth.check, bookmarks.createFolder);
+app.patch("/api/bookmarks/folders/:id", auth.check, bookmarks.updateFolder);
+app.delete("/api/bookmarks/folders/:id", auth.check, bookmarks.deleteFolder);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     if (err.type === 'cors') {

@@ -91,3 +91,62 @@ shareRouter.delete('/:id', check, (req, res) => {
     }
 });
 
+// Get public bookmark collection (no auth required)
+shareRouter.get('/collection/:folderID', (req, res) => {
+    try {
+        const { folderID } = req.params;
+
+        // Check if folder exists and is public
+        const folderStmt = db.prepare(`
+            SELECT id, accountID, name, isPublic, createdAt
+            FROM bookmark_folder
+            WHERE id = ?
+        `);
+        const folder = folderStmt.get(folderID) as any;
+
+        if (!folder) {
+            return res.status(404).json({ message: 'Collection not found' });
+        }
+
+        if (!folder.isPublic) {
+            return res.status(403).json({ message: 'Collection is private' });
+        }
+
+        // Get pins in this folder
+        const pinsStmt = db.prepare(`
+            SELECT
+                p.id,
+                p.creatorID,
+                a.email,
+                p.latitude,
+                p.longitude,
+                p.title,
+                p.address,
+                p.description,
+                p.image,
+                p.tags,
+                p.createdAt,
+                (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
+            FROM bookmark b
+            JOIN pin p ON p.id = b.pinID
+            JOIN account a ON a.id = p.creatorID
+            WHERE b.folderID = ?
+            ORDER BY b.createdAt DESC
+        `);
+        const pins = pinsStmt.all(folderID) as any[];
+
+        res.json({
+            folder: {
+                id: folder.id,
+                name: folder.name,
+                createdAt: folder.createdAt,
+                pinCount: pins.length
+            },
+            pins
+        });
+    } catch (error) {
+        console.error('Error fetching collection:', error);
+        res.status(500).json({ error: 'Failed to fetch collection' });
+    }
+});
+

@@ -22,10 +22,12 @@ tags:
     description: Comments on pins
   - name: Likes
     description: Like system for pins
+  - name: Bookmarks
+    description: Bookmark system with folders
   - name: Posts
     description: Community posts
   - name: Share
-    description: Public sharing of itineraries
+    description: Public sharing of itineraries and collections
   - name: Trip
     description: Trip planning and routing
 
@@ -1338,6 +1340,390 @@ paths:
           description: Like not found
           content: {}
 
+  /api/likes/user:
+    get:
+      tags: [Likes]
+      summary: Get liked pins
+      description: Retrieves all pins liked by the authenticated user
+      operationId: getLikedPins
+      responses:
+        200:
+          description: Successful response with array of liked pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pin'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookmarks:
+    get:
+      tags: [Bookmarks]
+      summary: Get bookmarked pins
+      description: Retrieves all pins bookmarked by the authenticated user
+      operationId: getBookmarks
+      responses:
+        200:
+          description: Successful response with array of bookmarked pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bookmark'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Bookmarks]
+      summary: Bookmark a pin
+      description: Adds a pin to the authenticated user's bookmarks
+      operationId: addBookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pinID
+              properties:
+                pinID:
+                  type: integer
+                  description: The ID of the pin to bookmark
+                  example: 1
+                folderID:
+                  type: string
+                  nullable: true
+                  description: Optional folder ID to organize the bookmark
+      responses:
+        201:
+          description: Bookmark created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bookmark created"
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Pin already bookmarked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookmarks/{pinID}:
+    delete:
+      tags: [Bookmarks]
+      summary: Remove a bookmark
+      description: Deletes a bookmark for the authenticated user
+      operationId: deleteBookmark
+      parameters:
+        - in: path
+          name: pinID
+          required: true
+          schema:
+            type: integer
+          description: The ID of the bookmarked pin
+      responses:
+        204:
+          description: Bookmark removed successfully
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Bookmark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [Bookmarks]
+      summary: Reassign bookmark to folder
+      description: Moves a bookmark to a different folder or to uncategorized
+      operationId: updateBookmark
+      parameters:
+        - in: path
+          name: pinID
+          required: true
+          schema:
+            type: integer
+          description: The ID of the bookmarked pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                folderID:
+                  type: string
+                  nullable: true
+                  description: Folder ID or null for uncategorized
+      responses:
+        200:
+          description: Bookmark updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bookmark updated"
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Bookmark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookmarks/folders:
+    get:
+      tags: [Bookmarks]
+      summary: Get user's bookmark folders
+      description: Retrieves all bookmark folders for the authenticated user
+      operationId: getFolders
+      responses:
+        200:
+          description: Successful response with array of folders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookmarkFolder'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Bookmarks]
+      summary: Create a new bookmark folder
+      description: Creates a new folder for organizing bookmarks
+      operationId: createFolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                  description: Folder name
+                  example: "Summer Trip Ideas"
+                isPublic:
+                  type: boolean
+                  description: Whether the folder is publicly shareable
+                  example: false
+      responses:
+        201:
+          description: Folder created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmarkFolder'
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookmarks/folders/{id}:
+    patch:
+      tags: [Bookmarks]
+      summary: Update a bookmark folder
+      description: Updates folder name or public visibility
+      operationId: updateFolder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The folder ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                  description: New folder name
+                isPublic:
+                  type: boolean
+                  description: New public visibility state
+      responses:
+        200:
+          description: Folder updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Folder updated"
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Forbidden - not folder owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Bookmarks]
+      summary: Delete a bookmark folder
+      description: Deletes a folder and moves its bookmarks to uncategorized
+      operationId: deleteFolder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The folder ID
+      responses:
+        204:
+          description: Folder deleted successfully
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Forbidden - not folder owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/share/collection/{folderID}:
+    get:
+      tags: [Share]
+      summary: Get public bookmark collection
+      description: Retrieves a public bookmark folder with all its pins (no auth required)
+      operationId: getPublicCollection
+      parameters:
+        - in: path
+          name: folderID
+          required: true
+          schema:
+            type: string
+          description: The folder ID
+      responses:
+        200:
+          description: Successful response with collection and pins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  folder:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+                      pinCount:
+                        type: integer
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pin'
+        403:
+          description: Collection is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/share:
     post:
       tags: [Share]
@@ -1978,6 +2364,104 @@ components:
           description: |
             Computed trending score `likes + 3 * max(0, 1 - ageDays / days)`.
             Only present on `/api/pins/trending`.
+
+    Bookmark:
+      type: object
+      description: A bookmarked pin with folder context
+      properties:
+        pinID:
+          type: integer
+          description: The bookmarked pin's ID
+          example: 1
+        folderID:
+          type: string
+          nullable: true
+          description: Folder ID if organized, or null for uncategorized
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the bookmark was created
+          example: "2026-01-17T12:00:00Z"
+        creatorID:
+          type: integer
+          description: ID of the pin's creator
+          example: 1
+        email:
+          type: string
+          format: email
+          description: Email of the pin creator
+          example: "user@example.com"
+        latitude:
+          type: number
+          description: Pin latitude
+          example: 37.7749
+        longitude:
+          type: number
+          description: Pin longitude
+          example: -122.4194
+        title:
+          type: string
+          maxLength: 200
+          description: Pin title
+          example: "Golden Gate Bridge Viewpoint"
+          nullable: true
+        address:
+          type: string
+          maxLength: 200
+          description: Pin address
+          example: "Golden Gate Bridge, San Francisco, CA"
+          nullable: true
+        description:
+          type: string
+          maxLength: 500
+          description: Pin description
+          nullable: true
+        image:
+          type: string
+          maxLength: 2000
+          description: Pin image URL
+          nullable: true
+        tags:
+          type: string
+          maxLength: 500
+          description: Tags as JSON string
+          nullable: true
+        pinCreatedAt:
+          type: string
+          format: date-time
+          description: When the pin was created
+        likes:
+          type: integer
+          description: Current like count for the pin
+          example: 42
+
+    BookmarkFolder:
+      type: object
+      description: A folder for organizing bookmarks
+      properties:
+        id:
+          type: string
+          description: Folder UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          maxLength: 80
+          description: Folder name
+          example: "Summer Trip Ideas"
+        isPublic:
+          type: integer
+          description: Public visibility flag (0 or 1)
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          description: When the folder was created
+          example: "2026-01-17T12:00:00Z"
+        pinCount:
+          type: integer
+          description: Number of pins in this folder
+          example: 5
 
     SearchHistoryEntry:
       type: object
