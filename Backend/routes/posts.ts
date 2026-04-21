@@ -203,7 +203,10 @@ export function deletePost(req: Request, res: Response) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
-    db.query("DELETE FROM post WHERE id = ?", [postID]);
+    const result = db.query("DELETE FROM post WHERE id = ?", [postID]);
+    if (result.changes === 0) {
+        return res.status(404).json({ message: "Post not found" });
+    }
     res.status(200).json({ message: "Post deleted successfully" });
 }
 

@@ -145,8 +145,11 @@ export function updatePin(req: Request, res: Response) {
     const { title, address, description, image } = req.body;
 
     const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0 || Number(pinResult[0].creatorID) !== Number(userID)) {
+    if (pinResult.length === 0) {
         return res.status(404).json({ message: "Pin not found" });
+    }
+    if (Number(pinResult[0].creatorID) !== Number(userID)) {
+        return res.status(403).json({ message: "Forbidden" });
     }
 
     const updates: string[] = [];
@@ -218,11 +221,17 @@ export function deletePin(req: Request, res: Response) {
     const userID = req.user.id;
 
     const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0 || Number(pinResult[0].creatorID) !== Number(userID)) {
+    if (pinResult.length === 0) {
         return res.status(404).send();
     }
+    if (Number(pinResult[0].creatorID) !== Number(userID)) {
+        return res.status(403).json({ message: "Forbidden" });
+    }
 
-    db.query("DELETE FROM pin WHERE id = ?", [pinID]);
+    const result = db.query("DELETE FROM pin WHERE id = ?", [pinID]);
+    if (result.changes === 0) {
+        return res.status(404).send();
+    }
     res.status(200).send();
 }
 

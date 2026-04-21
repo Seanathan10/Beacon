@@ -1092,7 +1092,8 @@ export async function getLocalRoute(req: Request, res: Response) {
 export async function getNearbyPinsForSelection(req: Request, res: Response) {
     try {
         const { lat, lng } = req.body;
-        const radiusKm = Math.min(Number(req.body.radiusKm ?? 50), 500);
+        const parsedRadius = Number(req.body.radiusKm);
+        const radiusKm = Math.min(isNaN(parsedRadius) ? 50 : parsedRadius, 500);
 
         if (lat === undefined || lng === undefined) {
             return res.status(400).json({ error: "Missing required fields: lat, lng" });
