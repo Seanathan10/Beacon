@@ -50,7 +50,26 @@ export function initializeSchema(db: DatabaseSync) {
       tags VARCHAR(200),
       image VARCHAR(2000),
       likes INTEGER DEFAULT 0,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (creatorID) REFERENCES account(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS pin_status (
+      pinID INTEGER NOT NULL,
+      accountID INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('visited','wishlist')),
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (pinID, accountID),
+      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
+      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS search_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      accountID INTEGER NOT NULL,
+      query VARCHAR(200) NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS comment (
@@ -106,6 +125,8 @@ export function initializeSchema(db: DatabaseSync) {
 export function resetTestDb() {
   try {
     db.exec(`
+      DELETE FROM search_history;
+      DELETE FROM pin_status;
       DELETE FROM post_upvote;
       DELETE FROM likes;
       DELETE FROM comment;

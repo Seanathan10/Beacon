@@ -9,6 +9,7 @@ interface LocationPinProps {
 	setSelectedPoint: (a: any) => void;
 	onShowDetails: () => void;
 	onBookmarkChange?: (pinId: number, isBookmarked: boolean) => void;
+	onStatusChange?: (pinId: number, status: "visited" | "wishlist" | null) => void;
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -45,6 +46,30 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
 	)
 }
 
+function CheckIcon({ filled }: { filled: boolean }) {
+	return (
+		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
+			fill={filled ? "#4db688" : "#1f1f1f"}>
+			<path d="M0 0h24v24H0V0z" fill="none" />
+			<path d="M9 16.2l-3.5-3.5a.984.984 0 0 0-1.4 0 .984.984 0 0 0 0 1.4l4.19 4.19c.39.39 1.02.39 1.41 0L20.3 7.7a.984.984 0 0 0 0-1.4.984.984 0 0 0-1.4 0L9 16.2z" />
+		</svg>
+	);
+}
+
+function StarIcon({ filled }: { filled: boolean }) {
+	return filled ? (
+		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#4db688">
+			<path d="M0 0h24v24H0V0z" fill="none" />
+			<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+		</svg>
+	) : (
+		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#1f1f1f">
+			<path d="M0 0h24v24H0V0z" fill="none" />
+			<path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z" />
+		</svg>
+	);
+}
+
 function InfoIcon() {
 	return (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#1f1f1f">
@@ -55,7 +80,7 @@ function InfoIcon() {
 	)
 }
 
-export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails, onBookmarkChange }: LocationPinProps) {
+export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails, onBookmarkChange, onStatusChange }: LocationPinProps) {
 	const titleText = selectedPoint.title?.trim() || selectedPoint.description?.trim() || "Untitled Pin";
 	const messageText = selectedPoint.description?.trim() || "";
 	const showMessage = messageText && messageText !== titleText;
@@ -65,6 +90,11 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	const [isLiked, setIsLiked] = useState<boolean>(false);
 	const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
 	const [likesLoading, setLikesLoading] = useState<boolean>(true);
+	const [userStatus, setUserStatus] = useState<"visited" | "wishlist" | null>(selectedPoint.userStatus ?? null);
+
+	useEffect(() => {
+		setUserStatus(selectedPoint.userStatus ?? null);
+	}, [selectedPoint.id, selectedPoint.userStatus]);
 
 	useEffect(() => {
 		// Check if pin is bookmarked
@@ -107,6 +137,36 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		}).catch(() => {
 			setIsLiked(prevLiked);
 			setLikes(prevLikes);
+		});
+	};
+
+	const toggleStatus = (next: "visited" | "wishlist") => {
+		if (!selectedPoint.id) return;
+		const prev = userStatus;
+		const newStatus = prev === next ? null : next;
+		setUserStatus(newStatus);
+		onStatusChange?.(selectedPoint.id, newStatus);
+
+		const request = newStatus
+			? fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
+				method: "PUT",
+				credentials: "include",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: newStatus }),
+			})
+			: fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
+				method: "DELETE",
+				credentials: "include",
+			});
+
+		request.then(res => {
+			if (!res.ok && res.status !== 404) {
+				setUserStatus(prev);
+				onStatusChange?.(selectedPoint.id!, prev);
+			}
+		}).catch(() => {
+			setUserStatus(prev);
+			onStatusChange?.(selectedPoint.id!, prev);
 		});
 	};
 
@@ -238,6 +298,44 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 						}}
 					>
 						<BookmarkIcon filled={isBookmarked} />
+					</button>
+
+					<button
+						className="location-popup-button"
+						onClick={() => toggleStatus("visited")}
+						aria-label="Mark as visited"
+						title={userStatus === "visited" ? "Visited" : "Mark as visited"}
+						onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+						onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'none',
+							color: '#1a1a1a',
+							padding: '4px 8px',
+						}}
+					>
+						<CheckIcon filled={userStatus === "visited"} />
+					</button>
+
+					<button
+						className="location-popup-button"
+						onClick={() => toggleStatus("wishlist")}
+						aria-label="Add to wishlist"
+						title={userStatus === "wishlist" ? "On wishlist" : "Add to wishlist"}
+						onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+						onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'none',
+							color: '#1a1a1a',
+							padding: '4px 8px',
+						}}
+					>
+						<StarIcon filled={userStatus === "wishlist"} />
 					</button>
 				</div>
 			</div>

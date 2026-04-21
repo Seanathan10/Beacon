@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import { reverseGeocode } from "@/utils/geocoding";
+import { BASE_API_URL } from "../../constants";
 
 interface SearchBarProps {
     mapRef: React.MutableRefObject<mapboxgl.Map | null>;
@@ -16,6 +17,12 @@ interface SearchBarProps {
     isFocused?: boolean;
 }
 
+interface SearchHistoryEntry {
+    id: number;
+    query: string;
+    createdAt: string;
+}
+
 export default function SearchBar({
     mapRef,
     searchMarkerRef,
@@ -26,6 +33,57 @@ export default function SearchBar({
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isSearching, setIsSearching] = useState<boolean>(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
+
+    const fetchHistory = async () => {
+        try {
+            const res = await fetch(`${BASE_API_URL}/api/search/history`, {
+                credentials: "include",
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setHistory(Array.isArray(data) ? data : []);
+            }
+        } catch {
+            // non-fatal
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, []);
+
+    const recordHistory = async (query: string) => {
+        try {
+            const res = await fetch(`${BASE_API_URL}/api/search/history`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query }),
+            });
+            if (res.ok) {
+                const entry = await res.json();
+                setHistory(prev => {
+                    const filtered = prev.filter(h => h.query !== entry.query);
+                    return [entry, ...filtered].slice(0, 10);
+                });
+            }
+        } catch {
+            // non-fatal
+        }
+    };
+
+    const deleteHistoryEntry = async (id: number) => {
+        setHistory(prev => prev.filter(h => h.id !== id));
+        try {
+            await fetch(`${BASE_API_URL}/api/search/history/${id}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+        } catch {
+            // non-fatal
+        }
+    };
 
     // Generate a session token for the Search Box API
     const sessionToken = useMemo(() => {
@@ -118,11 +176,19 @@ export default function SearchBar({
 
     const handleSearchSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim() || !mapRef.current) return;
-        // If we already have results, pick the first
+        const trimmed = searchQuery.trim();
+        if (!trimmed || !mapRef.current) return;
+        // Persist before any await that might redirect attention.
+        void recordHistory(trimmed);
         if (searchResults[0]) {
             await handleSelectResult(searchResults[0]);
         }
+    };
+
+    const runHistoryQuery = (entry: SearchHistoryEntry) => {
+        setSearchQuery(entry.query);
+        // Bump this entry to the top of the server-side history too.
+        void recordHistory(entry.query);
     };
 
     return (
@@ -183,6 +249,36 @@ export default function SearchBar({
                                     {suggestion.full_address}
                                 </div>
                             )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {isFocused && searchResults.length === 0 && !searchQuery.trim() && history.length > 0 && (
+                <ul className="search-results search-history">
+                    <li className="search-history-header">Recent searches</li>
+                    {history.map((entry) => (
+                        <li
+                            key={entry.id}
+                            className="search-result-item search-history-item"
+                            onMouseDown={(e) => {
+                                if ((e.target as HTMLElement).closest(".search-history-remove")) return;
+                                runHistoryQuery(entry);
+                            }}
+                        >
+                            <div className="result-primary">{entry.query}</div>
+                            <button
+                                type="button"
+                                className="search-history-remove"
+                                aria-label={`Remove "${entry.query}" from history`}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    deleteHistoryEntry(entry.id);
+                                }}
+                            >
+                                ×
+                            </button>
                         </li>
                     ))}
                 </ul>

@@ -28,7 +28,10 @@ export function splitTags(tags: string | null): string[] {
 }
 
 export function getAllPins(req: Request, res: Response) {
-    const results = db.query(`
+    const userID = req.user?.id ?? null;
+    const sort = typeof req.query.sort === "string" ? req.query.sort : "";
+
+    const results: any[] = db.query(`
 		SELECT
 			p.id,
 			p.creatorID,
@@ -40,10 +43,69 @@ export function getAllPins(req: Request, res: Response) {
 			p.description,
 			p.image,
 			p.tags,
-			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
+			p.createdAt,
+			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+			(SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
 		FROM pin p
 		JOIN account a ON a.id = p.creatorID;
-	`);
+	`, [userID]);
+
+    if (sort === "distance") {
+        const lat = parseFloat(req.query.lat as string);
+        const lng = parseFloat(req.query.lng as string);
+        if (
+            !isNaN(lat) && !isNaN(lng) &&
+            lat >= -90 && lat <= 90 &&
+            lng >= -180 && lng <= 180
+        ) {
+            const sorted = results
+                .map((p) => ({
+                    ...p,
+                    _distance: distBetweenCoordinates(p.latitude, p.longitude, lat, lng),
+                }))
+                .sort((a, b) => a._distance - b._distance)
+                .map(({ _distance: _d, ...rest }) => rest);
+            return res.json(sorted);
+        }
+    }
+
+    res.json(results);
+}
+
+export function getTrendingPins(req: Request, res: Response) {
+    const userID = req.user?.id ?? null;
+    const daysRaw = parseInt(String(req.query.days ?? "7"), 10);
+    const days = isNaN(daysRaw) || daysRaw <= 0 ? 7 : Math.min(daysRaw, 365);
+
+    // trendingScore = likes + 3 * max(0, 1 - age_days / days)
+    // Pins outside the window still appear but with recencyScore 0.
+    const results = db.query(`
+        SELECT
+            p.id,
+            p.creatorID,
+            a.email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus,
+            ((SELECT COUNT(*) FROM likes WHERE pinID = p.id)
+                + 3.0 * MAX(
+                    0.0,
+                    1.0 - (julianday('now') - julianday(p.createdAt)) / CAST(? AS REAL)
+                )
+            ) AS trendingScore
+        FROM pin p
+        JOIN account a ON a.id = p.creatorID
+        ORDER BY trendingScore DESC, p.createdAt DESC
+        LIMIT 20;
+    `, [userID, days]);
+
     res.json(results);
 }
 

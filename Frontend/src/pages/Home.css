@@ -442,6 +442,40 @@
     gap: 12px;
 }
 
+.pin-sort-control {
+    display: inline-flex;
+    align-items: stretch;
+    height: 48px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px var(--color-shadow-lg);
+    padding: 4px;
+    gap: 2px;
+}
+
+.pin-sort-option {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pin-sort-option:hover {
+    color: var(--color-text-primary);
+}
+
+.pin-sort-option.active {
+    background: var(--color-accent, #111);
+    color: #fff;
+}
+
 .search-bar {
     width: 380px;
 }
@@ -574,6 +608,44 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.search-history-header {
+    padding: 4px 16px 8px 16px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+    list-style: none;
+    cursor: default;
+}
+
+.search-history-header:hover {
+    background: transparent;
+}
+
+.search-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.search-history-remove {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.search-history-remove:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
 }
 
 /* Discover Button */

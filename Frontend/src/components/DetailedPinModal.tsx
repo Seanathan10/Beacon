@@ -14,6 +14,7 @@ interface DetailedPinModalProps {
         email?: string;
         address?: string;
         tags?: string | string[];
+        userStatus?: "visited" | "wishlist" | null;
     };
     currentUserId: number | null;
     currentUserEmail: string | null;
@@ -31,6 +32,7 @@ interface DetailedPinModalProps {
         image: string;
         tags: string[];
     }) => void;
+    onStatusChange?: (pinId: number, status: "visited" | "wishlist" | null) => void;
 }
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -67,9 +69,44 @@ function parseTags(raw: string | string[] | undefined): string[] {
     }
 }
 
-export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate, onDelete, onClone }: DetailedPinModalProps) {
+export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate, onDelete, onClone, onStatusChange }: DetailedPinModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
+    const [userStatus, setUserStatus] = useState<"visited" | "wishlist" | null>(selectedPoint.userStatus ?? null);
+
+    useEffect(() => {
+        setUserStatus(selectedPoint.userStatus ?? null);
+    }, [selectedPoint.id, selectedPoint.userStatus]);
+
+    const toggleStatus = (next: "visited" | "wishlist") => {
+        if (!selectedPoint.id) return;
+        const prev = userStatus;
+        const newStatus = prev === next ? null : next;
+        setUserStatus(newStatus);
+        onStatusChange?.(selectedPoint.id, newStatus);
+
+        const request = newStatus
+            ? fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus }),
+            })
+            : fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+        request.then(res => {
+            if (!res.ok && res.status !== 404) {
+                setUserStatus(prev);
+                onStatusChange?.(selectedPoint.id!, prev);
+            }
+        }).catch(() => {
+            setUserStatus(prev);
+            onStatusChange?.(selectedPoint.id!, prev);
+        });
+    };
     const [description, setDescription] = useState(selectedPoint.description);
     const [image, setImage] = useState(selectedPoint.image);
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -403,6 +440,32 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                 </div>
 
                 <div className="detailed-modal-content">
+                    {!isEditing && selectedPoint.id && (
+                        <div className="pin-status-bar">
+                            <button
+                                type="button"
+                                className={`pin-status-btn ${userStatus === "visited" ? "active visited" : ""}`}
+                                onClick={() => toggleStatus("visited")}
+                                aria-pressed={userStatus === "visited"}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                {userStatus === "visited" ? "Visited" : "Mark as visited"}
+                            </button>
+                            <button
+                                type="button"
+                                className={`pin-status-btn ${userStatus === "wishlist" ? "active wishlist" : ""}`}
+                                onClick={() => toggleStatus("wishlist")}
+                                aria-pressed={userStatus === "wishlist"}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill={userStatus === "wishlist" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"></polygon>
+                                </svg>
+                                {userStatus === "wishlist" ? "On wishlist" : "Add to wishlist"}
+                            </button>
+                        </div>
+                    )}
                     {isEditing ? (
                         <div className="edit-form">
                             {image && (

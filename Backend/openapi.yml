@@ -56,8 +56,35 @@ paths:
     get:
       tags: [Pins]
       summary: Get all pins
-      description: Retrieves all pins from the database
+      description: |
+        Retrieves all pins from the database. Supports optional distance sort via
+        `sort=distance&lat=&lng=` (Near Me priority). When authenticated, includes
+        the requesting user's status per pin (`visited` or `wishlist`).
       operationId: getAllPins
+      parameters:
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+            enum: [recent, distance]
+          description: Sort mode. `distance` requires lat/lng query params.
+        - in: query
+          name: lat
+          required: false
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          description: Latitude of origin for distance sort.
+        - in: query
+          name: lng
+          required: false
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          description: Longitude of origin for distance sort.
       responses:
         200:
           description: Successful response with array of pins
@@ -154,6 +181,263 @@ paths:
                 $ref: '#/components/schemas/Error'
         500:
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pins/trending:
+    get:
+      tags: [Pins]
+      summary: Get trending pins
+      description: |
+        Returns up to 20 pins ordered by a trending score of
+        `likes + 3 * max(0, 1 - ageDays / days)`. Recency score decays linearly
+        and pins outside the window receive a recency contribution of 0.
+      operationId: getTrendingPins
+      parameters:
+        - in: query
+          name: days
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 7
+          description: Number of days the linear recency decay is stretched over.
+      responses:
+        200:
+          description: Successful response with trending pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pin'
+        401:
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pins/{id}/status:
+    put:
+      tags: [Pins]
+      summary: Set visited/wishlist status on a pin
+      description: Idempotent upsert of the requesting user's status for a pin.
+      operationId: setPinStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [visited, wishlist]
+      responses:
+        200:
+          description: Status set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pinID:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [visited, wishlist]
+        400:
+          description: Invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Pins]
+      summary: Clear visited/wishlist status for a pin
+      description: Removes the requesting user's status entry for a pin.
+      operationId: deletePinStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the pin
+      responses:
+        204:
+          description: Status cleared
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Status not set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pin-status:
+    get:
+      tags: [Pins]
+      summary: Get all of the requesting user's pin statuses
+      description: Returns every `pin_status` row belonging to the current user.
+      operationId: getUserPinStatuses
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    pinID:
+                      type: integer
+                    status:
+                      type: string
+                      enum: [visited, wishlist]
+                    updatedAt:
+                      type: string
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/history:
+    get:
+      tags: [Pins]
+      summary: Get recent search history
+      description: Returns up to 10 most recent search queries for the current user.
+      operationId: getSearchHistory
+      responses:
+        200:
+          description: Array of recent queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchHistoryEntry'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Pins]
+      summary: Record a search query
+      description: |
+        Records a search query for the current user. Duplicate queries are
+        collapsed (the older entry is deleted so the new one is freshest).
+        Retention is capped at 50 entries per user.
+      operationId: addSearchHistory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  maxLength: 200
+      responses:
+        201:
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchHistoryEntry'
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Pins]
+      summary: Clear all search history
+      description: Deletes every search history entry belonging to the current user.
+      operationId: clearSearchHistory
+      responses:
+        204:
+          description: History cleared
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/history/{id}:
+    delete:
+      tags: [Pins]
+      summary: Delete a single search history entry
+      operationId: deleteSearchHistoryEntry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: History entry ID
+      responses:
+        204:
+          description: Entry deleted
+        400:
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Entry not found
           content:
             application/json:
               schema:
@@ -1676,7 +1960,36 @@ components:
           description: Base like count stored on the pin
           example: 0
           nullable: true
-    
+        createdAt:
+          type: string
+          description: Timestamp when the pin was created
+          example: "2026-01-17 12:00:00"
+          nullable: true
+        userStatus:
+          type: string
+          enum: [visited, wishlist]
+          nullable: true
+          description: |
+            The requesting user's status for this pin, if any. Only populated on
+            authenticated endpoints.
+        trendingScore:
+          type: number
+          nullable: true
+          description: |
+            Computed trending score `likes + 3 * max(0, 1 - ageDays / days)`.
+            Only present on `/api/pins/trending`.
+
+    SearchHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        query:
+          type: string
+          maxLength: 200
+        createdAt:
+          type: string
+
     Comment:
       type: object
       properties:

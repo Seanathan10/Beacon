@@ -24,6 +24,54 @@ export function query(sql: string, params: any[] = []): any {
     }
 }
 
+function runMigrations() {
+    try {
+        const existingTables = db.prepare(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).all() as { name: string }[];
+        const tableNames = new Set(existingTables.map(t => t.name));
+
+        // Add pin.createdAt if missing (backfill existing rows to ~30 days ago).
+        if (tableNames.has('pin')) {
+            const columns = db.prepare("PRAGMA table_info(pin)").all() as { name: string }[];
+            const hasCreatedAt = columns.some(c => c.name === 'createdAt');
+            if (!hasCreatedAt) {
+                // SQLite disallows non-constant defaults on ALTER TABLE, so add the column
+                // nullable, backfill, then rely on inserts to populate it via explicit defaults.
+                db.exec(`ALTER TABLE pin ADD COLUMN createdAt DATETIME`);
+                db.exec(`UPDATE pin SET createdAt = datetime('now', '-30 days') WHERE createdAt IS NULL`);
+                console.log("Migrated: added pin.createdAt column with 30-day backfill");
+            }
+        }
+
+        // Create pin_status table if missing
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS pin_status (
+                pinID INTEGER NOT NULL,
+                accountID INTEGER NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('visited','wishlist')),
+                updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (pinID, accountID),
+                FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
+                FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+            );
+        `);
+
+        // Create search_history table if missing
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS search_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                accountID INTEGER NOT NULL,
+                query VARCHAR(200) NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+            );
+        `);
+    } catch (err) {
+        console.error("Failed to run migrations:", err);
+    }
+}
+
 function createIndexes() {
     try {
         // Create indexes on foreign keys and common query patterns
@@ -45,6 +93,10 @@ function createIndexes() {
             { table: 'post_upvote', sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID)' },
             // Account table indexes
             { table: 'account', sql: 'CREATE INDEX IF NOT EXISTS idx_account_email ON account(email)' },
+            // Batch 2: trending + status + search history
+            { table: 'pin', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_createdAt ON pin(createdAt)' },
+            { table: 'pin_status', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_status_accountID ON pin_status(accountID)' },
+            { table: 'search_history', sql: 'CREATE INDEX IF NOT EXISTS idx_search_history_user_time ON search_history(accountID, createdAt DESC)' },
         ];
 
         // Get list of existing tables
@@ -101,5 +153,6 @@ function initPostsTable() {
 
 if (!isTest) {
     initPostsTable();
+    runMigrations();
     createIndexes();
 }

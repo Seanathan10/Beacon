@@ -682,3 +682,40 @@ textarea {
         gap: 8px;
     }
 }
+
+.pin-status-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.pin-status-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pin-status-btn:hover {
+    background: #f3f4f6;
+}
+
+.pin-status-btn.active.visited {
+    background: #ecfdf5;
+    border-color: #4db688;
+    color: #047857;
+}
+
+.pin-status-btn.active.wishlist {
+    background: #fefce8;
+    border-color: #eab308;
+    color: #a16207;
+}

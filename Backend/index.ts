@@ -14,6 +14,8 @@ import * as posts from "./routes/posts.ts";
 import * as comments from "./routes/comments.ts";
 import * as likes from "./routes/likes.ts";
 import * as trip from "./routes/trip.ts";
+import * as pinStatus from "./routes/pinStatus.ts";
+import * as search from "./routes/search.ts";
 import { shareRouter } from "./routes/share.ts";
 
 const REQUIRED_ENV_VARS = ["SECRET"];
@@ -128,6 +130,7 @@ app.post("/api/register", authRateLimit, auth.register);
 app.post("/api/logout", auth.logout);
 
 app.get("/api/pins", auth.check, pins.getAllPins);
+app.get("/api/pins/trending", auth.check, pins.getTrendingPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
 app.post("/api/pins/nearby", auth.check, pins.getPinsNearCoordinate);
 app.get("/api/pins/:id", auth.check, pins.getPin);
@@ -150,6 +153,15 @@ app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
 app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);
 app.delete("/api/likes/:id", auth.check, likes.removeLike);
+
+app.get("/api/pin-status", auth.check, pinStatus.getUserPinStatuses);
+app.put("/api/pins/:id/status", auth.check, pinStatus.setPinStatus);
+app.delete("/api/pins/:id/status", auth.check, pinStatus.deletePinStatus);
+
+app.get("/api/search/history", auth.check, search.getSearchHistory);
+app.post("/api/search/history", auth.check, search.addSearchHistory);
+app.delete("/api/search/history/:id", auth.check, search.deleteSearchHistoryEntry);
+app.delete("/api/search/history", auth.check, search.clearSearchHistory);
 
 app.post("/api/trip/plan", auth.check, tripRateLimit, trip.planTrip);
 app.post("/api/trip/plan/stream", auth.check, tripRateLimit, trip.planTripStream);

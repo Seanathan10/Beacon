@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS search_history;
+DROP TABLE IF EXISTS pin_status;
 DROP TABLE IF EXISTS post_upvote;
 DROP TABLE IF EXISTS likes;
 DROP TABLE IF EXISTS comment;
@@ -23,6 +25,7 @@ CREATE TABLE pin (
 	tags VARCHAR(200),
 	image VARCHAR(2000),
 	likes INTEGER DEFAULT 0,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );
 
@@ -66,6 +69,24 @@ CREATE TABLE post_upvote (
 	FOREIGN KEY (accountID) REFERENCES account(id)
 );
 
+CREATE TABLE pin_status (
+	pinID INTEGER NOT NULL,
+	accountID INTEGER NOT NULL,
+	status TEXT NOT NULL CHECK(status IN ('visited','wishlist')),
+	updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (pinID, accountID),
+	FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+);
+
+CREATE TABLE search_history (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	accountID INTEGER NOT NULL,
+	query VARCHAR(200) NOT NULL,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+);
+
 CREATE TABLE itinerary (
 	id TEXT PRIMARY KEY,
 	creatorID INTEGER,
@@ -83,3 +104,6 @@ CREATE INDEX idx_likes_accountID ON likes(accountID);
 CREATE INDEX idx_account_email ON account(email);
 CREATE INDEX idx_post_creatorID ON post(creatorID);
 CREATE INDEX idx_post_upvote_postID ON post_upvote(postID);
+CREATE INDEX idx_pin_createdAt ON pin(createdAt);
+CREATE INDEX idx_pin_status_accountID ON pin_status(accountID);
+CREATE INDEX idx_search_history_user_time ON search_history(accountID, createdAt DESC);

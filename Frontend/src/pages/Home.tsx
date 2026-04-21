@@ -43,6 +43,7 @@ export interface SelectedPoint {
     color: string;
     email?: string;
     tags?: string;
+    userStatus?: "visited" | "wishlist" | null;
 }
 
 interface CloneValues {
@@ -96,6 +97,9 @@ function HomePage() {
     const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
     const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
     const [cloneValues, setCloneValues] = useState<CloneValues | null>(null);
+    const [pinSort, setPinSort] = useState<"recent" | "trending" | "distance">("recent");
+    const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [geoError, setGeoError] = useState<string | null>(null);
 
     // Listen for theme changes and update map style
     useEffect(() => {
@@ -189,7 +193,13 @@ function HomePage() {
     useEffect(() => {
         const fetchPins = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/api/pins`, {
+                let url = `${BASE_API_URL}/api/pins`;
+                if (pinSort === "trending") {
+                    url = `${BASE_API_URL}/api/pins/trending?days=7`;
+                } else if (pinSort === "distance" && geoCoords) {
+                    url = `${BASE_API_URL}/api/pins?sort=distance&lat=${geoCoords.lat}&lng=${geoCoords.lng}`;
+                }
+                const res = await fetch(url, {
                     credentials: "include",
                 });
 
@@ -222,6 +232,7 @@ function HomePage() {
                             address: p.address,
                             likes: p.likes || 0,
                             tags: p.tags,
+                            userStatus: p.userStatus || null,
                         },
                     })),
                 };
@@ -250,8 +261,37 @@ function HomePage() {
             }
         };
 
-        fetchPins();
-    }, [isLoggedIn]);
+        if (pinSort !== "distance" || geoCoords) {
+            fetchPins();
+        }
+    }, [isLoggedIn, pinSort, geoCoords]);
+
+    const requestGeo = useCallback(() => {
+        if (!navigator.geolocation) {
+            setGeoError("Geolocation is not supported by your browser.");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setGeoCoords({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                });
+                setGeoError(null);
+            },
+            () => {
+                setGeoError("Unable to retrieve your location.");
+            },
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+        );
+    }, []);
+
+    const handleSortChange = (next: "recent" | "trending" | "distance") => {
+        setPinSort(next);
+        if (next === "distance" && !geoCoords) {
+            requestGeo();
+        }
+    };
 
     const handleLogout = () => {
         logout();
@@ -287,6 +327,7 @@ function HomePage() {
                 email: feature.properties?.email || "",
                 address: geocodeResult.fullAddress,
                 tags: feature.properties?.tags,
+                userStatus: feature.properties?.userStatus || null,
             });
 
             setPinData(null); // Close any existing pin
@@ -516,6 +557,30 @@ function HomePage() {
                         isFocused={isSearchFocused}
                     />
 
+                    <div className="pin-sort-control" role="group" aria-label="Sort pins">
+                        <button
+                            type="button"
+                            className={`pin-sort-option ${pinSort === "recent" ? "active" : ""}`}
+                            onClick={() => handleSortChange("recent")}
+                        >
+                            Recent
+                        </button>
+                        <button
+                            type="button"
+                            className={`pin-sort-option ${pinSort === "trending" ? "active" : ""}`}
+                            onClick={() => handleSortChange("trending")}
+                        >
+                            Trending
+                        </button>
+                        <button
+                            type="button"
+                            className={`pin-sort-option ${pinSort === "distance" ? "active" : ""}`}
+                            onClick={() => handleSortChange("distance")}
+                            title={geoError || undefined}
+                        >
+                            Near Me
+                        </button>
+                    </div>
                 </div>
 
                 <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
@@ -660,6 +725,17 @@ function HomePage() {
                             selectedPoint={selectedPoint}
                             setSelectedPoint={setSelectedPoint}
                             onShowDetails={() => setShowDetailedModal(true)}
+                            onStatusChange={(pinId, status) => {
+                                setAllPins((prev) => ({
+                                    type: "FeatureCollection",
+                                    features: prev.features.map((f) =>
+                                        f.properties.id === pinId
+                                            ? { ...f, properties: { ...f.properties, userStatus: status } }
+                                            : f,
+                                    ),
+                                }));
+                                setSelectedPoint((prev) => prev ? { ...prev, userStatus: status } : prev);
+                            }}
                             onBookmarkChange={(pinId, isBookmarked) => {
                                 const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
                                 const email = localStorage.getItem("userEmail")!;
@@ -688,6 +764,17 @@ function HomePage() {
                             currentUserId={userId}
                             currentUserEmail={localStorage.getItem("userEmail")}
                             onClose={() => setShowDetailedModal(false)}
+                            onStatusChange={(pinId, status) => {
+                                setAllPins((prev) => ({
+                                    type: "FeatureCollection",
+                                    features: prev.features.map((f) =>
+                                        f.properties.id === pinId
+                                            ? { ...f, properties: { ...f.properties, userStatus: status } }
+                                            : f,
+                                    ),
+                                }));
+                                setSelectedPoint((prev) => prev ? { ...prev, userStatus: status } : prev);
+                            }}
                             onClone={(data) => {
                                 setCloneValues({
                                     title: data.title,
