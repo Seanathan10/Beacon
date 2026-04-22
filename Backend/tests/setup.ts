@@ -82,6 +82,15 @@ export function initializeSchema(db: DatabaseSync) {
       FOREIGN KEY (accountID) REFERENCES account(id)
     );
 
+    CREATE TABLE IF NOT EXISTS comment_reaction (
+      commentID INTEGER,
+      accountID INTEGER,
+      emoji VARCHAR(2),
+      PRIMARY KEY (commentID, accountID, emoji),
+      FOREIGN KEY (commentID) REFERENCES comment(id) ON DELETE CASCADE,
+      FOREIGN KEY (accountID) REFERENCES account(id)
+    );
+
     CREATE TABLE IF NOT EXISTS likes (
       pinID INTEGER,
       accountID INTEGER,
@@ -100,6 +109,8 @@ export function initializeSchema(db: DatabaseSync) {
       message TEXT NOT NULL,
       image VARCHAR(2000),
       upvotes INTEGER DEFAULT 0,
+      latitude REAL,
+      longitude REAL,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (creatorID) REFERENCES account(id)
     );
@@ -119,6 +130,26 @@ export function initializeSchema(db: DatabaseSync) {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS bookmark_folder (
+      id TEXT PRIMARY KEY,
+      accountID INTEGER NOT NULL,
+      name VARCHAR(80) NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      isPublic INTEGER DEFAULT 0,
+      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS bookmark (
+      pinID INTEGER NOT NULL,
+      accountID INTEGER NOT NULL,
+      folderID TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (pinID, accountID),
+      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
+      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE,
+      FOREIGN KEY (folderID) REFERENCES bookmark_folder(id) ON DELETE SET NULL
+    );
   `);
 }
 
@@ -128,6 +159,9 @@ export function resetTestDb() {
       DELETE FROM search_history;
       DELETE FROM pin_status;
       DELETE FROM post_upvote;
+      DELETE FROM bookmark;
+      DELETE FROM bookmark_folder;
+      DELETE FROM comment_reaction;
       DELETE FROM likes;
       DELETE FROM comment;
       DELETE FROM pin;

@@ -3,6 +3,7 @@ import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
 import Sidebar from "@/components/Sidebar";
+import { NearbyPostsDrawer } from "@/components/NearbyPostsDrawer";
 import Map, {
     GeolocateControl,
     NavigationControl,
@@ -100,6 +101,7 @@ function HomePage() {
     const [pinSort, setPinSort] = useState<"recent" | "trending" | "distance">("recent");
     const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [geoError, setGeoError] = useState<string | null>(null);
+    const [mapBounds, setMapBounds] = useState<{ minLng: number; minLat: number; maxLng: number; maxLat: number } | null>(null);
 
     // Listen for theme changes and update map style
     useEffect(() => {
@@ -343,6 +345,29 @@ function HomePage() {
             email: userEmail || "",
         });
     };
+
+    // Track map bounds for nearby posts discovery
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        const handleMoveEnd = () => {
+            const bounds = mapRef.current!.getBounds();
+            setMapBounds({
+                minLng: bounds.getWest(),
+                minLat: bounds.getSouth(),
+                maxLng: bounds.getEast(),
+                maxLat: bounds.getNorth(),
+            });
+        };
+
+        mapRef.current.on("moveend", handleMoveEnd);
+        // Initial bounds
+        handleMoveEnd();
+
+        return () => {
+            mapRef.current?.off("moveend", handleMoveEnd);
+        };
+    }, []);
 
     return (
         <div className="home-container">
@@ -901,6 +926,31 @@ function HomePage() {
                     )}
                 </Map>
             </div>
+
+            {mapBounds && (
+                <NearbyPostsDrawer
+                    mapBounds={mapBounds}
+                    onPostSelect={(post) => {
+                        if (post.latitude !== undefined && post.longitude !== undefined) {
+                            setSelectedPoint({
+                                id: post.id,
+                                creatorID: post.creatorID || "",
+                                longitude: post.longitude,
+                                latitude: post.latitude,
+                                title: post.title,
+                                description: post.description || "",
+                                image: post.image || "",
+                                color: post.color || PIN_COLOR,
+                                email: post.email || "",
+                                address: post.location || "Unknown Location",
+                                tags: post.tags,
+                                userStatus: null,
+                            });
+                            setShowDetailedModal(true);
+                        }
+                    }}
+                />
+            )}
 
             {showShortcutsHelp && (
                 <ShortcutsHelpModal onClose={() => setShowShortcutsHelp(false)} />

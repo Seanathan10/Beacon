@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import "./styles/DetailedPinModal.css";
 import { BASE_API_URL, PIN_COLOR } from '../../constants';
+import { EmojiReactionPicker } from "./EmojiReactionPicker";
 
 interface DetailedPinModalProps {
     selectedPoint: {
@@ -38,6 +39,12 @@ interface DetailedPinModalProps {
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit
 
+interface CommentReaction {
+    emoji: string;
+    count: number;
+    userReacted: boolean;
+}
+
 interface Comment {
     id: number;
     accountID: number;
@@ -45,6 +52,9 @@ interface Comment {
     email: string;
     comment: string;
     createdAt: string;
+    reactions?: CommentReaction[];
+    isCreator?: boolean;
+    hasLiked?: boolean;
 }
 
 function ModalSection({ header, content }: { header: string, content: any }) {
@@ -149,6 +159,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [showAllComments, setShowAllComments] = useState(false);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+    const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null);
+    const [optimisticReactions, setOptimisticReactions] = useState<{ [key: number]: { emoji: string; count: number; userReacted: boolean }[] }>({});
 
     // Fetch comments when modal opens
     useEffect(() => {
@@ -239,6 +251,136 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         } catch (error) {
             console.error("Error deleting comment:", error);
             alert("Failed to delete comment");
+        }
+    };
+
+    const handleAddReaction = async (commentId: number, emoji: string) => {
+        try {
+            // Optimistic update
+            const existingReactions = comments.find(c => c.id === commentId)?.reactions || [];
+            const reactionIndex = existingReactions.findIndex(r => r.emoji === emoji);
+            
+            let newReactions: CommentReaction[];
+            if (reactionIndex >= 0) {
+                newReactions = [...existingReactions];
+                if (newReactions[reactionIndex].userReacted) {
+                    newReactions[reactionIndex] = {
+                        ...newReactions[reactionIndex],
+                        count: newReactions[reactionIndex].count - 1,
+                        userReacted: false,
+                    };
+                } else {
+                    newReactions[reactionIndex] = {
+                        ...newReactions[reactionIndex],
+                        count: newReactions[reactionIndex].count + 1,
+                        userReacted: true,
+                    };
+                }
+            } else {
+                newReactions = [...existingReactions, { emoji, count: 1, userReacted: true }];
+            }
+            
+            setOptimisticReactions(prev => ({
+                ...prev,
+                [commentId]: newReactions,
+            }));
+
+            const response = await fetch(
+                `${BASE_API_URL}/api/comments/${commentId}/reactions`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ emoji }),
+                }
+            );
+
+            if (response.ok) {
+                // Refetch comments to get authoritative state
+                const commentsResponse = await fetch(
+                    `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
+                    { credentials: "include" }
+                );
+                if (commentsResponse.ok) {
+                    const updatedComments = await commentsResponse.json();
+                    setComments(updatedComments);
+                    setOptimisticReactions({});
+                }
+            } else {
+                // Revert optimistic update on failure
+                setOptimisticReactions(prev => {
+                    const updated = { ...prev };
+                    delete updated[commentId];
+                    return updated;
+                });
+            }
+            setShowReactionPicker(null);
+        } catch (error) {
+            console.error("Error adding reaction:", error);
+            // Revert optimistic update
+            setOptimisticReactions(prev => {
+                const updated = { ...prev };
+                delete updated[commentId];
+                return updated;
+            });
+        }
+    };
+
+    const handleRemoveReaction = async (commentId: number, emoji: string) => {
+        try {
+            // Optimistic update
+            const existingReactions = comments.find(c => c.id === commentId)?.reactions || [];
+            const reactionIndex = existingReactions.findIndex(r => r.emoji === emoji);
+            
+            let newReactions: CommentReaction[] = [...existingReactions];
+            if (reactionIndex >= 0) {
+                newReactions[reactionIndex] = {
+                    ...newReactions[reactionIndex],
+                    count: Math.max(0, newReactions[reactionIndex].count - 1),
+                    userReacted: false,
+                };
+            }
+            
+            setOptimisticReactions(prev => ({
+                ...prev,
+                [commentId]: newReactions,
+            }));
+
+            const response = await fetch(
+                `${BASE_API_URL}/api/comments/${commentId}/reactions/${emoji}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
+
+            if (response.ok) {
+                // Refetch comments
+                const commentsResponse = await fetch(
+                    `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
+                    { credentials: "include" }
+                );
+                if (commentsResponse.ok) {
+                    const updatedComments = await commentsResponse.json();
+                    setComments(updatedComments);
+                    setOptimisticReactions({});
+                }
+            } else {
+                // Revert optimistic update
+                setOptimisticReactions(prev => {
+                    const updated = { ...prev };
+                    delete updated[commentId];
+                    return updated;
+                });
+            }
+        } catch (error) {
+            console.error("Error removing reaction:", error);
+            // Revert optimistic update
+            setOptimisticReactions(prev => {
+                const updated = { ...prev };
+                delete updated[commentId];
+                return updated;
+            });
         }
     };
 
@@ -640,41 +782,98 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                                 {/* Comments List */}
                                 {!isLoadingComments && comments.length > 0 && (
                                     <div className="comments-list">
-                                        {(showAllComments ? comments : comments.slice(0, 2)).map((comment) => (
-                                            <div key={comment.id} className="comment-item">
-                                                <div className="comment-avatar">
-                                                    {comment.email.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="comment-content">
-                                                    <div className="comment-header">
-                                                        <span className="comment-author">
-                                                            {comment.email.split('@')[0]}
-                                                        </span>
-                                                        <span className="comment-time">
-                                                            {new Date(comment.createdAt).toLocaleDateString('en-US', {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                            })}
-                                                        </span>
+                                        {(showAllComments ? comments : comments.slice(0, 2)).map((comment) => {
+                                            const reactions = optimisticReactions[comment.id] || comment.reactions || [];
+                                            return (
+                                                <div key={comment.id} className="comment-item">
+                                                    <div className="comment-avatar">
+                                                        {comment.email.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <p className="comment-text">{comment.comment}</p>
-                                                    {currentUserEmail === comment.email && (
-                                                        <div className="comment-actions">
-                                                            <button
-                                                                className="comment-action-btn delete"
-                                                                onClick={() => handleDeleteComment(comment.id)}
-                                                            >
-                                                                <svg width="14" height="14" viewBox="0 0 24 24\" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                                </svg>
-                                                                Delete
-                                                            </button>
+                                                    <div className="comment-content">
+                                                        <div className="comment-header">
+                                                            <span className="comment-author">
+                                                                {comment.email.split('@')[0]}
+                                                                {comment.isCreator && <span className="badge-creator">✓ Creator</span>}
+                                                                {comment.hasLiked && <span className="badge-liked">♥ Liked</span>}
+                                                            </span>
+                                                            <span className="comment-time">
+                                                                {new Date(comment.createdAt).toLocaleDateString('en-US', {
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                })}
+                                                            </span>
                                                         </div>
-                                                    )}
+                                                        <p className="comment-text">{comment.comment}</p>
+                                                        
+                                                        {/* Reactions Display */}
+                                                        {reactions.length > 0 && (
+                                                            <div className="comment-reactions">
+                                                                {reactions.map((reaction) => (
+                                                                    <button
+                                                                        key={reaction.emoji}
+                                                                        className={`reaction-pill ${reaction.userReacted ? 'user-reacted' : ''}`}
+                                                                        onClick={() => {
+                                                                            if (reaction.userReacted) {
+                                                                                handleRemoveReaction(comment.id, reaction.emoji);
+                                                                            }
+                                                                        }}
+                                                                        title={reaction.userReacted ? 'Click to remove your reaction' : `${reaction.count} ${reaction.emoji}`}
+                                                                    >
+                                                                        {reaction.emoji} {reaction.count}
+                                                                    </button>
+                                                                ))}
+                                                                <button
+                                                                    className="reaction-add-btn"
+                                                                    onClick={() => setShowReactionPicker(showReactionPicker === comment.id ? null : comment.id)}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                                {showReactionPicker === comment.id && (
+                                                                    <div className="reaction-picker-popup">
+                                                                        <EmojiReactionPicker
+                                                                            onEmojiSelect={(emoji) => handleAddReaction(comment.id, emoji)}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {reactions.length === 0 && (
+                                                            <div className="comment-reactions">
+                                                                <button
+                                                                    className="reaction-add-btn"
+                                                                    onClick={() => setShowReactionPicker(showReactionPicker === comment.id ? null : comment.id)}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                                {showReactionPicker === comment.id && (
+                                                                    <div className="reaction-picker-popup">
+                                                                        <EmojiReactionPicker
+                                                                            onEmojiSelect={(emoji) => handleAddReaction(comment.id, emoji)}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {currentUserEmail === comment.email && (
+                                                            <div className="comment-actions">
+                                                                <button
+                                                                    className="comment-action-btn delete"
+                                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                                >
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                                    </svg>
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
 
