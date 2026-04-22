@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { geocodeLocation } from "../utils/geocoding";
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_LENGTH = 500;
@@ -17,8 +18,8 @@ function isValidUrl(url: string): boolean {
 
 export function getAllPosts(req: Request, res: Response) {
     const results = db.query(`
-        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
-               p.message, p.image, p.createdAt,
+        SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
+               p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
         FROM post p
         ORDER BY createdAt DESC
@@ -35,8 +36,8 @@ export function getAllPosts(req: Request, res: Response) {
 export function getPost(req: Request, res: Response) {
     const postID = req.params.id;
     const results = db.query(`
-        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
-               p.message, p.image, p.createdAt,
+        SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
+               p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
         FROM post p WHERE p.id = ?
     `, [postID]);
@@ -52,7 +53,7 @@ export function getPost(req: Request, res: Response) {
     });
 }
 
-export function createPost(req: Request, res: Response) {
+export async function createPost(req: Request, res: Response) {
     const { title, location, category, tags, message, image } = req.body;
 
     if (!title || String(title).trim().length === 0) {
@@ -94,16 +95,30 @@ export function createPost(req: Request, res: Response) {
     const tagsString = Array.isArray(tags) ? tags.join(',') : (tags || '');
 
     try {
+        // Geocode location if provided
+        let latitude: number | null = null;
+        let longitude: number | null = null;
+        
+        if (locationStr) {
+            const coords = await geocodeLocation(locationStr);
+            if (coords) {
+                latitude = coords.latitude;
+                longitude = coords.longitude;
+            }
+        }
+
         const results = db.query(
             `
-            INSERT INTO post (creatorID, title, location, category, tags, message, image)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, creatorID, title, location, category, tags, message, image, createdAt;
+            INSERT INTO post (creatorID, title, location, latitude, longitude, category, tags, message, image)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, creatorID, title, location, latitude, longitude, category, tags, message, image, createdAt;
             `,
             [
                 req.user.id,
                 titleStr,
                 locationStr,
+                latitude,
+                longitude,
                 categoryStr,
                 tagsString,
                 messageStr,
@@ -127,7 +142,7 @@ export function createPost(req: Request, res: Response) {
     }
 }
 
-export function updatePost(req: Request, res: Response) {
+export async function updatePost(req: Request, res: Response) {
     const postID = req.params.id;
     const userID = req.user?.id;
     const { title, location, category, tags, message, image } = req.body;
@@ -170,6 +185,15 @@ export function updatePost(req: Request, res: Response) {
         params.push(image);
     }
 
+    // If location is updated, geocode it
+    if (location !== undefined) {
+        const coords = await geocodeLocation(location);
+        updates.push("latitude = ?");
+        params.push(coords?.latitude ?? null);
+        updates.push("longitude = ?");
+        params.push(coords?.longitude ?? null);
+    }
+
     if (updates.length > 0) {
         params.push(postID);
         const sql = `UPDATE post SET ${updates.join(", ")} WHERE id = ?`;
@@ -177,8 +201,8 @@ export function updatePost(req: Request, res: Response) {
     }
 
     const updatedPost = db.query(`
-        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
-               p.message, p.image, p.createdAt,
+        SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
+               p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
         FROM post p WHERE p.id = ?
     `, [postID])[0];
@@ -233,8 +257,8 @@ export function upvotePost(req: Request, res: Response) {
     }
 
     const updatedPost = db.query(`
-        SELECT p.id, p.creatorID, p.title, p.location, p.category, p.tags,
-               p.message, p.image, p.createdAt,
+        SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
+               p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
         FROM post p WHERE p.id = ?
     `, [postID])[0];
@@ -243,4 +267,51 @@ export function upvotePost(req: Request, res: Response) {
         ...updatedPost,
         tags: updatedPost.tags ? updatedPost.tags.split(',').map((t: string) => t.trim()) : [],
     });
+}
+
+// Get nearby posts within a bounding box
+export function getNearbyPosts(req: Request, res: Response) {
+    const { bbox } = req.query;
+
+    if (!bbox || typeof bbox !== 'string') {
+        return res.status(400).json({ message: "bbox query parameter is required (format: minLng,minLat,maxLng,maxLat)" });
+    }
+
+    const parts = bbox.split(',');
+    if (parts.length !== 4) {
+        return res.status(400).json({ message: "bbox must have 4 values: minLng,minLat,maxLng,maxLat" });
+    }
+
+    const minLng = parseFloat(parts[0]);
+    const minLat = parseFloat(parts[1]);
+    const maxLng = parseFloat(parts[2]);
+    const maxLat = parseFloat(parts[3]);
+
+    if (isNaN(minLng) || isNaN(minLat) || isNaN(maxLng) || isNaN(maxLat)) {
+        return res.status(400).json({ message: "All bbox values must be valid numbers" });
+    }
+
+    try {
+        const results = db.query(`
+            SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
+                   p.category, p.tags, p.message, p.image, p.createdAt,
+                   (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
+            FROM post p
+            WHERE p.latitude IS NOT NULL AND p.longitude IS NOT NULL
+            AND p.latitude BETWEEN ? AND ?
+            AND p.longitude BETWEEN ? AND ?
+            ORDER BY p.createdAt DESC
+            LIMIT 20
+        `, [minLat, maxLat, minLng, maxLng]);
+
+        const posts = results.map((post: any) => ({
+            ...post,
+            tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
+        }));
+
+        res.json(posts);
+    } catch (error) {
+        console.error("Error fetching nearby posts:", error);
+        res.status(500).json({ message: "Failed to fetch nearby posts" });
+    }
 }

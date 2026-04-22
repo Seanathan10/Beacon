@@ -54,6 +54,8 @@ CREATE TABLE post (
 	creatorID INTEGER,
 	title VARCHAR(100) NOT NULL,
 	location VARCHAR(200) NOT NULL,
+	latitude REAL,
+	longitude REAL,
 	category VARCHAR(20) DEFAULT 'New',
 	tags VARCHAR(500),
 	message TEXT NOT NULL,
@@ -117,6 +119,16 @@ CREATE TABLE bookmark (
 	FOREIGN KEY (folderID) REFERENCES bookmark_folder(id) ON DELETE SET NULL
 );
 
+CREATE TABLE comment_reaction (
+	commentID INTEGER NOT NULL,
+	accountID INTEGER NOT NULL,
+	emoji VARCHAR(8) NOT NULL,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (commentID, accountID, emoji),
+	FOREIGN KEY (commentID) REFERENCES comment(id) ON DELETE CASCADE,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+);
+
 -- Indexes for common query patterns
 CREATE INDEX idx_pin_creatorID ON pin(creatorID);
 CREATE INDEX idx_comment_pinID ON comment(pinID);
@@ -132,3 +144,6 @@ CREATE INDEX idx_search_history_user_time ON search_history(accountID, createdAt
 CREATE INDEX idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC);
 CREATE INDEX idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC);
 CREATE INDEX idx_bookmark_folder_public ON bookmark_folder(isPublic);
+CREATE INDEX idx_comment_reaction_comment ON comment_reaction(commentID);
+CREATE INDEX idx_comment_reaction_account ON comment_reaction(accountID);
+CREATE INDEX idx_post_coords ON post(latitude, longitude);

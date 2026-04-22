@@ -145,11 +145,14 @@ app.post("/api/posts", auth.check, posts.createPost);
 app.put("/api/posts/:id", auth.check, posts.updatePost);
 app.delete("/api/posts/:id", auth.check, posts.deletePost);
 app.post("/api/posts/:id/upvote", auth.check, posts.upvotePost);
+app.get("/api/posts/nearby", auth.check, posts.getNearbyPosts);
 
 app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
 app.post("/api/pins/:pinId/comments", auth.check, comments.createComment);
 app.put("/api/comments/:commentId", auth.check, comments.updateComment);
 app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
+app.post("/api/comments/:id/reactions", auth.check, comments.addCommentReaction);
+app.delete("/api/comments/:id/reactions/:emoji", auth.check, comments.removeCommentReaction);
 
 app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);

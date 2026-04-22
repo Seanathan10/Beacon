@@ -1,9 +1,17 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 
-// Get all comments for a specific pin
+// Get all comments for a specific pin with reactions and badges
 export function getPinComments(req: Request, res: Response) {
     const pinID = req.params.pinId;
+    const userID = req.user?.id;
+    
+    // Get pin creator for badge comparison
+    const pin = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID])[0];
+    if (!pin) {
+        res.status(404).json({ message: "Pin not found" });
+        return;
+    }
     
     const results = db.query(
         `
@@ -22,7 +30,47 @@ export function getPinComments(req: Request, res: Response) {
         [pinID]
     );
     
-    res.json(results);
+    // Enrich comments with reactions and badges
+    const enrichedComments = results.map((comment: any) => {
+        // Get reactions for this comment
+        const reactions = db.query(
+            `
+            SELECT emoji, COUNT(*) as count
+            FROM comment_reaction
+            WHERE commentID = ?
+            GROUP BY emoji
+            `,
+            [comment.id]
+        );
+        
+        // Get user's reactions
+        const userReactions = userID ? db.query(
+            `
+            SELECT emoji FROM comment_reaction
+            WHERE commentID = ? AND accountID = ?
+            `,
+            [comment.id, userID]
+        ).map((r: any) => r.emoji) : [];
+        
+        // Check if user has liked this pin
+        const hasLiked = userID ? db.query(
+            "SELECT 1 FROM likes WHERE pinID = ? AND accountID = ?",
+            [pinID, userID]
+        ).length > 0 : false;
+        
+        return {
+            ...comment,
+            isCreator: comment.accountID === pin.creatorID,
+            hasLiked,
+            reactions: reactions.map((r: any) => ({
+                emoji: r.emoji,
+                count: r.count,
+                userReacted: userReactions.includes(r.emoji)
+            }))
+        };
+    });
+    
+    res.json(enrichedComments);
 }
 
 // Create a new comment on a pin
@@ -62,7 +110,10 @@ export function createComment(req: Request, res: Response) {
         const userEmail = db.query("SELECT email FROM account WHERE id = ?", [userID])[0]?.email;
         res.status(201).json({
             ...results[0],
-            email: userEmail
+            email: userEmail,
+            isCreator: false,
+            hasLiked: false,
+            reactions: []
         });
     } else {
         res.status(500).json({ message: "Failed to create comment" });
@@ -158,5 +209,66 @@ export function updateComment(req: Request, res: Response) {
         return res.status(404).json({ message: "Comment not found" });
     }
 
-    res.json(updatedComment);
+    res.json({
+        ...updatedComment,
+        isCreator: false,
+        hasLiked: false,
+        reactions: []
+    });
+}
+
+// Add a reaction to a comment (idempotent)
+export function addCommentReaction(req: Request, res: Response) {
+    const commentID = req.params.id;
+    const userID = req.user.id;
+    const { emoji } = req.body;
+
+    if (!emoji || typeof emoji !== 'string' || emoji.length === 0) {
+        res.status(400).json({ message: "Emoji is required" });
+        return;
+    }
+
+    // Verify comment exists
+    const comment = db.query("SELECT id FROM comment WHERE id = ?", [commentID])[0];
+    if (!comment) {
+        res.status(404).json({ message: "Comment not found" });
+        return;
+    }
+
+    try {
+        // Idempotent insert: ignore if already exists
+        db.query(
+            "INSERT OR IGNORE INTO comment_reaction(commentID, accountID, emoji, createdAt) VALUES(?, ?, ?, datetime('now'))",
+            [commentID, userID, emoji]
+        );
+        res.status(201).json({ message: "Reaction added" });
+    } catch (error) {
+        console.error("Reaction error:", error);
+        res.status(500).json({ message: "Failed to add reaction" });
+    }
+}
+
+// Remove a reaction from a comment
+export function removeCommentReaction(req: Request, res: Response) {
+    const commentID = req.params.id;
+    const emoji = req.params.emoji;
+    const userID = req.user.id;
+
+    // Verify comment exists
+    const comment = db.query("SELECT id FROM comment WHERE id = ?", [commentID])[0];
+    if (!comment) {
+        res.status(404).json({ message: "Comment not found" });
+        return;
+    }
+
+    const result = db.query(
+        "DELETE FROM comment_reaction WHERE commentID = ? AND accountID = ? AND emoji = ?",
+        [commentID, userID, emoji]
+    );
+
+    if (result.changes > 0) {
+        res.status(200).json({ message: "Reaction removed" });
+    } else {
+        res.status(404).json({ message: "Reaction not found" });
+    }
 }
