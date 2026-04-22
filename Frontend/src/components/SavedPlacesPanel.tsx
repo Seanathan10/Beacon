@@ -3,7 +3,7 @@ import "./styles/SavedPlacesPanel.css";
 import { PIN_COLOR, BASE_API_URL } from "../../constants";
 import type { Bookmark, BookmarkFolder } from "../../types/bookmarks";
 
-type Tab = 'myPins' | 'bookmarked' | 'liked';
+type Tab = 'myPins' | 'bookmarked' | 'liked' | 'visited' | 'wishlist';
 
 interface Pin {
     id: number;
@@ -20,6 +20,12 @@ interface Pin {
     likes?: number;
 }
 
+interface PinStatus {
+    pinID: number;
+    status: 'visited' | 'wishlist';
+    updatedAt?: string;
+}
+
 interface SavedPlacesPanelProps {
     mapRef: React.RefObject<mapboxgl.Map | null>;
 }
@@ -28,6 +34,8 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
     const [myPins, setMyPins] = useState<Pin[]>([]);
     const [bookmarked, setBookmarked] = useState<Bookmark[]>([]);
     const [liked, setLiked] = useState<Pin[]>([]);
+    const [visited, setVisited] = useState<Pin[]>([]);
+    const [wishlist, setWishlist] = useState<Pin[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('myPins');
@@ -38,12 +46,13 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
             try {
                 setIsLoading(true);
                 
-                // Fetch all three endpoints in parallel
-                const [myPinsRes, bookmarkedRes, likedRes, foldersRes] = await Promise.all([
+                // Fetch all endpoints in parallel
+                const [myPinsRes, bookmarkedRes, likedRes, foldersRes, pinStatusRes] = await Promise.all([
                     fetch(`${BASE_API_URL}/api/pins/user`, { credentials: "include" }),
                     fetch(`${BASE_API_URL}/api/bookmarks`, { credentials: "include" }),
                     fetch(`${BASE_API_URL}/api/likes/user`, { credentials: "include" }),
-                    fetch(`${BASE_API_URL}/api/bookmarks/folders`, { credentials: "include" })
+                    fetch(`${BASE_API_URL}/api/bookmarks/folders`, { credentials: "include" }),
+                    fetch(`${BASE_API_URL}/api/pin-status`, { credentials: "include" })
                 ]);
 
                 if (myPinsRes.ok) {
@@ -65,6 +74,54 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                     const data = await foldersRes.json();
                     setFolders(data);
                 }
+
+                // Handle pin statuses (visited/wishlist)
+                if (pinStatusRes.ok) {
+                    const statuses: PinStatus[] = await pinStatusRes.json();
+                    
+                    // Group statuses by type
+                    const visitedPinIds = statuses
+                        .filter(s => s.status === 'visited')
+                        .map(s => s.pinID);
+                    const wishlistPinIds = statuses
+                        .filter(s => s.status === 'wishlist')
+                        .map(s => s.pinID);
+                    
+                    // Fetch details for visited/wishlist pins
+                    // For now, we'll make individual requests for each pin
+                    // In production, we'd want a batch endpoint
+                    const visitedPins: Pin[] = [];
+                    const wishlistPins: Pin[] = [];
+                    
+                    // Fetch visited pins
+                    for (const pinId of visitedPinIds) {
+                        try {
+                            const res = await fetch(`${BASE_API_URL}/api/pins/${pinId}`, { credentials: "include" });
+                            if (res.ok) {
+                                const pin = await res.json();
+                                visitedPins.push(pin);
+                            }
+                        } catch (error) {
+                            console.error(`Failed to fetch visited pin ${pinId}`, error);
+                        }
+                    }
+                    
+                    // Fetch wishlist pins
+                    for (const pinId of wishlistPinIds) {
+                        try {
+                            const res = await fetch(`${BASE_API_URL}/api/pins/${pinId}`, { credentials: "include" });
+                            if (res.ok) {
+                                const pin = await res.json();
+                                wishlistPins.push(pin);
+                            }
+                        } catch (error) {
+                            console.error(`Failed to fetch wishlist pin ${pinId}`, error);
+                        }
+                    }
+                    
+                    setVisited(visitedPins);
+                    setWishlist(wishlistPins);
+                }
             } catch (error) {
                 console.error("Error fetching saved places:", error);
             } finally {
@@ -75,7 +132,7 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
         fetchData();
     }, []);
 
-    const totalItems = myPins.length + bookmarked.length + liked.length;
+    const totalItems = myPins.length + bookmarked.length + liked.length + visited.length + wishlist.length;
 
     if (!isLoading && totalItems === 0) {
         return null;
@@ -114,16 +171,28 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                             My Pins ({myPins.length})
                         </button>
                         <button
-                            className={`tab ${activeTab === 'bookmarked' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('bookmarked')}
+                            className={`tab ${activeTab === 'visited' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('visited')}
                         >
-                            Bookmarked ({bookmarked.length})
+                            Visited ({visited.length})
+                        </button>
+                        <button
+                            className={`tab ${activeTab === 'wishlist' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('wishlist')}
+                        >
+                            Wishlist ({wishlist.length})
                         </button>
                         <button
                             className={`tab ${activeTab === 'liked' ? 'active' : ''}`}
                             onClick={() => setActiveTab('liked')}
                         >
                             Liked ({liked.length})
+                        </button>
+                        <button
+                            className={`tab ${activeTab === 'bookmarked' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('bookmarked')}
+                        >
+                            Bookmarked ({bookmarked.length})
                         </button>
                     </div>
 
@@ -142,16 +211,22 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                                 </div>
                             )}
 
-                            {activeTab === 'bookmarked' && (
+                            {activeTab === 'visited' && (
                                 <div className="tab-content">
-                                    {bookmarked.length === 0 ? (
-                                        <p className="empty">No bookmarked pins yet</p>
+                                    {visited.length === 0 ? (
+                                        <p className="empty">No visited places yet</p>
                                     ) : (
-                                        <BookmarksList 
-                                            bookmarks={bookmarked} 
-                                            folders={folders}
-                                            onPinClick={handlePinClick}
-                                        />
+                                        <PinsList pins={visited} onPinClick={handlePinClick} />
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'wishlist' && (
+                                <div className="tab-content">
+                                    {wishlist.length === 0 ? (
+                                        <p className="empty">No wishlist items yet</p>
+                                    ) : (
+                                        <PinsList pins={wishlist} onPinClick={handlePinClick} />
                                     )}
                                 </div>
                             )}
@@ -162,6 +237,20 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                                         <p className="empty">No liked pins yet</p>
                                     ) : (
                                         <PinsList pins={liked} onPinClick={handlePinClick} />
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'bookmarked' && (
+                                <div className="tab-content">
+                                    {bookmarked.length === 0 ? (
+                                        <p className="empty">No bookmarked pins yet</p>
+                                    ) : (
+                                        <BookmarksList 
+                                            bookmarks={bookmarked} 
+                                            folders={folders}
+                                            onPinClick={handlePinClick}
+                                        />
                                     )}
                                 </div>
                             )}

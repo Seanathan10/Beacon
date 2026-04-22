@@ -3,6 +3,7 @@ import "./Home.css";
 import AuthModal from "@/components/AuthModal";
 import SearchBar from "@/components/SearchBar";
 import Sidebar from "@/components/Sidebar";
+import SavedPlacesPanel from "@/components/SavedPlacesPanel";
 import { NearbyPostsDrawer } from "@/components/NearbyPostsDrawer";
 import Map, {
     GeolocateControl,
@@ -951,6 +952,8 @@ function HomePage() {
                     }}
                 />
             )}
+
+            {isLoggedIn && <SavedPlacesPanel mapRef={mapRef} />}
 
             {showShortcutsHelp && (
                 <ShortcutsHelpModal onClose={() => setShowShortcutsHelp(false)} />
