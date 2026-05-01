@@ -10,6 +10,7 @@
 
 import request from 'supertest';
 import { createTestApp, createTestUser, createTestPin, createTestPost } from './helpers/testApp';
+import { query } from '../database/db';
 
 let app: any;
 
@@ -196,11 +197,13 @@ describe('Integration Tests', () => {
       expect(response.body.message).toBe('Pin not found');
     });
 
-    it('should handle concurrent like attempts gracefully', async () => {
+    it('should reject a duplicate like from the same user', async () => {
       const user = await createTestUser('concurrent@example.com', 'pass', 'Concurrent');
       const pinId = createTestPin(user.userId, { title: 'Race Condition Pin' });
 
-      // Attempt concurrent likes from same user
+      // Fire two like requests simultaneously via Promise.all. Node.js + synchronous
+      // SQLite will serialize them at the DB layer, but the PRIMARY KEY constraint
+      // still ensures exactly one succeeds regardless of arrival order.
       const likePromises = [
         request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${user.token}`),
         request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${user.token}`),
@@ -401,6 +404,36 @@ describe('Integration Tests', () => {
   });
 
   describe('Cascade Deletes', () => {
+    it('should remove pins, comments, and likes when the owning account is deleted', async () => {
+      const owner = await createTestUser('acct-cascade@test.com', 'pass', 'AccountCascade');
+      const liker = await createTestUser('acct-liker@test.com', 'pass', 'Liker');
+
+      const pinId = createTestPin(owner.userId, { title: 'Owned Pin' });
+
+      await request(app)
+        .post(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ comment: 'My comment' });
+
+      await request(app)
+        .post(`/api/likes/${pinId}`)
+        .set('Authorization', `Bearer ${liker.token}`);
+
+      // Delete the account directly (no public API endpoint for account deletion).
+      query('DELETE FROM account WHERE id = ?', [owner.userId]);
+
+      // Pin should cascade-delete with the account.
+      const pinRows = query('SELECT id FROM pin WHERE id = ?', [pinId]);
+      expect(pinRows.length).toBe(0);
+
+      // Comments and likes should cascade-delete with the pin.
+      const commentRows = query('SELECT id FROM comment WHERE pinID = ?', [pinId]);
+      expect(commentRows.length).toBe(0);
+
+      const likeRows = query('SELECT pinID FROM likes WHERE pinID = ?', [pinId]);
+      expect(likeRows.length).toBe(0);
+    });
+
     it('should remove comments and likes when a pin is deleted', async () => {
       const owner = await createTestUser('cascade@test.com', 'pass', 'Cascade');
       const liker = await createTestUser('cascade-liker@test.com', 'pass', 'Liker');

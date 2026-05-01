@@ -1,31 +1,12 @@
-/**
- * Test Application Factory
- * Uses the real Express app but with a test database connection
- */
-
 import { Express } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { db, query } from '../../database/db'; // Use the main db instance
-import { initializeSchema } from '../setup';
+import { db, query } from '../../database/db';
 
 let cachedApp: Express | null = null;
 
 export async function createTestApp(): Promise<Express> {
   if (!cachedApp) {
-    initializeSchema(db);
-    const { app } = await import('../../index');
-    cachedApp = app;
-  }
-  return cachedApp;
-}
-
-
-export async function createMockedTestApp(): Promise<Express> {
-  // This is used by trip.test.ts which mocks external services
-  // The mocking happens via jest.unstable_mockModule before importing
-  if (!cachedApp) {
-    initializeSchema(db);
     const { app } = await import('../../index');
     cachedApp = app;
   }
@@ -37,8 +18,8 @@ export async function createTestUser(
   password = 'testpassword123',
   name = 'Test User'
 ): Promise<{ token: string; userId: number; email: string }> {
-
-	const hashedPassword = await bcrypt.hash(password, 10);
+  // bcrypt cost 10 (vs production 12) intentionally speeds up test runs.
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   query('INSERT INTO account (email, password, name) VALUES (?, ?, ?)', [
     email,

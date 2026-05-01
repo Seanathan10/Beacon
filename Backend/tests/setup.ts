@@ -2,9 +2,17 @@ import { jest } from '@jest/globals';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load the production schema once so tests always run against the exact same
+// table definitions, FK cascade rules, and indexes as production.
+const CREATE_SQL = readFileSync(
+  path.join(__dirname, '../database/create.sql'),
+  'utf8'
+);
 
 // Set test environment
 process.env.NODE_ENV = 'test';
@@ -30,168 +38,24 @@ export function getTestDb(): DatabaseSync {
   return db;
 }
 
-export function initializeSchema(db: DatabaseSync) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS account (
-      id INTEGER PRIMARY KEY,
-      name VARCHAR(100),
-      email VARCHAR(254) UNIQUE NOT NULL,
-      password VARCHAR(60)
-    );
-
-    CREATE TABLE IF NOT EXISTS pin (
-      id INTEGER PRIMARY KEY,
-      creatorID INTEGER,
-      latitude REAL,
-      longitude REAL,
-      title VARCHAR(200),
-      address VARCHAR(200),
-      description VARCHAR(500),
-      tags VARCHAR(200),
-      image VARCHAR(2000),
-      likes INTEGER DEFAULT 0,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (creatorID) REFERENCES account(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS pin_status (
-      pinID INTEGER NOT NULL,
-      accountID INTEGER NOT NULL,
-      status TEXT NOT NULL CHECK(status IN ('visited','wishlist')),
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (pinID, accountID),
-      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS search_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      accountID INTEGER NOT NULL,
-      query VARCHAR(200) NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS comment (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      pinID INTEGER,
-      accountID INTEGER,
-      comment VARCHAR(280),
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS comment_reaction (
-      commentID INTEGER NOT NULL,
-      accountID INTEGER NOT NULL,
-      emoji VARCHAR(8) NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (commentID, accountID, emoji),
-      FOREIGN KEY (commentID) REFERENCES comment(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS likes (
-      pinID INTEGER,
-      accountID INTEGER,
-      PRIMARY KEY (pinID, accountID),
-      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS post (
-      id INTEGER PRIMARY KEY,
-      creatorID INTEGER,
-      title VARCHAR(100) NOT NULL,
-      location VARCHAR(200) NOT NULL,
-      category VARCHAR(20) DEFAULT 'New',
-      tags VARCHAR(500),
-      message TEXT NOT NULL,
-      image VARCHAR(2000),
-      upvotes INTEGER DEFAULT 0,
-      latitude REAL,
-      longitude REAL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (creatorID) REFERENCES account(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS post_upvote (
-      postID INTEGER,
-      accountID INTEGER,
-      PRIMARY KEY (postID, accountID),
-      FOREIGN KEY (postID) REFERENCES post(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS itinerary (
-      id TEXT PRIMARY KEY,
-      creatorID INTEGER,
-      data TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS bookmark_folder (
-      id TEXT PRIMARY KEY,
-      accountID INTEGER NOT NULL,
-      name VARCHAR(80) NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      isPublic INTEGER DEFAULT 0,
-      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS bookmark (
-      pinID INTEGER NOT NULL,
-      accountID INTEGER NOT NULL,
-      folderID TEXT,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (pinID, accountID),
-      FOREIGN KEY (pinID) REFERENCES pin(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE,
-      FOREIGN KEY (folderID) REFERENCES bookmark_folder(id) ON DELETE SET NULL
-    );
-  `);
+// Drops and recreates all tables from the production schema. Running this
+// before each test gives a fully clean slate: no leftover rows, correct FK
+// cascade rules, and reset autoincrement sequences.
+export function initializeSchema(database: DatabaseSync) {
+  database.exec(CREATE_SQL);
 }
 
-export function resetTestDb() {
-  try {
-    db.exec(`
-      DELETE FROM search_history;
-      DELETE FROM pin_status;
-      DELETE FROM post_upvote;
-      DELETE FROM bookmark;
-      DELETE FROM bookmark_folder;
-      DELETE FROM comment_reaction;
-      DELETE FROM likes;
-      DELETE FROM comment;
-      DELETE FROM pin;
-      DELETE FROM post;
-      DELETE FROM itinerary;
-      DELETE FROM account;
-    `);
-  } catch (error) {
-    // Ignore errors if tables don't exist
-  }
-}
-
-export function closeTestDb() {
-  // DatabaseSync is managed by the module, no need to close explicitly for now
-}
-
-// Clean up after all tests
 afterAll(() => {
-  closeTestDb();
+  // DatabaseSync is managed by the module; no explicit close needed.
 });
 
 beforeAll(async () => {
-  // Delay importing the DB module until after the console mocks
-  // are installed, so its module-level console output can be silenced.
+  // Delay importing the DB module until after console mocks are installed,
+  // so its module-level console output can be silenced.
   ({ db } = await import('../database/db'));
 });
 
-// Reset database before each test
+// Drop and recreate all tables before each test for a fully clean slate.
 beforeEach(() => {
   initializeSchema(db);
-  resetTestDb();
 });

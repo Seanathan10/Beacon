@@ -6,9 +6,8 @@
  */
 
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
-import { createTestPin, createTestUser, createMockedTestApp } from './helpers/testApp';
+import { createTestPin, createTestUser, createTestApp } from './helpers/testApp';
 
 // --- Mock external dependencies BEFORE importing the app (ESM) ---
 
@@ -128,13 +127,6 @@ jestAny.unstable_mockModule('../services/ai', () => ({
 
 let app: any;
 
-function makeToken(id = 1) {
-  return jwt.sign({ id }, process.env.SECRET as string, {
-    expiresIn: '1h',
-    algorithm: 'HS256',
-  });
-}
-
 function makeGeocodeResponse(lat: number, lng: number) {
   return {
     ok: true,
@@ -151,6 +143,8 @@ function makeGeocodeResponse(lat: number, lng: number) {
 }
 
 describe('Trip', () => {
+  let authToken: string;
+
   beforeAll(async () => {
     // Ensure geocoding works even in test.
     process.env.GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'test-key';
@@ -169,7 +163,14 @@ describe('Trip', () => {
       return makeGeocodeResponse(0, 0);
     });
 
-    app = await createMockedTestApp();
+    app = await createTestApp();
+  });
+
+  // Create a fresh authenticated user before each test so the JWT always
+  // references a real account that exists in the current test's DB state.
+  beforeEach(async () => {
+    const user = await createTestUser('tripuser@example.com', 'password123', 'Trip User');
+    authToken = user.token;
   });
 
   describe('POST /api/trip/plan', () => {
@@ -183,10 +184,9 @@ describe('Trip', () => {
     });
 
     it('should reject invalid request bodies via OpenAPI validation', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/plan')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ startLocation: 'San Francisco', endLocation: 'Los Angeles', durationDays: '3' });
 
       expect(response.status).toBe(400);
@@ -194,11 +194,9 @@ describe('Trip', () => {
     });
 
     it('should plan a trip successfully (mocked dependencies)', async () => {
-      const token = makeToken();
-
       const response = await request(app)
         .post('/api/trip/plan')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           startLocation: 'San Francisco',
           endLocation: 'Los Angeles',
@@ -218,7 +216,6 @@ describe('Trip', () => {
     });
 
     it('should return 400 when geocoding fails for origin', async () => {
-      const token = makeToken();
       const originalFetch = (globalThis as any).fetch;
 
       (globalThis as any).fetch = jest.fn(async (url: string) => {
@@ -231,7 +228,7 @@ describe('Trip', () => {
 
       const response = await request(app)
         .post('/api/trip/plan')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           startLocation: 'Unknown City',
           endLocation: 'Los Angeles',
@@ -257,10 +254,9 @@ describe('Trip', () => {
     });
 
     it('should stream SSE updates and end with a ready stage', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/plan/stream')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ startLocation: 'San Francisco', endLocation: 'Los Angeles', itineraryType: 'nature' });
 
       expect(response.status).toBe(200);
@@ -274,10 +270,9 @@ describe('Trip', () => {
       // The SSE endpoint now runs after the OpenAPI validator, so missing required
       // fields (itineraryType is required) are rejected at the middleware level with
       // a 400 rather than reaching the handler and emitting an SSE error stage.
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/plan/stream')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ startLocation: 'San Francisco', endLocation: 'Los Angeles' });
 
       expect(response.status).toBe(400);
@@ -285,7 +280,6 @@ describe('Trip', () => {
     });
 
     it('should emit an error stage when geocoding fails', async () => {
-      const token = makeToken();
       const originalFetch = (globalThis as any).fetch;
 
       (globalThis as any).fetch = jest.fn(async (url: string) => {
@@ -298,7 +292,7 @@ describe('Trip', () => {
 
       const response = await request(app)
         .post('/api/trip/plan/stream')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ startLocation: 'Unknown City', endLocation: 'Los Angeles', itineraryType: 'nature' });
 
       expect(response.status).toBe(200);
@@ -316,10 +310,9 @@ describe('Trip', () => {
     });
 
     it('should require a question', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/ask')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
       // OpenAPI validation should catch this
@@ -327,10 +320,9 @@ describe('Trip', () => {
     });
 
     it('should answer the question (mocked AI)', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/ask')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           question: 'What should I pack?',
           origin: 'San Francisco',
@@ -354,20 +346,18 @@ describe('Trip', () => {
     });
 
     it('should reject missing required fields via OpenAPI validation', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/generate-itinerary')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ destination: 'Los Angeles', itineraryType: 'nature' });
 
       expect(response.status).toBe(400);
     });
 
     it('should generate itinerary with selections', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/generate-itinerary')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           destination: 'Los Angeles',
           itineraryType: 'nature',
@@ -402,20 +392,18 @@ describe('Trip', () => {
     });
 
     it('should reject invalid bodies via OpenAPI validation', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
       expect(response.status).toBe(400);
     });
 
     it('should return a transit route when available', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ originLat: 37.6213, originLng: -122.379, destLat: 37.7749, destLng: -122.4194 });
 
       expect(response.status).toBe(200);
@@ -425,10 +413,9 @@ describe('Trip', () => {
     });
 
     it('should accept address-based inputs', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ originAddress: 'SFO Airport', destAddress: 'Downtown San Francisco' });
 
       expect(response.status).toBe(200);
@@ -444,10 +431,9 @@ describe('Trip', () => {
         polyline: undefined,
       });
 
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ originLat: 37.6213, originLng: -122.379, destLat: 37.7749, destLng: -122.4194 });
 
       expect(response.status).toBe(404);
@@ -462,10 +448,9 @@ describe('Trip', () => {
         polyline: 'drive_poly',
       });
 
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ originLat: 37.6213, originLng: -122.379, destLat: 37.7749, destLng: -122.4194 });
 
       expect(response.status).toBe(200);
@@ -474,10 +459,9 @@ describe('Trip', () => {
     });
 
     it('should accept 0-valued coordinate inputs', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/local-route')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ originLat: 0, originLng: 0, destLat: 0, destLng: 0 });
 
       // With our mocks, transit is available, so this should succeed.
@@ -492,20 +476,18 @@ describe('Trip', () => {
     });
 
     it('should reject invalid bodies via OpenAPI validation', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/nearby-pins')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ lat: 1 });
 
       expect(response.status).toBe(400);
     });
 
     it('should return pins array', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/nearby-pins')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ lat: 37.7749, lng: -122.4194, radiusKm: 50 });
 
       expect(response.status).toBe(200);
@@ -514,10 +496,9 @@ describe('Trip', () => {
     });
 
     it('should accept 0-valued coordinates', async () => {
-      const token = makeToken();
       const response = await request(app)
         .post('/api/trip/nearby-pins')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ lat: 0, lng: 0, radiusKm: 50 });
 
       expect(response.status).toBe(200);

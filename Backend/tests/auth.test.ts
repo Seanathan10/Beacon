@@ -9,6 +9,7 @@
  */
 
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import { createTestApp, createTestUser } from './helpers/testApp';
 import { getTestDb } from './setup';
 
@@ -192,6 +193,22 @@ describe('Authentication', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
+    });
+
+    it('should reject expired tokens', async () => {
+      // Sign with a past exp claim to guarantee the token is already expired.
+      const expiredToken = jwt.sign(
+        { id: 999, exp: Math.floor(Date.now() / 1000) - 3600 },
+        process.env.SECRET as string,
+        { algorithm: 'HS256' }
+      );
+
+      const response = await request(app)
+        .get('/api/pins')
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid token');
     });
   });
 

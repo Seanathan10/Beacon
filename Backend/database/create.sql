@@ -1,7 +1,9 @@
+DROP TABLE IF EXISTS comment_reaction;
 DROP TABLE IF EXISTS bookmark;
 DROP TABLE IF EXISTS bookmark_folder;
 DROP TABLE IF EXISTS search_history;
 DROP TABLE IF EXISTS pin_status;
+DROP TABLE IF EXISTS itinerary;
 DROP TABLE IF EXISTS post_upvote;
 DROP TABLE IF EXISTS likes;
 DROP TABLE IF EXISTS comment;
