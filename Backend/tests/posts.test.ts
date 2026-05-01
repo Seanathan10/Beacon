@@ -293,6 +293,14 @@ describe('Posts', () => {
       // Allowing any authenticated user to edit ownerless posts was an IDOR vulnerability.
       expect(response.status).toBe(403);
     });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .put(`/api/posts/${postId}`)
+        .send({ title: 'No auth' });
+
+      expect(response.status).toBe(401);
+    });
   });
 
   describe('DELETE /api/posts/:id', () => {
@@ -344,6 +352,13 @@ describe('Posts', () => {
 
       // Null creatorID means the post has no owner — no one should be able to delete it.
       expect(response.status).toBe(403);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${postId}`);
+
+      expect(response.status).toBe(401);
     });
   });
 

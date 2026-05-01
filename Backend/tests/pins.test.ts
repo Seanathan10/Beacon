@@ -277,6 +277,14 @@ describe('Pins', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .put(`/api/pins/${pinId}`)
+        .send({ title: 'No auth' });
+
+      expect(response.status).toBe(401);
+    });
   });
 
   describe('DELETE /api/pins/:id', () => {
@@ -332,6 +340,13 @@ describe('Pins', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(response.status).toBe(404);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .delete(`/api/pins/${pinId}`);
+
+      expect(response.status).toBe(401);
     });
   });
 
