@@ -5,30 +5,31 @@ let app: any;
 let token: string;
 let userId: number;
 let pinId: number;
-let folderId: string;
 
 beforeAll(async () => {
 	app = await createTestApp();
-	const user = await createTestUser('bookmarktest@example.com', 'password123', 'Bookmark Test');
-	token = user.token;
-	userId = user.userId;
-
-	// Create a test pin
-	const pinRes = await request(app)
-		.post('/api/pins')
-		.set('Authorization', `Bearer ${token}`)
-		.send({
-			title: 'Test Pin',
-			latitude: 37.7749,
-			longitude: -122.4194,
-			address: 'San Francisco, CA',
-			description: 'A test pin',
-			tags: ['test'],
-		});
-	pinId = pinRes.body.id;
 });
 
 describe('Bookmarks Endpoint', () => {
+	beforeEach(async () => {
+		const user = await createTestUser('bookmarktest@example.com', 'password123', 'Bookmark Test');
+		token = user.token;
+		userId = user.userId;
+
+		const pinRes = await request(app)
+			.post('/api/pins')
+			.set('Authorization', `Bearer ${token}`)
+			.send({
+				title: 'Test Pin',
+				latitude: 37.7749,
+				longitude: -122.4194,
+				address: 'San Francisco, CA',
+				description: 'A test pin',
+				tags: ['test'],
+			});
+		pinId = pinRes.body.id;
+	});
+
 	describe('POST /api/bookmarks', () => {
 		it('should create a bookmark', async () => {
 			const res = await request(app)
@@ -58,6 +59,11 @@ describe('Bookmarks Endpoint', () => {
 		});
 
 		it('should reject duplicate bookmark', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
 			const res = await request(app)
 				.post('/api/bookmarks')
 				.set('Authorization', `Bearer ${token}`)
@@ -78,6 +84,11 @@ describe('Bookmarks Endpoint', () => {
 
 	describe('GET /api/bookmarks', () => {
 		it('should return bookmarks for authenticated user', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
 			const res = await request(app)
 				.get('/api/bookmarks')
 				.set('Authorization', `Bearer ${token}`);
@@ -99,6 +110,11 @@ describe('Bookmarks Endpoint', () => {
 
 	describe('DELETE /api/bookmarks/{pinID}', () => {
 		it('should remove a bookmark', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
 			const res = await request(app)
 				.delete(`/api/bookmarks/${pinId}`)
 				.set('Authorization', `Bearer ${token}`);
@@ -123,7 +139,6 @@ describe('Bookmarks Endpoint', () => {
 
 	describe('PATCH /api/bookmarks/{pinID}', () => {
 		it('should update bookmark with valid folderID', async () => {
-			// First create a new bookmark and folder
 			await request(app)
 				.post('/api/bookmarks')
 				.set('Authorization', `Bearer ${token}`)
@@ -133,7 +148,7 @@ describe('Bookmarks Endpoint', () => {
 				.post('/api/bookmarks/folders')
 				.set('Authorization', `Bearer ${token}`)
 				.send({ name: 'Test Folder' });
-			folderId = folderRes.body.id;
+			const folderId = folderRes.body.id;
 
 			const res = await request(app)
 				.patch(`/api/bookmarks/${pinId}`)
@@ -145,6 +160,22 @@ describe('Bookmarks Endpoint', () => {
 		});
 
 		it('should move bookmark to uncategorized', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
+			const folderRes = await request(app)
+				.post('/api/bookmarks/folders')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ name: 'Temp Folder' });
+			const folderId = folderRes.body.id;
+
+			await request(app)
+				.patch(`/api/bookmarks/${pinId}`)
+				.set('Authorization', `Bearer ${token}`)
+				.send({ folderID: folderId });
+
 			const res = await request(app)
 				.patch(`/api/bookmarks/${pinId}`)
 				.set('Authorization', `Bearer ${token}`)
@@ -162,6 +193,11 @@ describe('Bookmarks Endpoint', () => {
 		});
 
 		it('should fail with invalid folderID', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
 			const res = await request(app)
 				.patch(`/api/bookmarks/${pinId}`)
 				.set('Authorization', `Bearer ${token}`)
@@ -247,7 +283,7 @@ describe('Bookmarks Endpoint', () => {
 	describe('PATCH /api/bookmarks/folders/{id}', () => {
 		let testFolderId: string;
 
-		beforeAll(async () => {
+		beforeEach(async () => {
 			const res = await request(app)
 				.post('/api/bookmarks/folders')
 				.set('Authorization', `Bearer ${token}`)
@@ -304,18 +340,13 @@ describe('Bookmarks Endpoint', () => {
 	});
 
 	describe('DELETE /api/bookmarks/folders/{id}', () => {
-		let testFolderId: string;
-
-		beforeAll(async () => {
-			const res = await request(app)
+		it('should delete folder and cascade bookmarks to uncategorized', async () => {
+			const folderRes = await request(app)
 				.post('/api/bookmarks/folders')
 				.set('Authorization', `Bearer ${token}`)
 				.send({ name: 'To Delete' });
-			testFolderId = res.body.id;
-		});
+			const testFolderId = folderRes.body.id;
 
-		it('should delete folder and cascade bookmarks to uncategorized', async () => {
-			// Add a bookmark to the folder
 			await request(app)
 				.post('/api/bookmarks')
 				.set('Authorization', `Bearer ${token}`)
@@ -327,7 +358,6 @@ describe('Bookmarks Endpoint', () => {
 
 			expect(res.status).toBe(204);
 
-			// Verify bookmark still exists but without folder
 			const bookmarksRes = await request(app)
 				.get('/api/bookmarks')
 				.set('Authorization', `Bearer ${token}`);
@@ -338,6 +368,12 @@ describe('Bookmarks Endpoint', () => {
 		});
 
 		it('should fail without auth', async () => {
+			const folderRes = await request(app)
+				.post('/api/bookmarks/folders')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ name: 'Protected Folder' });
+			const testFolderId = folderRes.body.id;
+
 			const res = await request(app).delete(
 				`/api/bookmarks/folders/${testFolderId}`
 			);
@@ -346,13 +382,12 @@ describe('Bookmarks Endpoint', () => {
 		});
 
 		it('should fail if not owner', async () => {
-			const otherUser = await createTestUser(app);
-			const newFolderId = (
-				await request(app)
-					.post('/api/bookmarks/folders')
-					.set('Authorization', `Bearer ${token}`)
-					.send({ name: 'Another Folder' })
-			).body.id;
+			const otherUser = await createTestUser('otherdelete@example.com', 'pass', 'Other Delete');
+			const newFolderRes = await request(app)
+				.post('/api/bookmarks/folders')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ name: 'Another Folder' });
+			const newFolderId = newFolderRes.body.id;
 
 			const res = await request(app)
 				.delete(`/api/bookmarks/folders/${newFolderId}`)

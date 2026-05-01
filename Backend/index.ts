@@ -100,7 +100,7 @@ app.use(
             if (allowedOrigins.has(origin)) return cb(null, true);
             return cb(null, false);
         },
-        credentials: true,
+        credentials: false,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
     }),
@@ -154,10 +154,10 @@ app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
 app.post("/api/comments/:id/reactions", auth.check, comments.addCommentReaction);
 app.delete("/api/comments/:id/reactions/:emoji", auth.check, comments.removeCommentReaction);
 
+app.get("/api/likes/user", auth.check, likes.getLikedPins);
 app.get("/api/likes/:id", auth.check, likes.getLikes);
 app.post("/api/likes/:id", auth.check, likes.addLike);
 app.delete("/api/likes/:id", auth.check, likes.removeLike);
-app.get("/api/likes/user", auth.check, likes.getLikedPins);
 
 app.get("/api/pin-status", auth.check, pinStatus.getUserPinStatuses);
 app.put("/api/pins/:id/status", auth.check, pinStatus.setPinStatus);

@@ -211,7 +211,7 @@ export function updatePin(req: Request, res: Response) {
         return res.status(404).json({ message: "Pin not found" });
     }
     if (Number(pinResult[0].creatorID) !== Number(userID)) {
-        return res.status(403).json({ message: "Forbidden" });
+        return res.status(404).json({ message: "Pin not found" });
     }
 
     const updates: string[] = [];
@@ -287,7 +287,7 @@ export function deletePin(req: Request, res: Response) {
         return res.status(404).send();
     }
     if (Number(pinResult[0].creatorID) !== Number(userID)) {
-        return res.status(403).json({ message: "Forbidden" });
+        return res.status(404).send();
     }
 
     const result = db.query("DELETE FROM pin WHERE id = ?", [pinID]);

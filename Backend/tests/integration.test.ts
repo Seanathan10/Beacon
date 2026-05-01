@@ -260,14 +260,14 @@ describe('Integration Tests', () => {
         .set('Authorization', `Bearer ${user2.token}`)
         .send({ title: 'Hacked!' });
 
-      expect(updateResponse.status).toBe(403);
+      expect(updateResponse.status).toBe(404);
 
       // User2 tries to delete
       const deleteResponse = await request(app)
         .delete(`/api/pins/${pinId}`)
         .set('Authorization', `Bearer ${user2.token}`);
 
-      expect(deleteResponse.status).toBe(403);
+      expect(deleteResponse.status).toBe(404);
 
       // Pin should still exist with original title
       const getResponse = await request(app)
@@ -425,13 +425,12 @@ describe('Integration Tests', () => {
 
       expect(deleteResponse.status).toBe(200);
 
-      // Comments should be gone (cascaded with the pin)
+      // Comments are gone — pin row is deleted, so the endpoint returns 404
       const commentsResponse = await request(app)
         .get(`/api/pins/${pinId}/comments`)
         .set('Authorization', `Bearer ${owner.token}`);
 
-      expect(commentsResponse.status).toBe(200);
-      expect(commentsResponse.body).toEqual([]);
+      expect(commentsResponse.status).toBe(404);
 
       // Likes should be gone — getLikes joins on the pin table, so a deleted
       // pin yields 404 (pin row is gone, likes rows cascaded away).

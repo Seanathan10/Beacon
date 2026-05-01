@@ -339,7 +339,7 @@ describe('Likes', () => {
     let pin1: number;
     let pin2: number;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
       const user1 = await createTestUser('liker1@example.com', 'pass', 'Liker1');
       const user2 = await createTestUser('creator@example.com', 'pass', 'Creator');
 
@@ -432,7 +432,7 @@ describe('Likes', () => {
 
     it('should only return pins liked by authenticated user', async () => {
       // Different user
-      const otherUser = await createTestUser('other@example.com', 'pass', 'Other');
+      const otherUser = await createTestUser('other-likes@example.com', 'pass', 'Other');
 
       // Other user likes pin1
       await request(app)

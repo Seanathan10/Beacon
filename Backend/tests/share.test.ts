@@ -399,7 +399,7 @@ describe('Shared Itineraries', () => {
     let testPin: any;
     let testFolderId: string;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
       const user = await createTestUser('collectiontest@example.com', 'pass', 'CollectionTest');
 
       // Create a pin

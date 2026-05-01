@@ -14,11 +14,11 @@ const COOKIE_OPTIONS = {
 const BCRYPT_ROUNDS = 12;
 
 interface SessionUser {
-    id: string;
+    id: number;
 }
 
 export interface User {
-    id: string;
+    id: number;
     username: string;
 }
 
