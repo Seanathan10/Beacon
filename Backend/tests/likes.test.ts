@@ -284,10 +284,8 @@ describe('Likes', () => {
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(response.status).toBe(200);
-      // With COALESCE or IFNULL, null likes should be treated as 0
-      // So null + 1 like should equal 1 (or remain null if not fixed)
-      // This documents current behavior - should be fixed in schema
-      expect(response.body).toHaveProperty('likes');
+      // getLikes counts from the likes junction table, so a NULL pin.likes column is irrelevant
+      expect(response.body.likes).toBe(1);
       expect(response.body.wasLiked).toBe(true);
     });
   });

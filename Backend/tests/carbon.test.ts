@@ -169,7 +169,7 @@ describe('calculateOffsetCost', () => {
     expect(calculateOffsetCost(0)).toBe(0);
   });
 
-  it('should return ~$0.015 for 1 kg CO2 ($15/ton)', () => {
+  it('should return $0.02 for 1 kg CO2 ($15/ton rounds up from $0.015)', () => {
     expect(calculateOffsetCost(1)).toBeCloseTo(0.02, 2);
   });
 

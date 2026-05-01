@@ -108,6 +108,48 @@ describe('Bookmarks Endpoint', () => {
 		});
 	});
 
+	describe('Cross-user bookmark isolation', () => {
+		it('should not allow user B to delete user A bookmark', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
+			const userB = await createTestUser('userb@example.com', 'pass', 'User B');
+
+			const res = await request(app)
+				.delete(`/api/bookmarks/${pinId}`)
+				.set('Authorization', `Bearer ${userB.token}`);
+
+			expect(res.status).toBe(404);
+
+			const check = await request(app)
+				.get('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`);
+			expect(check.body.some((b: any) => b.pinID === pinId)).toBe(true);
+		});
+	});
+
+	describe('Bookmark cascade on pin deletion', () => {
+		it('should remove bookmark when the bookmarked pin is deleted', async () => {
+			await request(app)
+				.post('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`)
+				.send({ pinID: pinId });
+
+			await request(app)
+				.delete(`/api/pins/${pinId}`)
+				.set('Authorization', `Bearer ${token}`);
+
+			const res = await request(app)
+				.get('/api/bookmarks')
+				.set('Authorization', `Bearer ${token}`);
+
+			expect(res.status).toBe(200);
+			expect(res.body.some((b: any) => b.pinID === pinId)).toBe(false);
+		});
+	});
+
 	describe('DELETE /api/bookmarks/{pinID}', () => {
 		it('should remove a bookmark', async () => {
 			await request(app)

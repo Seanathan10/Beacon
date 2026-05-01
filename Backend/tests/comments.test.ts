@@ -348,4 +348,158 @@ describe('Comments', () => {
       expect(userComments.length).toBe(2);
     });
   });
+
+  describe('POST /api/comments/:id/reactions', () => {
+    let commentId: number;
+
+    beforeEach(async () => {
+      const res = await request(app)
+        .post(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ comment: 'React to me' });
+      commentId = res.body.id;
+    });
+
+    it('should add a reaction to a comment', async () => {
+      const response = await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '👍' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toBe('Reaction added');
+    });
+
+    it('should be idempotent when adding the same reaction twice', async () => {
+      await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '❤️' });
+
+      const response = await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '❤️' });
+
+      expect(response.status).toBe(201);
+
+      const commentsRes = await request(app)
+        .get(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`);
+      const comment = commentsRes.body.find((c: any) => c.id === commentId);
+      const heartReaction = comment.reactions.find((r: any) => r.emoji === '❤️');
+      expect(heartReaction.count).toBe(1);
+    });
+
+    it('should reflect reactions in GET /api/pins/:pinId/comments', async () => {
+      await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '🔥' });
+
+      const response = await request(app)
+        .get(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      const comment = response.body.find((c: any) => c.id === commentId);
+      expect(comment.reactions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ emoji: '🔥', count: 1, userReacted: true }),
+        ])
+      );
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .send({ emoji: '👍' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 400 when emoji is missing', async () => {
+      const response = await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({});
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 404 for non-existent comment', async () => {
+      const response = await request(app)
+        .post('/api/comments/99999/reactions')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '👍' });
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('DELETE /api/comments/:id/reactions/:emoji', () => {
+    let commentId: number;
+
+    beforeEach(async () => {
+      const res = await request(app)
+        .post(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ comment: 'React to me' });
+      commentId = res.body.id;
+
+      await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ emoji: '👍' });
+    });
+
+    it('should remove a reaction', async () => {
+      const response = await request(app)
+        .delete(`/api/comments/${commentId}/reactions/👍`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Reaction removed');
+    });
+
+    it('should return 404 when reaction does not exist', async () => {
+      const response = await request(app)
+        .delete(`/api/comments/${commentId}/reactions/😂`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should only remove the reaction for the authenticated user', async () => {
+      await request(app)
+        .post(`/api/comments/${commentId}/reactions`)
+        .set('Authorization', `Bearer ${otherUserToken}`)
+        .send({ emoji: '👍' });
+
+      await request(app)
+        .delete(`/api/comments/${commentId}/reactions/👍`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      const commentsRes = await request(app)
+        .get(`/api/pins/${pinId}/comments`)
+        .set('Authorization', `Bearer ${userToken}`);
+      const comment = commentsRes.body.find((c: any) => c.id === commentId);
+      const thumbsUp = comment.reactions.find((r: any) => r.emoji === '👍');
+      expect(thumbsUp.count).toBe(1);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .delete(`/api/comments/${commentId}/reactions/👍`);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 404 for non-existent comment', async () => {
+      const response = await request(app)
+        .delete('/api/comments/99999/reactions/👍')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response.status).toBe(404);
+    });
+  });
 });

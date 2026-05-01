@@ -83,12 +83,13 @@ export function initializeSchema(db: DatabaseSync) {
     );
 
     CREATE TABLE IF NOT EXISTS comment_reaction (
-      commentID INTEGER,
-      accountID INTEGER,
-      emoji VARCHAR(2),
+      commentID INTEGER NOT NULL,
+      accountID INTEGER NOT NULL,
+      emoji VARCHAR(8) NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (commentID, accountID, emoji),
       FOREIGN KEY (commentID) REFERENCES comment(id) ON DELETE CASCADE,
-      FOREIGN KEY (accountID) REFERENCES account(id)
+      FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS likes (
