@@ -5,6 +5,8 @@ import { initializeTheme } from "./utils/theme";
 import Landing from "./pages/Landing";
 import SharedItinerary from "./pages/SharedItinerary";
 import PublicCollection from "./pages/PublicCollection";
+import UserProfile from "./pages/UserProfile";
+import { FollowersList, FollowingList } from "./pages/FollowersList";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { PostsPage } from "./pages/PostsPage";
@@ -34,7 +36,19 @@ const router = createBrowserRouter([
     {
         path: '/collection/:folderID',
         element: <PublicCollection />,
-    }
+    },
+    {
+        path: '/profile/:userID',
+        element: <UserProfile />,
+    },
+    {
+        path: '/users/:userID/followers',
+        element: <FollowersList />,
+    },
+    {
+        path: '/users/:userID/following',
+        element: <FollowingList />,
+    },
 ]);
 
 const root = document.getElementById("root");

@@ -318,6 +318,32 @@ function distBetweenCoordinates(lat1: number, lon1: number, lat2: number, lon2: 
     return theta * 6371.2;
 }
 
+export function getSimilarPins(req: Request, res: Response) {
+    const pinID = req.params.id;
+
+    const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
+    if (!pin) return res.status(404).json({ message: "Pin not found" });
+
+    // Find pins that users who liked this pin also liked
+    const results = db.query(`
+        SELECT
+            p.id, p.creatorID, a.email, p.latitude, p.longitude,
+            p.title, p.address, p.description, p.image, p.tags, p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            COUNT(*) AS sharedLikers
+        FROM likes l1
+        JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
+        JOIN pin p ON p.id = l2.pinID
+        JOIN account a ON a.id = p.creatorID
+        WHERE l1.pinID = ?
+        GROUP BY p.id
+        ORDER BY sharedLikers DESC, likes DESC
+        LIMIT 10
+    `, [pinID, pinID]);
+
+    res.json(results);
+}
+
 export function getPinsNearCoordinate(req: Request, res: Response) {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);

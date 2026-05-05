@@ -22,7 +22,7 @@
 - **Frontend:** React 19, TypeScript, Vite, Mapbox GL, Tailwind CSS, React Router 7
 - **Backend:** Express 5, TypeScript, Node.js
 - **Database:** SQLite3 (serverless, file-based)
-- **APIs Used:** Mapbox (location, mapping), Google Gemini 3 Flash (AI trip planning), LocationIQ (geocoding)
+- **APIs Used:** Mapbox (location, mapping), Google Gemini 2.0 Flash (AI trip planning), LocationIQ (geocoding)
 - **Package Manager:** pnpm 9 (monorepo workspace)
 
 ---
@@ -99,7 +99,7 @@ pnpm start
 - **database_backup/** — Database snapshots
 
 ### Frontend Key Directories
-- **src/pages/** — Route pages (Home, Login, Registration, PostsPage, SharedItinerary, etc.)
+- **src/pages/** — Route pages (Home, Landing, Login, PostsPage, PublicCollection, SharedItinerary, AuthHook, etc.)
 - **src/components/** — Reusable React components (Map integration, modals, UI)
 - **src/utils/** — Helper functions (geocoding, theme)
 - **src/types/** — TypeScript type definitions
@@ -107,12 +107,12 @@ pnpm start
 - **constants.ts** — API URL configuration with environment detection
 
 ### Backend Key Directories
-- **routes/** — API endpoints (auth, pins, posts, comments, likes, trip, share)
-- **services/** — Business logic utilities
+- **routes/** — API endpoints (auth, pins, posts, comments, likes, bookmarks, pinStatus, search, trip, share)
+- **services/** — Business logic utilities (AI, Amadeus, Google Routes, hotels)
 - **database/** — SQLite schema and migrations
-- **tests/** — Jest test suite with setup helpers
+- **tests/** — Jest test suite with setup helpers (14 test files)
 - **types/** — Shared TypeScript definitions
-- **utils/** — Utility functions
+- **utils/** — Utility functions (carbon, geocoding)
 
 ### Development Environment Setup
 The application automatically switches between local and production backends:
@@ -138,10 +138,10 @@ The application automatically switches between local and production backends:
 
 ### Database
 - **SQLite3** — serverless, file-based
-- **Schema:** `Backend/database/schema.sql`
-- **Cascade deletes:** Comments and likes are removed when their parent pin/post is deleted
-- **Indexes:** 9 foreign-key indexes for query performance
-- **Junction tables:** `post_upvote`, `likes` for deduplication
+- **Schema:** `Backend/database/create.sql` (12 tables)
+- **Cascade deletes:** Comments, likes, bookmarks, and reactions cascade when their parent is deleted
+- **Foreign keys:** 18 relationships for referential integrity and cascade behavior
+- **Junction tables:** `post_upvote`, `likes`, `bookmark`, `comment_reaction` for deduplication and relationships
 
 ## Key Conventions
 

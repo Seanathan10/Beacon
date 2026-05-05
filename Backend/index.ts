@@ -17,6 +17,9 @@ import * as trip from "./routes/trip.ts";
 import * as pinStatus from "./routes/pinStatus.ts";
 import * as search from "./routes/search.ts";
 import * as bookmarks from "./routes/bookmarks.ts";
+import * as stats from "./routes/stats.ts";
+import * as users from "./routes/users.ts";
+import * as follows from "./routes/follows.ts";
 import { shareRouter } from "./routes/share.ts";
 
 const REQUIRED_ENV_VARS = ["SECRET"];
@@ -134,6 +137,7 @@ app.get("/api/pins", auth.check, pins.getAllPins);
 app.get("/api/pins/trending", auth.check, pins.getTrendingPins);
 app.get("/api/pins/user", auth.check, pins.getUserPins);
 app.post("/api/pins/nearby", auth.check, pins.getPinsNearCoordinate);
+app.get("/api/pins/:id/similar", auth.check, pins.getSimilarPins);
 app.get("/api/pins/:id", auth.check, pins.getPin);
 app.put("/api/pins/:id", auth.check, pins.updatePin);
 app.post("/api/pins", auth.check, pins.createPin);
@@ -186,6 +190,18 @@ app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
 app.post("/api/bookmarks/folders", auth.check, bookmarks.createFolder);
 app.patch("/api/bookmarks/folders/:id", auth.check, bookmarks.updateFolder);
 app.delete("/api/bookmarks/folders/:id", auth.check, bookmarks.deleteFolder);
+
+app.get("/api/me/stats", auth.check, stats.getUserStats);
+app.get("/api/me/activity", auth.check, stats.getUserActivity);
+app.patch("/api/me", auth.check, users.updateMe);
+
+app.get("/api/users/:userID", auth.check, users.getUser);
+app.get("/api/users/:userID/pins", auth.check, users.getUserPins);
+app.get("/api/users/:userID/followers", auth.check, users.getUserFollowers);
+app.get("/api/users/:userID/following", auth.check, users.getUserFollowing);
+app.post("/api/users/:userID/follow", auth.check, follows.followUser);
+app.delete("/api/users/:userID/follow", auth.check, follows.unfollowUser);
+app.get("/api/me/feed", auth.check, follows.getFollowFeed);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     if (err.type === 'cors') {

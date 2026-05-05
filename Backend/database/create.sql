@@ -9,13 +9,27 @@ DROP TABLE IF EXISTS likes;
 DROP TABLE IF EXISTS comment;
 DROP TABLE IF EXISTS post;
 DROP TABLE IF EXISTS pin;
+DROP TABLE IF EXISTS user_follow;
 DROP TABLE IF EXISTS account;
 
 CREATE TABLE account (
 	id INTEGER PRIMARY KEY,
 	name VARCHAR(100),
 	email VARCHAR(254) UNIQUE NOT NULL,
-	password VARCHAR(60)
+	password VARCHAR(60),
+	bio VARCHAR(300),
+	avatar VARCHAR(2000),
+	profileVisibility TEXT DEFAULT 'public' CHECK(profileVisibility IN ('public','friends','private'))
+);
+
+CREATE TABLE user_follow (
+	followerID INTEGER NOT NULL,
+	followingID INTEGER NOT NULL,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (followerID, followingID),
+	FOREIGN KEY (followerID) REFERENCES account(id) ON DELETE CASCADE,
+	FOREIGN KEY (followingID) REFERENCES account(id) ON DELETE CASCADE,
+	CHECK (followerID != followingID)
 );
 
 CREATE TABLE pin (
@@ -149,3 +163,5 @@ CREATE INDEX idx_bookmark_folder_public ON bookmark_folder(isPublic);
 CREATE INDEX idx_comment_reaction_comment ON comment_reaction(commentID);
 CREATE INDEX idx_comment_reaction_account ON comment_reaction(accountID);
 CREATE INDEX idx_post_coords ON post(latitude, longitude);
+CREATE INDEX idx_user_follow_follower ON user_follow(followerID);
+CREATE INDEX idx_user_follow_following ON user_follow(followingID);

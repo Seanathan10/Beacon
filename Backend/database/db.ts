@@ -67,6 +67,37 @@ function runMigrations() {
                 FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
             );
         `);
+
+        // Add profile columns to account if missing
+        if (tableNames.has('account')) {
+            const accountCols = db.prepare("PRAGMA table_info(account)").all() as { name: string }[];
+            const accountColNames = new Set(accountCols.map(c => c.name));
+            if (!accountColNames.has('bio')) {
+                db.exec(`ALTER TABLE account ADD COLUMN bio VARCHAR(300)`);
+                console.log("Migrated: added account.bio column");
+            }
+            if (!accountColNames.has('avatar')) {
+                db.exec(`ALTER TABLE account ADD COLUMN avatar VARCHAR(2000)`);
+                console.log("Migrated: added account.avatar column");
+            }
+            if (!accountColNames.has('profileVisibility')) {
+                db.exec(`ALTER TABLE account ADD COLUMN profileVisibility TEXT DEFAULT 'public'`);
+                console.log("Migrated: added account.profileVisibility column");
+            }
+        }
+
+        // Create user_follow table if missing
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS user_follow (
+                followerID INTEGER NOT NULL,
+                followingID INTEGER NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (followerID, followingID),
+                FOREIGN KEY (followerID) REFERENCES account(id) ON DELETE CASCADE,
+                FOREIGN KEY (followingID) REFERENCES account(id) ON DELETE CASCADE,
+                CHECK (followerID != followingID)
+            );
+        `);
     } catch (err) {
         console.error("Failed to run migrations:", err);
     }
@@ -97,6 +128,8 @@ function createIndexes() {
             { table: 'pin', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_createdAt ON pin(createdAt)' },
             { table: 'pin_status', sql: 'CREATE INDEX IF NOT EXISTS idx_pin_status_accountID ON pin_status(accountID)' },
             { table: 'search_history', sql: 'CREATE INDEX IF NOT EXISTS idx_search_history_user_time ON search_history(accountID, createdAt DESC)' },
+            { table: 'user_follow', sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_follower ON user_follow(followerID)' },
+            { table: 'user_follow', sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
         ];
 
         // Get list of existing tables

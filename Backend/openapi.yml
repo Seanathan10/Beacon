@@ -1809,6 +1809,372 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/me/stats:
+    get:
+      tags: [Auth]
+      summary: Get current user statistics
+      description: Returns aggregate stats for the authenticated user
+      operationId: getUserStats
+      responses:
+        200:
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pinsCreated: { type: integer }
+                  likesReceived: { type: integer }
+                  placesVisited: { type: integer }
+                  wishlistCount: { type: integer }
+                  bookmarksCount: { type: integer }
+                  commentsCount: { type: integer }
+                  postsCount: { type: integer }
+                  followersCount: { type: integer }
+                  followingCount: { type: integer }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/me/activity:
+    get:
+      tags: [Auth]
+      summary: Get current user activity
+      description: Returns recent activity (pins created, comments, visits) for the last 30 days
+      operationId: getUserActivity
+      responses:
+        200:
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type: { type: string, enum: [pin_created, comment_added, place_visited] }
+                    relatedID: { type: integer }
+                    summary: { type: string }
+                    createdAt: { type: string, format: date-time }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/me:
+    patch:
+      tags: [Auth]
+      summary: Update current user profile
+      description: Update bio, avatar URL, or profile visibility
+      operationId: updateMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bio:
+                  type: string
+                  maxLength: 300
+                  nullable: true
+                avatar:
+                  type: string
+                  maxLength: 2000
+                  nullable: true
+                profileVisibility:
+                  type: string
+                  enum: [public, friends, private]
+      responses:
+        200:
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/me/feed:
+    get:
+      tags: [Auth]
+      summary: Get activity feed from followed users
+      description: Cursor-paginated feed of pins from users the current user follows
+      operationId: getFollowFeed
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+          description: Cursor (pin ID) for pagination
+      responses:
+        200:
+          description: Feed items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pin'
+                  nextCursor:
+                    type: integer
+                    nullable: true
+                  hasMore:
+                    type: boolean
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{userID}:
+    get:
+      tags: [Auth]
+      summary: Get user profile
+      description: Returns a user's public profile. Private profiles are hidden from non-followers.
+      operationId: getUser
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        403:
+          description: Profile is private
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{userID}/pins:
+    get:
+      tags: [Auth]
+      summary: Get user's public pins
+      description: Returns paginated pins for a user. Empty for private profiles.
+      operationId: getProfilePins
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        200:
+          description: Paginated pin list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pin'
+                  page: { type: integer }
+                  hasMore: { type: boolean }
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{userID}/followers:
+    get:
+      tags: [Auth]
+      summary: Get user's followers
+      description: Returns paginated list of followers for a user
+      operationId: getUserFollowers
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        200:
+          description: Paginated followers list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  followers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary'
+                  page: { type: integer }
+                  hasMore: { type: boolean }
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{userID}/following:
+    get:
+      tags: [Auth]
+      summary: Get users that a user follows
+      description: Returns paginated list of users that the given user follows
+      operationId: getUserFollowing
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        200:
+          description: Paginated following list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary'
+                  page: { type: integer }
+                  hasMore: { type: boolean }
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{userID}/follow:
+    post:
+      tags: [Auth]
+      summary: Follow a user
+      description: Follows the given user. Idempotent — following twice has no effect.
+      operationId: followUser
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Now following
+        400:
+          description: Cannot follow yourself
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Auth]
+      summary: Unfollow a user
+      description: Removes the follow relationship
+      operationId: unfollowUser
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Unfollowed
+        404:
+          description: Not following this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pins/{id}/similar:
+    get:
+      tags: [Pins]
+      summary: Get similar pins
+      description: Returns up to 10 pins that users who liked this pin also liked
+      operationId: getSimilarPins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Similar pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pin'
+        404:
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/share/collection/{folderID}:
     get:
       tags: [Share]
@@ -2951,6 +3317,31 @@ components:
                 description: Transportation note
                 example: "Take the DASH bus from Hollywood & Highland"
                 nullable: true
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        bio: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        profileVisibility: { type: string, enum: [public, friends, private] }
+        followerCount: { type: integer }
+        followingCount: { type: integer }
+        isFollowed: { type: boolean }
+        isOwn: { type: boolean }
+
+    UserSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        bio: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        followerCount: { type: integer }
+        isFollowed: { type: boolean }
 
     SharedItinerary:
       type: object
