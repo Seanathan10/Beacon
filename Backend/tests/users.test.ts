@@ -143,3 +143,38 @@ describe('Stats endpoints', () => {
         expect(Array.isArray(res.body)).toBe(true);
     });
 });
+
+describe('auth.optional middleware', () => {
+    it('GET /api/users/:userID returns public profile without authentication', async () => {
+        const user = await createTestUser('noauth@example.com', 'pass123', 'NoAuthUser');
+
+        const res = await request(app)
+            .get(`/api/users/${user.userId}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.id).toBe(user.userId);
+        expect(res.body.name).toBe('NoAuthUser');
+        expect(res.body.isFollowed).toBe(false);
+    });
+
+    it('GET /api/users/:userID returns 403 for private profile without authentication', async () => {
+        const priv = await createTestUser('noauthpriv@example.com', 'pass123', 'PrivUser');
+        query("UPDATE account SET profileVisibility = 'private' WHERE id = ?", [priv.userId]);
+
+        const res = await request(app)
+            .get(`/api/users/${priv.userId}`);
+
+        expect(res.status).toBe(403);
+    });
+
+    it('GET /api/users/:userID/pins returns empty for private profile without authentication', async () => {
+        const priv = await createTestUser('noauthprivpins@example.com', 'pass123', 'PrivPins');
+        query("UPDATE account SET profileVisibility = 'private' WHERE id = ?", [priv.userId]);
+
+        const res = await request(app)
+            .get(`/api/users/${priv.userId}/pins`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.pins).toHaveLength(0);
+    });
+});

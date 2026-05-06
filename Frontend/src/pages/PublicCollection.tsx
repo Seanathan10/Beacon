@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { Bookmark, PublicCollection } from "../types/bookmarks";
+import { Bookmark, PublicCollection as PublicCollectionData } from "../types/bookmarks";
 import { BASE_API_URL } from "../../constants";
 import ShareMenu from "../components/ShareMenu";
 
@@ -21,7 +21,7 @@ interface Pin {
 export default function PublicCollection() {
   const { folderID } = useParams<{ folderID: string }>();
   const navigate = useNavigate();
-  const [collection, setCollection] = useState<PublicCollection | null>(null);
+  const [collection, setCollection] = useState<PublicCollectionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {

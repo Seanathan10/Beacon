@@ -11,6 +11,7 @@
 
 import request from 'supertest';
 import { createTestApp, createTestUser, createTestPin } from './helpers/testApp';
+import { query } from '../database/db';
 
 let app: any;
 
@@ -496,5 +497,62 @@ describe('Pins', () => {
       expect(updateResponse.status).toBe(200);
       expect(updateResponse.body.title).toBe('Hacked');
     });
+  });
+});
+
+describe('GET /api/pins/:id/similar', () => {
+  it('returns 404 for non-existent pin', async () => {
+    const user = await createTestUser('similar404@example.com', 'pass', 'SimUser');
+    const res = await request(app)
+      .get('/api/pins/99999/similar')
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns empty array when no one else liked the pin', async () => {
+    const user = await createTestUser('simempty@example.com', 'pass', 'SimEmpty');
+    const pinId = createTestPin(user.userId, { title: 'Solo Pin' });
+    const res = await request(app)
+      .get(`/api/pins/${pinId}/similar`)
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('returns pins that co-likers also liked', async () => {
+    const owner = await createTestUser('simowner@example.com', 'pass', 'SimOwner');
+    const liker = await createTestUser('simliker@example.com', 'pass', 'SimLiker');
+    const pinA = createTestPin(owner.userId, { title: 'Pin A' });
+    const pinB = createTestPin(owner.userId, { title: 'Pin B' });
+
+    // liker likes both pins
+    query('INSERT INTO likes (pinID, accountID) VALUES (?, ?)', [pinA, liker.userId]);
+    query('INSERT INTO likes (pinID, accountID) VALUES (?, ?)', [pinB, liker.userId]);
+
+    const res = await request(app)
+      .get(`/api/pins/${pinA}/similar`)
+      .set('Authorization', `Bearer ${owner.token}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    const ids = res.body.map((p: any) => p.id);
+    expect(ids).toContain(pinB);
+    expect(ids).not.toContain(pinA);
+  });
+
+  it('does not return the source pin itself in results', async () => {
+    const owner = await createTestUser('simnodupe@example.com', 'pass', 'SimNoDupe');
+    const liker = await createTestUser('simliker2@example.com', 'pass', 'SimLiker2');
+    const pinA = createTestPin(owner.userId, { title: 'Source' });
+
+    query('INSERT INTO likes (pinID, accountID) VALUES (?, ?)', [pinA, liker.userId]);
+
+    const res = await request(app)
+      .get(`/api/pins/${pinA}/similar`)
+      .set('Authorization', `Bearer ${owner.token}`);
+
+    expect(res.status).toBe(200);
+    const ids = res.body.map((p: any) => p.id);
+    expect(ids).not.toContain(pinA);
   });
 });
