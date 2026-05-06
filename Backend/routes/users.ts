@@ -11,7 +11,7 @@ function isValidUrl(url: string): boolean {
 }
 
 export function getUser(req: Request, res: Response) {
-    const targetID = parseInt(req.params.userID, 10);
+    const targetID = parseInt(String(req.params.userID), 10);
     const viewerID = req.user?.id ?? null;
 
     const user = db.query(`
@@ -93,7 +93,7 @@ export function updateMe(req: Request, res: Response) {
 }
 
 export function getUserPins(req: Request, res: Response) {
-    const targetID = parseInt(req.params.userID, 10);
+    const targetID = parseInt(String(req.params.userID), 10);
     const viewerID = req.user?.id ?? null;
     const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
     const limit = 20;
@@ -120,7 +120,7 @@ export function getUserPins(req: Request, res: Response) {
 }
 
 export function getUserFollowers(req: Request, res: Response) {
-    const targetID = parseInt(req.params.userID, 10);
+    const targetID = parseInt(String(req.params.userID), 10);
     const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
     const limit = 20;
     const offset = (page - 1) * limit;
@@ -151,7 +151,7 @@ export function getUserFollowers(req: Request, res: Response) {
 }
 
 export function getUserFollowing(req: Request, res: Response) {
-    const targetID = parseInt(req.params.userID, 10);
+    const targetID = parseInt(String(req.params.userID), 10);
     const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
     const limit = 20;
     const offset = (page - 1) * limit;

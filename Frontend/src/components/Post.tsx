@@ -1,5 +1,6 @@
 import React from "react";
 import {Avatar} from "./Avatar";
+import ShareMenu from "./ShareMenu";
 
 export interface Post {
     id: number;
@@ -232,6 +233,10 @@ export function PostCard({ content }: PostProps) {
             >
                 <span>⬆ {content.upvotes}</span>
                 <span>💬 {content.comments.length}</span>
+                <ShareMenu
+                    url={`${window.location.origin}/explore?post=${content.id}`}
+                    title={`${content.title} on Beacon`}
+                />
             </div>
 
             {/* Comments */}

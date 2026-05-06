@@ -4,6 +4,7 @@ import TripPlanner, { TripPlanResult } from '../components/TripPlanner';
 import mapboxgl from 'mapbox-gl';
 import '../components/styles/TripPlanner.css';
 import { BASE_API_URL } from '../../constants';
+import ShareMenu from '../components/ShareMenu';
 
 export default function SharedItinerary() {
     const { id } = useParams();
@@ -94,6 +95,7 @@ export default function SharedItinerary() {
             <div className="shared-itinerary-header">
                 <a href="/" className="back-link">← Back to Beacon</a>
                 <span className="shared-badge">📤 Shared Itinerary</span>
+                <ShareMenu url={window.location.href} title="Check out this Beacon itinerary!" />
             </div>
             <TripPlanner
                 isOpen={true}

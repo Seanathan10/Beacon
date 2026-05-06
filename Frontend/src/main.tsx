@@ -7,6 +7,7 @@ import SharedItinerary from "./pages/SharedItinerary";
 import PublicCollection from "./pages/PublicCollection";
 import UserProfile from "./pages/UserProfile";
 import { FollowersList, FollowingList } from "./pages/FollowersList";
+import ActivityPage from "./pages/ActivityPage";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { PostsPage } from "./pages/PostsPage";
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
     {
         path: '/users/:userID/following',
         element: <FollowingList />,
+    },
+    {
+        path: '/activity',
+        element: <ActivityPage />,
     },
 ]);
 

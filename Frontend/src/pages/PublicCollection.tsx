@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { Bookmark, PublicCollection } from "../types/bookmarks";
 import { BASE_API_URL } from "../../constants";
+import ShareMenu from "../components/ShareMenu";
 
 interface Pin {
   id: number;
@@ -23,8 +24,6 @@ export default function PublicCollection() {
   const [collection, setCollection] = useState<PublicCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
   useEffect(() => {
     if (!folderID) return;
 
@@ -57,13 +56,6 @@ export default function PublicCollection() {
 
     fetchCollection();
   }, [folderID]);
-
-  const copyShareLink = () => {
-    const link = `${window.location.origin}/collection/${folderID}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   if (loading) {
     return (
@@ -116,12 +108,10 @@ export default function PublicCollection() {
                 {collection.folder.pinCount} {collection.folder.pinCount === 1 ? 'location' : 'locations'}
               </p>
             </div>
-            <button
-              onClick={copyShareLink}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-            >
-              {copied ? '✓ Copied!' : 'Share'}
-            </button>
+            <ShareMenu
+              url={`${window.location.origin}/collection/${folderID}`}
+              title={collection ? `${collection.folder.name} — Beacon Collection` : "Check out this Beacon collection!"}
+            />
           </div>
         </div>
       </div>

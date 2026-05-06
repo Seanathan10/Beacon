@@ -119,6 +119,27 @@ export function check(req: Request, res: Response, next: NextFunction) {
     });
 }
 
+export function optional(req: Request, _res: Response, next: NextFunction) {
+    let token: string | null = req.cookies?.accessToken ?? null;
+
+    if (!token) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && typeof authHeader === "string") {
+            const parts = authHeader.split(" ");
+            if (parts.length === 2 && parts[0].toLowerCase() === "bearer" && parts[1].length > 0) {
+                token = parts[1];
+            }
+        }
+    }
+
+    if (!token) return next();
+
+    jwt.verify(token, process.env.SECRET as string, (err, decoded) => {
+        if (!err) req.user = decoded as SessionUser;
+        next();
+    });
+}
+
 export function logout(_req: Request, res: Response) {
     res.clearCookie("accessToken", { ...COOKIE_OPTIONS, maxAge: 0 });
     res.status(200).json({ message: "Logged out" });

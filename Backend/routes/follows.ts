@@ -3,7 +3,7 @@ import * as db from "../database/db";
 
 export function followUser(req: Request, res: Response) {
     const followerID = req.user.id;
-    const followingID = parseInt(req.params.userID, 10);
+    const followingID = parseInt(String(req.params.userID), 10);
 
     if (followerID === followingID) {
         return res.status(400).json({ message: "Cannot follow yourself" });
@@ -26,7 +26,7 @@ export function followUser(req: Request, res: Response) {
 
 export function unfollowUser(req: Request, res: Response) {
     const followerID = req.user.id;
-    const followingID = parseInt(req.params.userID, 10);
+    const followingID = parseInt(String(req.params.userID), 10);
 
     const result = db.query(
         "DELETE FROM user_follow WHERE followerID = ? AND followingID = ?",

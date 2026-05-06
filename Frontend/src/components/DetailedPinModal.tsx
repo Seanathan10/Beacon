@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router";
 import "./styles/DetailedPinModal.css";
 import { BASE_API_URL, PIN_COLOR } from '../../constants';
 import { EmojiReactionPicker } from "./EmojiReactionPicker";
+import ShareMenu from "./ShareMenu";
 
 interface DetailedPinModalProps {
     selectedPoint: {
@@ -123,20 +125,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [copied, setCopied] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleShare = async () => {
-        if (!selectedPoint.id) return;
-        const shareUrl = `${window.location.origin}/home?pin=${selectedPoint.id}`;
-        try {
-            await navigator.clipboard.writeText(shareUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy URL:', err);
-        }
-    };
 
     const handleClose = () => {
         setIsClosing(true);
@@ -161,6 +150,16 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null);
     const [optimisticReactions, setOptimisticReactions] = useState<{ [key: number]: { emoji: string; count: number; userReacted: boolean }[] }>({});
+
+    const [similarPins, setSimilarPins] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!selectedPoint.id) return;
+        fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/similar`, { credentials: "include" })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setSimilarPins(Array.isArray(data) ? data : []))
+            .catch(() => setSimilarPins([]));
+    }, [selectedPoint.id]);
 
     // Fetch comments when modal opens
     useEffect(() => {
@@ -521,44 +520,13 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                         <p style={{ margin: 0, color: "black" }}>{selectedPoint.address}</p>
                     </div>
                     <div className="detailed-modal-header-actions">
-                        <button
-                            className="detailed-modal-share"
-                            onClick={handleShare}
-                            aria-label="Share"
-                            title={copied ? "Copied!" : "Copy link"}
-                        >
-                            {copied ? (
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            ) : (
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <circle cx="18" cy="5" r="3"></circle>
-                                    <circle cx="6" cy="12" r="3"></circle>
-                                    <circle cx="18" cy="19" r="3"></circle>
-                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                                </svg>
-                            )}
-                        </button>
+                        {selectedPoint.id && (
+                            <ShareMenu
+                                url={`${window.location.origin}/home?pin=${selectedPoint.id}`}
+                                title={selectedPoint.title ? `${selectedPoint.title} on Beacon` : "Check this out on Beacon!"}
+                                className="detailed-modal-share"
+                            />
+                        )}
                         <button
                             className="detailed-modal-close"
                             onClick={handleClose}
@@ -681,10 +649,18 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                             )}
 
                             {selectedPoint.email && (
-                                <ModalSection
-                                    header={"Uploaded by"}
-                                    content={`@${selectedPoint.email.split("@")[0]}`}
-                                />
+                                <div className="detailed-info-section">
+                                    <h3 style={{ marginBottom: 0 }}>Uploaded by</h3>
+                                    <p className="detailed-message">
+                                        {selectedPoint.creatorID ? (
+                                            <Link to={`/profile/${selectedPoint.creatorID}`} style={{ color: "var(--accent, #22c55e)", textDecoration: "none" }}>
+                                                @{selectedPoint.email.split("@")[0]}
+                                            </Link>
+                                        ) : (
+                                            `@${selectedPoint.email.split("@")[0]}`
+                                        )}
+                                    </p>
+                                </div>
                             )}
 
                             {selectedPoint.address && (
@@ -891,6 +867,26 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                                 )}
                             </div>
                         </>
+                    )}
+
+                    {similarPins.length > 0 && (
+                        <div className="similar-pins-section">
+                            <h4 style={{ margin: "0 0 8px", fontSize: 13, color: "var(--text-secondary, #6b7280)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Others Also Liked</h4>
+                            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                                {similarPins.map((pin: any) => (
+                                    <div key={pin.id} style={{ flexShrink: 0, width: 100, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-color, #e5e7eb)" }}>
+                                        {pin.image ? (
+                                            <img src={pin.image} alt={pin.title} style={{ width: "100%", height: 70, objectFit: "cover" }} />
+                                        ) : (
+                                            <div style={{ width: "100%", height: 70, background: "#f3f4f6" }} />
+                                        )}
+                                        <div style={{ padding: "4px 6px", fontSize: 11, color: "var(--text-primary, #374151)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {pin.title || "Untitled"}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
 
                     <div className="detailed-modal-actions">

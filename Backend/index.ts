@@ -195,10 +195,10 @@ app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
 app.patch("/api/me", auth.check, users.updateMe);
 
-app.get("/api/users/:userID", auth.check, users.getUser);
-app.get("/api/users/:userID/pins", auth.check, users.getUserPins);
-app.get("/api/users/:userID/followers", auth.check, users.getUserFollowers);
-app.get("/api/users/:userID/following", auth.check, users.getUserFollowing);
+app.get("/api/users/:userID", auth.optional, users.getUser);
+app.get("/api/users/:userID/pins", auth.optional, users.getUserPins);
+app.get("/api/users/:userID/followers", auth.optional, users.getUserFollowers);
+app.get("/api/users/:userID/following", auth.optional, users.getUserFollowing);
 app.post("/api/users/:userID/follow", auth.check, follows.followUser);
 app.delete("/api/users/:userID/follow", auth.check, follows.unfollowUser);
 app.get("/api/me/feed", auth.check, follows.getFollowFeed);
