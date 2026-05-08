@@ -232,3 +232,30 @@ describe('Endpoint Name', () => {
 - **In-memory rate limiter:** Periodic pruning prevents unbounded growth; doesn't persist across server restarts
 - **Test DB:** Each test suite gets a fresh DB; manual cleanup not needed
 - **Mapbox telemetry:** Return `null` (not `{ url: '' }`) in telemetry callback to avoid network errors
+
+## MCP Integration
+
+### Playwright MCP Server
+This repository is configured with a **Playwright Model Context Protocol (MCP) server** (see `.github/copilot-mcp-config.json`). This extends Copilot CLI capabilities with browser automation features:
+
+**Available capabilities:**
+- **End-to-End Testing** — Write and run E2E tests for the React frontend and user workflows
+- **Visual Testing** — Capture screenshots, validate layouts, test responsive design
+- **Browser Automation** — Navigate pages, interact with form inputs, validate UI state
+- **Accessibility Testing** — Verify keyboard navigation, ARIA attributes, screen reader compatibility
+- **Performance Testing** — Measure page load times, render performance with large datasets (e.g., many pins)
+- **Cross-browser Testing** — Test on Chromium (default), Firefox, or WebKit
+
+**How to use:**
+Ask Copilot CLI to write or run automated browser tests. Examples:
+- "Write an E2E test that logs in and creates a new pin"
+- "Check if the map pins render correctly with 1000 markers"
+- "Automate the full user journey: login → browse pins → add comment → verify it appears"
+- "Take a screenshot of the landing page and validate the hero layout"
+
+**Configuration file:** `.github/copilot-mcp-config.json`
+- Server: Auto-installed `@modelcontextprotocol/server-playwright` via npx
+- Browser: Chromium (headless by default)
+- Environment: Runs in local sandbox; data stays on your machine
+
+For detailed setup info, see `.github/MCP_SETUP.md`.
