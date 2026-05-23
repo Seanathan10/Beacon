@@ -23,6 +23,7 @@ import polyline from '@mapbox/polyline';
 import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
+import FilterPanel, { PinFilters, DEFAULT_FILTERS, loadSavedFilters } from "@/components/FilterPanel";
 
 interface PinData {
     lat: number;
@@ -125,6 +126,7 @@ function HomePage() {
     const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
     const [cloneValues, setCloneValues] = useState<CloneValues | null>(null);
     const [pinSort, setPinSort] = useState<"recent" | "trending" | "distance">("recent");
+    const [pinFilters, setPinFilters] = useState<PinFilters>(loadSavedFilters);
     const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [geoError, setGeoError] = useState<string | null>(null);
     const [mapBounds, setMapBounds] = useState<{ minLng: number; minLat: number; maxLng: number; maxLat: number } | null>(null);
@@ -225,11 +227,23 @@ function HomePage() {
     useEffect(() => {
         const fetchPins = async () => {
             try {
-                let url = `${BASE_API_URL}/api/pins`;
+                let url: string;
                 if (pinSort === "trending") {
                     url = `${BASE_API_URL}/api/pins/trending?days=7`;
-                } else if (pinSort === "distance" && geoCoords) {
-                    url = `${BASE_API_URL}/api/pins?sort=distance&lat=${geoCoords.lat}&lng=${geoCoords.lng}`;
+                } else {
+                    const params = new URLSearchParams();
+                    if (pinSort === "distance" && geoCoords) {
+                        params.set("sort", "distance");
+                        params.set("lat", String(geoCoords.lat));
+                        params.set("lng", String(geoCoords.lng));
+                    }
+                    pinFilters.tags.forEach(t => params.append("tags", t));
+                    if (pinFilters.minDate) params.set("minDate", pinFilters.minDate);
+                    if (pinFilters.maxDate) params.set("maxDate", pinFilters.maxDate);
+                    if (pinFilters.minRating !== null) params.set("minRating", String(pinFilters.minRating));
+                    if (pinFilters.bookmarkStatus) params.set("bookmarkStatus", pinFilters.bookmarkStatus);
+                    const qs = params.toString();
+                    url = `${BASE_API_URL}/api/pins${qs ? `?${qs}` : ""}`;
                 }
                 const res = await fetch(url, {
                     credentials: "include",
@@ -296,7 +310,7 @@ function HomePage() {
         if (pinSort !== "distance" || geoCoords) {
             fetchPins();
         }
-    }, [isLoggedIn, pinSort, geoCoords, handleLogout]);
+    }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout]);
 
     const requestGeo = useCallback(() => {
         if (!navigator.geolocation) {
@@ -631,6 +645,11 @@ function HomePage() {
                             Near Me
                         </button>
                     </div>
+
+                    <FilterPanel
+                        isLoggedIn={isLoggedIn}
+                        onApply={(filters) => setPinFilters(filters)}
+                    />
                 </div>
 
                 <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />

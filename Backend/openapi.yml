@@ -87,6 +87,58 @@ paths:
             minimum: -180
             maximum: 180
           description: Longitude of origin for distance sort.
+        - in: query
+          name: tags
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: "Tag names to filter by (OR logic within tags, AND with other filters). Repeat the param for multiple tags."
+        - in: query
+          name: minDate
+          required: false
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Earliest creation date to include (YYYY-MM-DD, inclusive).
+        - in: query
+          name: maxDate
+          required: false
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Latest creation date to include (YYYY-MM-DD, inclusive through end of day).
+        - in: query
+          name: minRating
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Minimum number of likes a pin must have.
+        - in: query
+          name: maxRating
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum number of likes a pin may have.
+        - in: query
+          name: bookmarkStatus
+          required: false
+          schema:
+            type: string
+            enum: [bookmarked, visited, wishlist]
+          description: Filter to pins with this status for the authenticated user. Requires authentication.
+        - in: query
+          name: creatorID
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Return only pins created by this user ID.
       responses:
         200:
           description: Successful response with array of pins

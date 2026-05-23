@@ -126,8 +126,12 @@ export function getUserFollowers(req: Request, res: Response) {
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
 
-    const user = db.query("SELECT id FROM account WHERE id = ?", [targetID])[0];
+    const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+        return res.status(403).json({ message: "This profile is private" });
+    }
 
     const rows = db.query(`
         SELECT a.id, a.name, a.email, a.bio, a.avatar,
@@ -157,8 +161,12 @@ export function getUserFollowing(req: Request, res: Response) {
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
 
-    const user = db.query("SELECT id FROM account WHERE id = ?", [targetID])[0];
+    const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+        return res.status(403).json({ message: "This profile is private" });
+    }
 
     const rows = db.query(`
         SELECT a.id, a.name, a.email, a.bio, a.avatar,

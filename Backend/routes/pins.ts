@@ -31,24 +31,90 @@ export function getAllPins(req: Request, res: Response) {
     const userID = req.user?.id ?? null;
     const sort = typeof req.query.sort === "string" ? req.query.sort : "";
 
-    const results: any[] = db.query(`
-		SELECT
-			p.id,
-			p.creatorID,
-			a.email,
-			p.latitude,
-			p.longitude,
-			p.title,
-			p.address,
-			p.description,
-			p.image,
-			p.tags,
-			p.createdAt,
-			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-			(SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
-		FROM pin p
-		JOIN account a ON a.id = p.creatorID;
-	`, [userID]);
+    // Filter params
+    // tags arrives as string[] from the OpenAPI validator (style: form, explode: true)
+    const rawTags = req.query.tags;
+    const tags: string[] = Array.isArray(rawTags)
+        ? (rawTags as string[]).map(t => t.trim()).filter(Boolean)
+        : typeof rawTags === "string" ? rawTags.split(',').map(t => t.trim()).filter(Boolean)
+        : [];
+    const minDate = typeof req.query.minDate === "string" ? req.query.minDate.trim() : "";
+    const maxDate = typeof req.query.maxDate === "string" ? req.query.maxDate.trim() : "";
+    const minRating = req.query.minRating !== undefined ? parseInt(String(req.query.minRating), 10) : null;
+    const maxRating = req.query.maxRating !== undefined ? parseInt(String(req.query.maxRating), 10) : null;
+    const bookmarkStatus = typeof req.query.bookmarkStatus === "string" ? req.query.bookmarkStatus : "";
+    const creatorIDRaw = req.query.creatorID !== undefined ? parseInt(String(req.query.creatorID), 10) : null;
+    const creatorID = creatorIDRaw !== null && !isNaN(creatorIDRaw) ? creatorIDRaw : null;
+
+    if (bookmarkStatus && !userID) {
+        return res.status(401).json({ error: "Authentication required for bookmarkStatus filter" });
+    }
+
+    // Build WHERE clause dynamically; params[0] is always userID for the userStatus subquery
+    const conditions: string[] = [];
+    const params: any[] = [userID];
+
+    if (tags.length > 0) {
+        conditions.push(`(${tags.map(() => "p.tags LIKE ?").join(" OR ")})`);
+        tags.forEach(t => params.push(`%${t}%`));
+    }
+
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    if (minDate && DATE_RE.test(minDate)) {
+        conditions.push("p.createdAt >= ?");
+        params.push(minDate);
+    }
+    if (maxDate && DATE_RE.test(maxDate)) {
+        conditions.push("p.createdAt <= ?");
+        params.push(maxDate + " 23:59:59");
+    }
+
+    if (creatorID !== null) {
+        conditions.push("p.creatorID = ?");
+        params.push(creatorID);
+    }
+
+    if (bookmarkStatus === 'bookmarked') {
+        conditions.push("EXISTS (SELECT 1 FROM bookmark WHERE pinID = p.id AND accountID = ?)");
+        params.push(userID);
+    } else if (bookmarkStatus === 'visited' || bookmarkStatus === 'wishlist') {
+        conditions.push("EXISTS (SELECT 1 FROM pin_status WHERE pinID = p.id AND accountID = ? AND status = ?)");
+        params.push(userID, bookmarkStatus);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    let sql = `
+        SELECT
+            p.id,
+            p.creatorID,
+            a.email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
+        FROM pin p
+        JOIN account a ON a.id = p.creatorID
+        ${whereClause}
+    `;
+
+    // Wrap in outer query to filter by the computed likes count (minRating / maxRating)
+    const validMin = minRating !== null && !isNaN(minRating);
+    const validMax = maxRating !== null && !isNaN(maxRating);
+    if (validMin || validMax) {
+        const ratingConds: string[] = [];
+        if (validMin) { ratingConds.push("likes >= ?"); params.push(minRating); }
+        if (validMax) { ratingConds.push("likes <= ?"); params.push(maxRating); }
+        sql = `SELECT * FROM (${sql}) WHERE ${ratingConds.join(" AND ")}`;
+    }
+
+    const results: any[] = db.query(sql, params);
 
     if (sort === "distance") {
         const lat = parseFloat(req.query.lat as string);
@@ -324,7 +390,7 @@ export function getSimilarPins(req: Request, res: Response) {
     const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
     if (!pin) return res.status(404).json({ message: "Pin not found" });
 
-    // Find pins that users who liked this pin also liked
+    // Find pins that users who liked this pin also liked, excluding pins from private creators
     const results = db.query(`
         SELECT
             p.id, p.creatorID, a.email, p.latitude, p.longitude,
@@ -335,7 +401,7 @@ export function getSimilarPins(req: Request, res: Response) {
         JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
         JOIN pin p ON p.id = l2.pinID
         JOIN account a ON a.id = p.creatorID
-        WHERE l1.pinID = ?
+        WHERE l1.pinID = ? AND (a.profileVisibility IS NULL OR a.profileVisibility != 'private')
         GROUP BY p.id
         ORDER BY sharedLikers DESC, likes DESC
         LIMIT 10
