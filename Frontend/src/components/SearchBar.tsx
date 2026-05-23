@@ -23,6 +23,13 @@ interface SearchHistoryEntry {
     createdAt: string;
 }
 
+interface MapboxSuggestion {
+    mapbox_id: string;
+    name?: string;
+    full_address?: string;
+    place_formatted?: string;
+}
+
 export default function SearchBar({
     mapRef,
     searchMarkerRef,
@@ -32,7 +39,7 @@ export default function SearchBar({
 }: SearchBarProps) {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isSearching, setIsSearching] = useState<boolean>(false);
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchResults, setSearchResults] = useState<MapboxSuggestion[]>([]);
     const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
 
     const fetchHistory = async () => {
@@ -113,7 +120,7 @@ export default function SearchBar({
                 const data = await resp.json();
                 setSearchResults(data?.suggestions ?? []);
             } catch (err) {
-                if ((err as any)?.name !== "AbortError") {
+                if ((err as Error)?.name !== "AbortError") {
                     console.error("Search Box API error:", err);
                 }
             } finally {
@@ -127,7 +134,7 @@ export default function SearchBar({
         };
     }, [searchQuery, mapRef, sessionToken]);
 
-    const handleSelectResult = async (suggestion: any) => {
+    const handleSelectResult = async (suggestion: MapboxSuggestion) => {
         if (!suggestion?.mapbox_id || !mapRef.current) return;
 
         const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;

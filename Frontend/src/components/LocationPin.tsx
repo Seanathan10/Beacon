@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 interface LocationPinProps {
 	selectedPoint: SelectedPoint;
-	setSelectedPoint: (a: any) => void;
+	setSelectedPoint: (value: SelectedPoint | null) => void;
 	onShowDetails: () => void;
 	onBookmarkChange?: (pinId: number, isBookmarked: boolean) => void;
 	onStatusChange?: (pinId: number, status: "visited" | "wishlist" | null) => void;
@@ -90,31 +90,35 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	const [isLiked, setIsLiked] = useState<boolean>(false);
 	const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
 	const [likesLoading, setLikesLoading] = useState<boolean>(true);
+	const [prevId, setPrevId] = useState<number | undefined>(selectedPoint.id);
 	const [userStatus, setUserStatus] = useState<"visited" | "wishlist" | null>(selectedPoint.userStatus ?? null);
 
-	useEffect(() => {
+	if (selectedPoint.id !== prevId) {
+		setPrevId(selectedPoint.id);
 		setUserStatus(selectedPoint.userStatus ?? null);
-	}, [selectedPoint.id, selectedPoint.userStatus]);
+		setLikesLoading(true);
+	}
 
 	useEffect(() => {
 		// Check if pin is bookmarked
 		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
 		const email = localStorage.getItem("userEmail")!;
 		const userSavedPins = saved[email] || [];
-		setIsBookmarked(userSavedPins.includes(selectedPoint.id));
+		const bookmarked = userSavedPins.includes(selectedPoint.id);
 
-		// Fetch likes
-		setLikesLoading(true);
+		// Fetch likes, then update all state in callbacks
 		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
 			credentials: "include",
 		})
 			.then(res => res.json())
 			.then(res => {
+				setIsBookmarked(bookmarked);
 				setLikes(res.likes);
 				setIsLiked(res.wasLiked);
 				setLikesLoading(false);
 			})
 			.catch(() => {
+				setIsBookmarked(bookmarked);
 				setLikesLoading(false);
 			});
 	}, [selectedPoint]);

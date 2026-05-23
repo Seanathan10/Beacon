@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { db, query } from '../../database/db';
+import { query } from '../../database/db';
 
 let cachedApp: Express | null = null;
 

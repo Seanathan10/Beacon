@@ -88,7 +88,7 @@ export async function register(req: Request, res: Response) {
             accessToken,
             user: { id, name: name || null, email },
         });
-    } catch (_err) {
+    } catch {
         res.status(500).json({ message: "Registration failed" });
     }
 }

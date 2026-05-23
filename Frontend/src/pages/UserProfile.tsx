@@ -33,11 +33,11 @@ type Tab = "pins" | "bookmarks" | "activity";
 export default function UserProfile() {
     const { userID } = useParams<{ userID: string }>();
     const navigate = useNavigate();
-    const [, userId] = AuthHook();
+    const [,] = AuthHook();
 
     const [profile, setProfile] = useState<UserProfileData | null>(null);
     const [pins, setPins] = useState<Pin[]>([]);
-    const [activity, setActivity] = useState<any[]>([]);
+    const [activity, setActivity] = useState<{ type: string; summary: string; createdAt: string }[]>([]);
     const [tab, setTab] = useState<Tab>("pins");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

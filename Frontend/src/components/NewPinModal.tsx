@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import "./styles/NewPinModal.css";
 import { BASE_API_URL } from '../../constants';
-import { reverseGeocode, ReverseGeocodeResult } from "@/utils/geocoding";
 import { CategoryBadge } from "./Post";
 
 interface NewPinModalProps {
@@ -88,10 +87,10 @@ export default function NewPinModal({
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setIsClosing(true);
         setTimeout(onClose, 400);
-    };
+    }, [onClose]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -101,7 +100,7 @@ export default function NewPinModal({
         };
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
-    }, []);
+    }, [handleClose]);
 
     // Debounce-save draft whenever text/tag state changes. Skip while the restore banner
     // is still showing so we don't overwrite the stored draft before the user decides.

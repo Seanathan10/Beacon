@@ -2,11 +2,27 @@ import { useState, useEffect, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "./styles/Sidebar.css";
 import { PIN_COLOR } from "../../constants";
-import TripPlanner from "./TripPlanner";
+import TripPlanner, { TripPlanResult } from "./TripPlanner";
 import ThemeToggle from "./ThemeToggle";
 import QuickStatsWidget from "./QuickStatsWidget";
 
 const KM_TO_MILES = 0.621371;
+
+function deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
+}
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
 interface Pin {
     id?: number;
@@ -17,18 +33,6 @@ interface Pin {
     image: string;
     color: string;
     email?: string;
-}
-
-interface TripPlanResult {
-    origin: string;
-    destination: string;
-    itineraryType: string;
-    transitOptions: any[];
-    itinerary: any;
-    localPins: any[];
-    ecoHotels?: any[];
-    carbonStats: any;
-    routePolylines: { mode: string; polyline: string }[];
 }
 
 interface RouteSegment {
@@ -100,43 +104,26 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
         }
     }, [isWide, onWideModeChange]);
 
-    // Distance calculation (Haversine formula)
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-        const R = 6371; // Radius of the earth in km
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const d = R * c; // Distance in km
-        return d;
-    };
-
-    const deg2rad = (deg: number) => {
-        return deg * (Math.PI / 180);
-    };
-
     // Update map center when map moves
     useEffect(() => {
-        if (!mapRef.current) return;
+        const map = mapRef.current;
+        if (!map) return;
 
         const handleMove = () => {
-            const center = mapRef.current?.getCenter();
+            const center = map.getCenter();
             if (center) {
                 setMapCenter({ lng: center.lng, lat: center.lat });
             }
         };
 
-        mapRef.current.on("moveend", handleMove);
+        map.on("moveend", handleMove);
         // Initial center
         handleMove();
 
         return () => {
-            mapRef.current?.off("moveend", handleMove);
+            map.off("moveend", handleMove);
         };
-    }, [mapRef.current]);
+    }, [mapRef]);
 
     const nearbyPins = useMemo(() => {
         return allPins

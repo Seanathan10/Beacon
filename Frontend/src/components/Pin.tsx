@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Popup } from "react-map-gl/mapbox";
 import NewPinModal from "./NewPinModal";
 import "./styles/Pin.css";
-import { ReverseGeocodeResult } from "@/utils/geocoding";
 
 interface PinProps {
     address?: string;
@@ -32,7 +31,7 @@ export default function Pin({
     longitude,
     isLoading,
     onClose,
-    onDetails,
+    onDetails: _onDetails,
     onPinCreated,
     initialValues,
     autoOpenModal,

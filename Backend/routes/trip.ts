@@ -9,11 +9,8 @@ import { searchTransit, searchDriving, TransitResult } from "../services/googleR
 import { searchEcoHotels, EcoHotel } from "../services/hotelService";
 import { generateItinerary, LocalPin, ItineraryResult } from "../services/ai";
 import {
-    calculateFlightCarbon,
     calculateTypicalTouristCarbon,
-    getComparison,
     calculateOffsetCost,
-    formatCarbon,
     getSustainabilityRating,
 } from "../utils/carbon";
 import * as db from "../database/db";
@@ -229,16 +226,6 @@ function sendSSE(res: Response, update: ProgressUpdate) {
     if (!res.writableEnded && !res.destroyed) {
         res.write(`data: ${JSON.stringify(update)}\n\n`);
     }
-}
-
-/**
- * Wait for a minimum display time (2s ± 150ms) to create smooth UX
- */
-function stageDelay(): Promise<void> {
-    const baseMs = 2000;
-    const variance = 150;
-    const delay = baseMs + Math.floor(Math.random() * variance * 2) - variance;
-    return new Promise(resolve => setTimeout(resolve, delay));
 }
 
 /**

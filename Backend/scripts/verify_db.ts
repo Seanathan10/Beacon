@@ -1,5 +1,5 @@
 
-import { db, query } from '../database/db';
+import { query } from '../database/db';
 
 try {
     const tableSql = `CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)`;

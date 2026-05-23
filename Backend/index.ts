@@ -51,7 +51,7 @@ function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Reques
             : (req.ip || req.socket.remoteAddress || "unknown");
         const now = Date.now();
 
-        let entry = rateLimitStore.get(key);
+        const entry = rateLimitStore.get(key);
 
         if (!entry || now > entry.resetAt) {
             rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });

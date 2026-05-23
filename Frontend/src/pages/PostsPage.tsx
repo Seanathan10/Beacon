@@ -8,7 +8,7 @@ import { BASE_API_URL } from '../../constants';
 export function PostsPage() {
     const navigate = useNavigate();
     const [posts, setPosts] = useState<Post[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +31,7 @@ export function PostsPage() {
             
             const data = await response.json();
             // Backend returns posts without comments array, so we add empty comments
-            const postsWithComments = data.map((post: any) => ({
+            const postsWithComments = data.map((post: Record<string, unknown>) => ({
                 ...post,
                 description: post.message,
                 address: post.location,
@@ -45,7 +45,7 @@ export function PostsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [navigate]);
+    }, []);
 
     useEffect(() => {
         fetchPosts();

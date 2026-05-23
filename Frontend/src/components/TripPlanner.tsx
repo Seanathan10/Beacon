@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -14,7 +14,7 @@ interface TransitOption {
     duration: string;
     carbonKg: number;
     carbonRating: { rating: string; color: string; score: number };
-    segments?: any[];
+    segments?: Record<string, unknown>[];
     polyline?: string;
     flightNumber?: string;
     bookingUrl?: string;
@@ -132,7 +132,7 @@ interface ProgressUpdate {
     stage: ProgressStage;
     message: string;
     progress: number;
-    data?: any;
+    data?: Record<string, unknown>;
 }
 
 interface StageInfo {
@@ -234,7 +234,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
     // Progress tracking state
     const [progress, setProgress] = useState(0);
-    const [currentStage, setCurrentStage] = useState<ProgressStage | null>(null);
+    const [, setCurrentStage] = useState<ProgressStage | null>(null);
     const [stageStatuses, setStageStatuses] = useState<Map<ProgressStage, StageInfo>>(new Map());
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -250,24 +250,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
     const [isSharing, setIsSharing] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
-                handleClose();
-            }
-        };
-        window.addEventListener('keydown', handleEscape);
-        return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (onWideModeChange) {
-            onWideModeChange(!!optionsData || !!result);
-        }
-    }, [optionsData, result, onWideModeChange]);
-
-    const handleClose = () => {
-        // Abort any ongoing request
+    const handleClose = useCallback(() => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -284,7 +267,23 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             setCurrentStage(null);
             setStageStatuses(new Map());
         }, 200);
-    };
+    }, [onClose]);
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                handleClose();
+            }
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isOpen, handleClose]);
+
+    useEffect(() => {
+        if (onWideModeChange) {
+            onWideModeChange(!!optionsData || !!result);
+        }
+    }, [optionsData, result, onWideModeChange]);
 
     const initializeStages = () => {
         const stages: ProgressStage[] = ['geocoding', 'flights', 'transit', 'driving', 'hotels', 'pins'];
@@ -495,7 +494,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
             const data = await response.json();
             setAiAnswer(data.answer);
-        } catch (err) {
+        } catch {
             setAiAnswer('Sorry, I could not get an answer at this time.');
         } finally {
             setIsAskingAI(false);

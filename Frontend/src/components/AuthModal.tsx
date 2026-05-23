@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BASE_API_URL } from '../../constants';
 
 type AuthMode = "login" | "register";
@@ -24,12 +24,12 @@ export default function AuthModal({
 
     const [isClosing, setIsClosing] = useState(false);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         if (onClose) {
             setIsClosing(true);
             setTimeout(onClose, 500);
         }
-    };
+    }, [onClose]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -39,7 +39,7 @@ export default function AuthModal({
         };
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
-    }, [isOpen]);
+    }, [isOpen, handleClose]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

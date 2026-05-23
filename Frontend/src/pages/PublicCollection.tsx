@@ -4,19 +4,6 @@ import { Bookmark, PublicCollection as PublicCollectionData } from "../types/boo
 import { BASE_API_URL } from "../../constants";
 import ShareMenu from "../components/ShareMenu";
 
-interface Pin {
-  id: number;
-  title?: string;
-  description?: string;
-  latitude: number;
-  longitude: number;
-  address?: string;
-  image?: string;
-  creatorID: number;
-  email?: string;
-  likes: number;
-  createdAt: string;
-}
 
 export default function PublicCollection() {
   const { folderID } = useParams<{ folderID: string }>();

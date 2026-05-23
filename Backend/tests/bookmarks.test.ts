@@ -3,7 +3,6 @@ import { createTestApp, createTestUser } from './helpers/testApp';
 
 let app: any;
 let token: string;
-let userId: number;
 let pinId: number;
 
 beforeAll(async () => {
@@ -14,7 +13,6 @@ describe('Bookmarks Endpoint', () => {
 	beforeEach(async () => {
 		const user = await createTestUser('bookmarktest@example.com', 'password123', 'Bookmark Test');
 		token = user.token;
-		userId = user.userId;
 
 		const pinRes = await request(app)
 			.post('/api/pins')

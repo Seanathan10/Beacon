@@ -14,8 +14,6 @@ beforeAll(async () => {
 });
 
 describe('CORS', () => {
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
-
   describe('Allowed Origins', () => {
     it('should allow requests from localhost:5173', async () => {
       const origin = 'http://localhost:5173';

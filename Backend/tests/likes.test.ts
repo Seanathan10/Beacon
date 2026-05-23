@@ -23,7 +23,6 @@ describe('Likes', () => {
   let userToken: string;
   let userId: number;
   let otherUserToken: string;
-  let otherUserId: number;
   let pinId: number;
 
   beforeEach(async () => {
@@ -33,7 +32,6 @@ describe('Likes', () => {
 
     const otherUser = await createTestUser('other@example.com', 'password123', 'Other');
     otherUserToken = otherUser.token;
-    otherUserId = otherUser.userId;
 
     pinId = createTestPin(userId, { title: 'Likeable Pin' });
   });
@@ -332,7 +330,6 @@ describe('Likes', () => {
 
   describe('GET /api/likes/user', () => {
     let user1Token: string;
-    let user1Id: number;
     let user2Token: string;
     let pin1: number;
     let pin2: number;
@@ -342,7 +339,6 @@ describe('Likes', () => {
       const user2 = await createTestUser('creator@example.com', 'pass', 'Creator');
 
       user1Token = user1.token;
-      user1Id = user1.userId;
       user2Token = user2.token;
 
       // User2 creates pins

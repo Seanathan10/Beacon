@@ -21,7 +21,6 @@ function UserList({ userID, type }: { userID: string; type: ListType }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
         fetch(`${BASE_API_URL}/api/users/${userID}/${type}?page=${page}`, { credentials: "include" })
             .then((r) => r.json())
             .then((data) => {

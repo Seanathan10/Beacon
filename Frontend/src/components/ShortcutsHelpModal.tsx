@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import "./styles/ShortcutsHelpModal.css";
 
 interface ShortcutsHelpModalProps {
@@ -15,10 +15,10 @@ const SHORTCUTS: { keys: string[]; description: string }[] = [
 export default function ShortcutsHelpModal({ onClose }: ShortcutsHelpModalProps) {
     const [isClosing, setIsClosing] = useState(false);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setIsClosing(true);
         setTimeout(onClose, 200);
-    };
+    }, [onClose]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -26,7 +26,7 @@ export default function ShortcutsHelpModal({ onClose }: ShortcutsHelpModalProps)
         };
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
-    }, []);
+    }, [handleClose]);
 
     return (
         <div className={`shortcuts-modal-overlay ${isClosing ? "is-closing" : ""}`} onClick={handleClose}>

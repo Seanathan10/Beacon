@@ -8,14 +8,13 @@ import { NearbyPostsDrawer } from "@/components/NearbyPostsDrawer";
 import Map, {
     GeolocateControl,
     NavigationControl,
-    Popup,
 } from "react-map-gl/mapbox";
-import { Source, Layer, CircleLayerSpecification, HeatmapLayerSpecification, LineLayerSpecification } from "react-map-gl/mapbox";
+import { Source, Layer, HeatmapLayerSpecification } from "react-map-gl/mapbox";
 import Pin from "@/components/Pin";
-import { reverseGeocode, ReverseGeocodeResult } from "@/utils/geocoding";
+import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
-import { NavLink, useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import AuthHook from "./AuthHook";
 import { BASE_API_URL, PIN_COLOR, USER_PIN_COLOR, PIN_LAYER_STYLE, HEATMAP_LAYER_STYLE } from '../../constants';
 import { GeoJSON } from '../types/express/index';
@@ -55,6 +54,32 @@ interface CloneValues {
     tags: string[];
 }
 
+interface SavedPin {
+    id: number;
+    latitude: number;
+    longitude: number;
+    title: string;
+    description: string;
+    image: string;
+    color: string;
+    email: string;
+}
+
+interface PinApiResponse {
+    id: number;
+    creatorID?: number;
+    email: string;
+    title: string;
+    description: string;
+    image: string;
+    address?: string;
+    longitude: number;
+    latitude: number;
+    likes: number;
+    tags: string;
+    userStatus: "visited" | "wishlist" | null;
+}
+
 function HomePage() {
     useEffect(() => {
         const heartbeat = async () => {
@@ -65,7 +90,7 @@ function HomePage() {
                     throw new Error(`HTTP ${res.status}`);
                 }
 
-                const text = await res.text();
+                await res.text();
             } catch {
                 // tunnel unreachable on initial load — non-fatal
             }
@@ -85,7 +110,7 @@ function HomePage() {
         type: "FeatureCollection",
         features: [],
     });
-    const [savedPlaces, setSavedPlaces] = useState<PinData[]>([]);
+    const [savedPlaces, setSavedPlaces] = useState<SavedPin[]>([]);
 
     const [cursor, setCursor] = useState<string>("auto");
     const [userEmail, userId, isLoggedIn, logout, authSuccess] = AuthHook();
@@ -143,8 +168,12 @@ function HomePage() {
         onHelp: () => setShowShortcutsHelp(true),
     });
 
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const handleLogout = useCallback(() => {
+        logout();
+        setIsDropdownOpen(false);
+    }, [logout]);
 
     // Handle ?pin= URL parameter for shared links
     useEffect(() => {
@@ -191,7 +220,7 @@ function HomePage() {
                 setSearchParams({});
             }
         }
-    }, [allPins.features, searchParams]);
+    }, [allPins.features, searchParams, setSearchParams]);
 
     useEffect(() => {
         const fetchPins = async () => {
@@ -216,10 +245,10 @@ function HomePage() {
                     return;
                 }
 
-                const data = await res.json();
+                const data = await res.json() as PinApiResponse[];
                 const geojson = {
                     type: "FeatureCollection",
-                    features: data.map((p: any) => ({
+                    features: data.map((p) => ({
                         type: "Feature",
                         geometry: {
                             type: "Point",
@@ -246,8 +275,8 @@ function HomePage() {
                     const email = localStorage.getItem("userEmail")!;
                     const savedPinIDs = savedPinsData[email] || [];
                     const saved = geojson.features
-                        .filter((f: any) => savedPinIDs.includes(f.properties.id))
-                        .map((f: any) => ({
+                        .filter((f) => savedPinIDs.includes(f.properties.id))
+                        .map((f) => ({
                             id: f.properties.id,
                             latitude: f.geometry.coordinates[1],
                             longitude: f.geometry.coordinates[0],
@@ -257,7 +286,7 @@ function HomePage() {
                             color: f.properties.color,
                             email: f.properties.email
                         }));
-                    setSavedPlaces(saved as any);
+                    setSavedPlaces(saved);
                 }
             } catch (error) {
                 console.error("Error fetching pins:", error);
@@ -267,7 +296,7 @@ function HomePage() {
         if (pinSort !== "distance" || geoCoords) {
             fetchPins();
         }
-    }, [isLoggedIn, pinSort, geoCoords]);
+    }, [isLoggedIn, pinSort, geoCoords, handleLogout]);
 
     const requestGeo = useCallback(() => {
         if (!navigator.geolocation) {
@@ -296,11 +325,6 @@ function HomePage() {
         }
     };
 
-    const handleLogout = () => {
-        logout();
-        setIsDropdownOpen(false);
-    };
-
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
         // Check if we clicked on a point feature
         const features = e.target.queryRenderedFeatures(e.point, {
@@ -317,7 +341,7 @@ function HomePage() {
 
         if (features && features.length > 0) {
             const feature = features[0];
-            const coords = (feature.geometry as any).coordinates;
+            const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
             setSelectedPoint({
                 id: feature.properties?.id,
                 creatorID: feature.properties?.creatorID,
@@ -384,7 +408,7 @@ function HomePage() {
                     color: f.properties.color,
                     email: f.properties.email
                 }))}
-                savedPlaces={savedPlaces.map((p: any) => ({
+                savedPlaces={savedPlaces.map((p) => ({
                     id: p.id,
                     latitude: p.latitude,
                     longitude: p.longitude,
@@ -410,7 +434,7 @@ function HomePage() {
                     setTransferPoints(null);
                     // Decode polylines and create route GeoJSON
                     if (result.routePolylines.length > 0) {
-                        const features = result.routePolylines.map((route, idx) => {
+                        const features = result.routePolylines.map((route) => {
                             const decoded = polyline.decode(route.polyline);
                             return {
                                 type: "Feature" as const,
@@ -424,7 +448,7 @@ function HomePage() {
                         setTripRoute({
                             type: "FeatureCollection",
                             features,
-                        } as any);
+                        } as GeoJSON.FeatureCollection);
                     }
                 }}
                 onFlightSelected={(originCoords, destCoords) => {
@@ -454,7 +478,7 @@ function HomePage() {
                                 ],
                             },
                         }],
-                    } as any);
+                    } as GeoJSON.FeatureCollection);
                     // Clear hotel line when flight changes
                     setHotelLine(null);
                     setTransferPoints(null);
@@ -543,7 +567,7 @@ function HomePage() {
                                     coordinates: decoded.map(([lat, lng]: [number, number]) => [lng, lat]),
                                 },
                             }],
-                        } as any);
+                        } as GeoJSON.FeatureCollection);
                         setTransferPoints(null);
                     } else if (destAirportCoords) {
                         // Fallback to straight line
@@ -560,7 +584,7 @@ function HomePage() {
                                     ],
                                 },
                             }],
-                        } as any);
+                        } as GeoJSON.FeatureCollection);
                         setTransferPoints(null);
                     }
                 }}
@@ -669,9 +693,9 @@ function HomePage() {
                     dragRotate={true}
                     touchZoomRotate={true}
                     attributionControl={false}
-                    transformRequest={(url, resourceType) => {
+                    transformRequest={(url) => {
                         if (url.includes('events.mapbox.com')) {
-                            return null as any;
+                            return undefined;
                         }
                         return { url };
                     }}
@@ -762,7 +786,7 @@ function HomePage() {
                                 }));
                                 setSelectedPoint((prev) => prev ? { ...prev, userStatus: status } : prev);
                             }}
-                            onBookmarkChange={(pinId, isBookmarked) => {
+                            onBookmarkChange={(_pinId, _isBookmarked) => {
                                 const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
                                 const email = localStorage.getItem("userEmail")!;
                                 const savedPinIDs = savedPins[email] || [];
@@ -779,7 +803,7 @@ function HomePage() {
                                         color: f.properties.color,
                                         email: f.properties.email
                                     }));
-                                setSavedPlaces(saved as any);
+                                setSavedPlaces(saved as SavedPin[]);
                             }}
                         />
                     )}
@@ -820,7 +844,7 @@ function HomePage() {
                                     ),
                                 }));
                                 setSavedPlaces((prev) =>
-                                    prev.filter((p: any) => p.id !== deletedId)
+                                    prev.filter((p) => p.id !== deletedId)
                                 );
                                 setSelectedPoint(null);
                                 setShowDetailedModal(false);
@@ -859,14 +883,14 @@ function HomePage() {
                         />
                     )}
 
-                    <Source id="my-data" type="geojson" data={allPins as any}>
+                    <Source id="my-data" type="geojson" data={allPins as unknown as GeoJSON.FeatureCollection}>
                         <Layer {...PIN_LAYER_STYLE} />
                         <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
                     </Source>
 
                     {/* Trip Route Line */}
                     {tripRoute && (
-                        <Source id="trip-route" type="geojson" data={tripRoute as any}>
+                        <Source id="trip-route" type="geojson" data={tripRoute}>
                             <Layer
                                 id="trip-route-line"
                                 type="line"
@@ -881,7 +905,7 @@ function HomePage() {
 
                     {/* Flight Selection Line */}
                     {flightLine && (
-                        <Source id="flight-line" type="geojson" data={flightLine as any}>
+                        <Source id="flight-line" type="geojson" data={flightLine}>
                             <Layer
                                 id="flight-line-layer"
                                 type="line"
@@ -897,7 +921,7 @@ function HomePage() {
 
                     {/* Hotel Selection Line - supports multi-colored transit segments */}
                     {hotelLine && (
-                        <Source id="hotel-line" type="geojson" data={hotelLine as any}>
+                        <Source id="hotel-line" type="geojson" data={hotelLine}>
                             <Layer
                                 id="hotel-line-layer"
                                 type="line"
@@ -912,7 +936,7 @@ function HomePage() {
 
                     {/* Transfer Points - white dots at transit transfers */}
                     {transferPoints && (
-                        <Source id="transfer-points" type="geojson" data={transferPoints as any}>
+                        <Source id="transfer-points" type="geojson" data={transferPoints}>
                             <Layer
                                 id="transfer-points-layer"
                                 type="circle"

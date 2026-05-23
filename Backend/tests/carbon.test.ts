@@ -17,7 +17,7 @@ import {
 
 describe('CARBON_FACTORS', () => {
   it('should have non-negative values for all factors', () => {
-    for (const [key, value] of Object.entries(CARBON_FACTORS)) {
+    for (const [, value] of Object.entries(CARBON_FACTORS)) {
       expect(value).toBeGreaterThanOrEqual(0);
     }
   });

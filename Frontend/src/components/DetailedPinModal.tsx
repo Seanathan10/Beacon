@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import "./styles/DetailedPinModal.css";
 import { BASE_API_URL, PIN_COLOR } from '../../constants';
@@ -59,7 +59,7 @@ interface Comment {
     hasLiked?: boolean;
 }
 
-function ModalSection({ header, content }: { header: string, content: any }) {
+function ModalSection({ header, content }: { header: string, content: React.ReactNode }) {
     return (
         <div className="detailed-info-section">
             <h3 style={{ marginBottom: 0 }}>{header}</h3>
@@ -81,7 +81,7 @@ function parseTags(raw: string | string[] | undefined): string[] {
     }
 }
 
-export default function DetailedPinModal({ selectedPoint, currentUserId, currentUserEmail, onClose, onUpdate, onDelete, onClone, onStatusChange }: DetailedPinModalProps) {
+export default function DetailedPinModal({ selectedPoint, currentUserId: _currentUserId, currentUserEmail, onClose, onUpdate, onDelete, onClone, onStatusChange }: DetailedPinModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [userStatus, setUserStatus] = useState<"visited" | "wishlist" | null>(selectedPoint.userStatus ?? null);
@@ -127,10 +127,10 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [isDeleting, setIsDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setIsClosing(true);
         setTimeout(onClose, 300);
-    };
+    }, [onClose]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -140,7 +140,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
         };
         window.addEventListener("keydown", handleEscape);
         return () => window.removeEventListener("keydown", handleEscape);
-    }, []);
+    }, [handleClose]);
 
     // Comments state
     const [comments, setComments] = useState<Comment[]>([]);
@@ -151,7 +151,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
     const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null);
     const [optimisticReactions, setOptimisticReactions] = useState<{ [key: number]: { emoji: string; count: number; userReacted: boolean }[] }>({});
 
-    const [similarPins, setSimilarPins] = useState<any[]>([]);
+    interface SimilarPin { id: number; title?: string; image?: string; }
+    const [similarPins, setSimilarPins] = useState<SimilarPin[]>([]);
 
     useEffect(() => {
         if (!selectedPoint.id) return;
@@ -161,14 +162,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
             .catch(() => setSimilarPins([]));
     }, [selectedPoint.id]);
 
-    // Fetch comments when modal opens
-    useEffect(() => {
-        if (selectedPoint.id) {
-            fetchComments();
-        }
-    }, [selectedPoint.id]);
-
-    const fetchComments = async () => {
+    const fetchComments = useCallback(async () => {
         if (!selectedPoint.id) return;
 
         setIsLoadingComments(true);
@@ -184,12 +178,19 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
             } else {
                 console.error("Failed to fetch comments");
             }
-        } catch (error) {
-            console.error("Error fetching comments:", error);
+        } catch (err) {
+            console.error("Error fetching comments:", err);
         } finally {
             setIsLoadingComments(false);
         }
-    };
+    }, [selectedPoint.id]);
+
+    // Fetch comments when modal opens
+    useEffect(() => {
+        if (selectedPoint.id) {
+            fetchComments();
+        }
+    }, [selectedPoint.id, fetchComments]);
 
     const handleSubmitComment = async () => {
         if (!newComment.trim() || !selectedPoint.id) return;
@@ -331,7 +332,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
             const existingReactions = comments.find(c => c.id === commentId)?.reactions || [];
             const reactionIndex = existingReactions.findIndex(r => r.emoji === emoji);
             
-            let newReactions: CommentReaction[] = [...existingReactions];
+            const newReactions: CommentReaction[] = [...existingReactions];
             if (reactionIndex >= 0) {
                 newReactions[reactionIndex] = {
                     ...newReactions[reactionIndex],
@@ -466,7 +467,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
             } else {
                 alert("Failed to save changes. Please try again.");
             }
-        } catch (error) {
+        } catch {
             alert("Failed to save changes. Please check your connection and try again.");
         } finally {
             setIsSaving(false);
@@ -873,7 +874,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId, current
                         <div className="similar-pins-section">
                             <h4 style={{ margin: "0 0 8px", fontSize: 13, color: "var(--text-secondary, #6b7280)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Others Also Liked</h4>
                             <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                                {similarPins.map((pin: any) => (
+                                {similarPins.map((pin) => (
                                     <div key={pin.id} style={{ flexShrink: 0, width: 100, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-color, #e5e7eb)" }}>
                                         {pin.image ? (
                                             <img src={pin.image} alt={pin.title} style={{ width: "100%", height: 70, objectFit: "cover" }} />

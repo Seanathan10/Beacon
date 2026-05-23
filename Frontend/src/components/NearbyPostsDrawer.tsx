@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PostWithCoords } from '../types/comments';
 import { BASE_API_URL } from '../../constants';
 import './styles/NearbyPostsDrawer.css';
@@ -15,13 +15,7 @@ export function NearbyPostsDrawer({ mapBounds, onPostSelect, isOpen, onClose }: 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && mapBounds) {
-      fetchNearbyPosts();
-    }
-  }, [isOpen, mapBounds]);
-
-  const fetchNearbyPosts = async () => {
+  const fetchNearbyPosts = useCallback(async () => {
     if (!mapBounds) return;
 
     setIsLoading(true);
@@ -45,7 +39,13 @@ export function NearbyPostsDrawer({ mapBounds, onPostSelect, isOpen, onClose }: 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [mapBounds]);
+
+  useEffect(() => {
+    if (isOpen && mapBounds) {
+      fetchNearbyPosts();
+    }
+  }, [isOpen, mapBounds, fetchNearbyPosts]);
 
   if (!isOpen) return null;
 
