@@ -68,8 +68,13 @@ function runMigrations() {
             const columns = db.prepare("PRAGMA table_info(pin)").all() as { name: string }[];
             if (!columns.some(c => c.name === 'createdAt')) {
                 db.exec(`ALTER TABLE pin ADD COLUMN createdAt DATETIME`);
-                db.exec(`UPDATE pin SET createdAt = datetime('now', '-30 days') WHERE createdAt IS NULL`);
                 console.log("Migrated: added pin.createdAt");
+            }
+            // Backfill any pins with NULL createdAt (e.g. seeded before the column had a default)
+            const nullCount = (db.prepare("SELECT COUNT(*) as n FROM pin WHERE createdAt IS NULL").get() as { n: number }).n;
+            if (nullCount > 0) {
+                db.exec(`UPDATE pin SET createdAt = datetime('now', '-30 days') WHERE createdAt IS NULL`);
+                console.log(`Migrated: backfilled createdAt for ${nullCount} pins`);
             }
         }
 
