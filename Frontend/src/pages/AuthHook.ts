@@ -5,10 +5,12 @@ export default function AuthHook() {
 	const [userEmail, setUserEmail] = useState<string>(() => {
         return localStorage.getItem("userEmail") || "";
     });
-    const [userId, setUserId] = useState<number | null>(() => {
+
+	const [userId, setUserId] = useState<number | null>(() => {
         const id = localStorage.getItem("userId");
         return id ? parseInt(id) : null;
     });
+
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
         return localStorage.getItem("isLoggedIn") === "true";
     });
@@ -20,7 +22,7 @@ export default function AuthHook() {
         localStorage.removeItem("userId");
         setIsLoggedIn(false);
         setUserEmail("");
-        setUserId(null);
+		setUserId(null);
     };
 
 	const authSuccess = () => {

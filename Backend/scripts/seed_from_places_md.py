@@ -2,7 +2,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-REPO_ROOT = Path("/home/sean/Desktop/Beacon")
+REPO_ROOT = Path("/Users/ss/Desktop/Beacon")
 PLACES_PATH = REPO_ROOT / "places.md"
 DB_PATH = REPO_ROOT / "Backend" / "database" / "database.db"
 

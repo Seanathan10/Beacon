@@ -1,0 +1,103 @@
+ Issues Found
+
+  1. Three overlapping "database" folders (structural mess)
+
+  ┌────────────────────────────────┬──────────────────────────────────────────────────────┐
+  │             Folder             │                       Purpose                        │
+  ├────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ Backend/database/              │ The active local dev DB used by the app              │
+  ├────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ Backend/db_from_prod/          │ A production DB snapshot downloaded locally          │
+  ├────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ Backend/local-database-backup/ │ An exact duplicate of database/ — no reason to exist │
+  └────────────────────────────────┴──────────────────────────────────────────────────────┘
+
+  local-database-backup/ is identical to database/ and should be deleted. The .gitignore correctly ignores *.db files, but the SQL/script files inside it are being tracked, creating confusion.
+
+  ---
+  2. Critical schema divergence: prod DB is dangerously under-constrained
+
+  account table — critical
+
+  ┌───────────────────┬─────────────────────┬──────────────────────────────────────────┐
+  │      Column       │ Prod (db_from_prod) │          Local dev / create.sql          │
+  ├───────────────────┼─────────────────────┼──────────────────────────────────────────┤
+  │ name              │ VARCHAR(20)         │ VARCHAR(100)                             │
+  ├───────────────────┼─────────────────────┼──────────────────────────────────────────┤
+  │ email             │ VARCHAR(20)         │ VARCHAR(254) (RFC standard)              │
+  ├───────────────────┼─────────────────────┼──────────────────────────────────────────┤
+  │ password          │ VARCHAR(20)         │ VARCHAR(60)                              │
+  ├───────────────────┼─────────────────────┼──────────────────────────────────────────┤
+  │ profileVisibility │ No CHECK constraint │ CHECK(IN ('public','friends','private')) │
+  └───────────────────┴─────────────────────┴──────────────────────────────────────────┘
+
+  The password VARCHAR(20) on prod is catastrophic. bcrypt hashes are 60 characters long. The prod database literally cannot store real bcrypt passwords — they get silently truncated, breaking authentication for any real user.
+
+  likes table — critical
+
+  ┌─────────────┬──────┬────────────────────────────────┐
+  │    Issue    │ Prod │           Local dev            │
+  ├─────────────┼──────┼────────────────────────────────┤
+  │ Primary key │ None │ PRIMARY KEY (pinID, accountID) │
+  └─────────────┴──────┴────────────────────────────────┘
+
+  Without a primary key, users can like the same pin multiple times, corrupting the like count.
+
+  pin table
+
+  ┌───────────────────┬──────────────────────────────┬───────────────────────────┐
+  │ Column/Constraint │             Prod             │         Local dev         │
+  ├───────────────────┼──────────────────────────────┼───────────────────────────┤
+  │ likes             │ No DEFAULT 0                 │ DEFAULT 0                 │
+  ├───────────────────┼──────────────────────────────┼───────────────────────────┤
+  │ createdAt         │ No DEFAULT CURRENT_TIMESTAMP │ DEFAULT CURRENT_TIMESTAMP │
+  ├───────────────────┼──────────────────────────────┼───────────────────────────┤
+  │ FK on creatorID   │ No ON DELETE CASCADE         │ ON DELETE CASCADE         │
+  └───────────────────┴──────────────────────────────┴───────────────────────────┘
+
+  comment & post tables
+
+  - Foreign keys in prod are missing ON DELETE CASCADE, so deleting a user/pin won't clean up related rows.
+
+  post table — missing columns
+
+  - Prod is missing latitude REAL and longitude REAL columns that local dev has (used in routes/posts.ts for geo-based queries).
+
+  ---
+  3. Missing tables in prod entirely
+
+  These 5 tables exist in local dev but don't exist in prod at all:
+
+  - post_upvote — voting on posts
+  - bookmark_folder — bookmark organization
+  - bookmark — saved pins
+  - comment_reaction — emoji reactions on comments
+  - itinerary — trip planning data
+
+  Any routes using these will silently fail or crash in production.
+
+  ---
+  4. db.ts migration logic is incomplete
+
+  The runMigrations() function in db.ts handles some historical migrations (adding createdAt, bio, avatar, profileVisibility, user_follow, etc.) but doesn't handle the 5 missing tables above. When the prod DB is pointed to by the server,
+  it will never create bookmark, bookmark_folder, comment_reaction, itinerary, or post_upvote. The initPostsTable() also creates post without latitude/longitude, but since the table already exists on prod, CREATE TABLE IF NOT EXISTS is a
+  no-op — those columns will never be added.
+
+  ---
+  How to Fix
+
+  Step 1: Delete local-database-backup/ — it's a stale duplicate that adds noise.
+
+  Step 2: Add migration steps to db.ts for prod to catch it up:
+  - ALTER TABLE account to expand name, email, password varchar sizes (SQLite allows this)
+  - Add PRIMARY KEY to likes — this requires recreating the table since SQLite can't alter PKs
+  - Add DEFAULT 0 / DEFAULT CURRENT_TIMESTAMP to pin
+  - Add latitude/longitude columns to post
+  - CREATE TABLE IF NOT EXISTS for all 5 missing tables with correct schema
+
+  Step 3: Run [118;1:3uthose migrations against the prod DB before the next deploy.
+
+  Want me to write the migration code in db.ts and a one-time SQL migration script for the prod DB?
+
+✻ Worked for 57s
+
