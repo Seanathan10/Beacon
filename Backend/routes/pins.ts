@@ -88,7 +88,7 @@ export function getAllPins(req: Request, res: Response) {
         SELECT
             p.id,
             p.creatorID,
-            a.email,
+            COALESCE(a.email, '') AS email,
             p.latitude,
             p.longitude,
             p.title,
@@ -100,7 +100,7 @@ export function getAllPins(req: Request, res: Response) {
             (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
             (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
         FROM pin p
-        JOIN account a ON a.id = p.creatorID
+        LEFT JOIN account a ON a.id = p.creatorID
         ${whereClause}
     `;
 
@@ -149,7 +149,7 @@ export function getTrendingPins(req: Request, res: Response) {
         SELECT
             p.id,
             p.creatorID,
-            a.email,
+            COALESCE(a.email, '') AS email,
             p.latitude,
             p.longitude,
             p.title,
@@ -167,7 +167,7 @@ export function getTrendingPins(req: Request, res: Response) {
                 )
             ) AS trendingScore
         FROM pin p
-        JOIN account a ON a.id = p.creatorID
+        LEFT JOIN account a ON a.id = p.creatorID
         ORDER BY trendingScore DESC, p.createdAt DESC
         LIMIT 20;
     `, [userID, days]);
@@ -443,4 +443,3 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
 
     res.json(filtered);
 }
-
