@@ -115,6 +115,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// Plausible proxy routes must be registered before OpenAPI validator,
+// which rejects paths not defined in the spec.
+app.get("/metrics/js/script.js", plausible.proxyScript);
+app.post("/metrics/event", plausible.proxyEvent);
+
 app.use(
     OpenApiValidator.middleware({
         apiSpec,
@@ -191,9 +196,6 @@ app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
 app.post("/api/bookmarks/folders", auth.check, bookmarks.createFolder);
 app.patch("/api/bookmarks/folders/:id", auth.check, bookmarks.updateFolder);
 app.delete("/api/bookmarks/folders/:id", auth.check, bookmarks.deleteFolder);
-
-app.get("/metrics/js/script.js", plausible.proxyScript);
-app.post("/metrics/event", plausible.proxyEvent);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
