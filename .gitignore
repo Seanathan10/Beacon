@@ -111,11 +111,7 @@ dist
 .serverless/
 
 CLAUDE.md
-feature_plans.md
-feature_plans_2.md
-FAILURE_SUMMARY.txt
-FIXES_REQUIRED.md
-TEST_FAILURE_ANALYSIS.md
+plan.md
 
 # FuseBox cache
 .fusebox/
@@ -153,5 +149,3 @@ vite.config.ts.timestamp-*
 .env.development
 
 __pycache__
-
-
