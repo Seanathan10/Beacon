@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [
+    { "source": "/metrics/:path*", "destination": "https://api.beaconapp.live/metrics/:path*" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
