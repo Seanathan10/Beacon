@@ -257,7 +257,7 @@
 		}
 		(Object.assign(
 			(i = {
-				endpoint: "/metrics/event",
+				endpoint: "https://api.beaconapp.live/metrics/event",
 				domain: "beaconapp.live",
 				formSubmissions: !0,
 				fileDownloads: !0,
