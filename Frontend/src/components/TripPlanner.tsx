@@ -6,6 +6,7 @@ import './styles/TripPlanner.css';
 import { DatePicker } from './DatePicker';
 import { BASE_API_URL } from '../../constants';
 import mapboxgl from 'mapbox-gl';
+import { track } from '@/utils/analytics';
 
 interface TransitOption {
     mode: 'flight' | 'train' | 'bus' | 'driving';
@@ -321,6 +322,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         setProgress(0);
         initializeStages();
 
+        track("Trip Search", { origin: startCity, destination: endCity, duration_days: durationDays, trip_type: itineraryType });
+
         abortControllerRef.current = new AbortController();
 
         try {
@@ -463,6 +466,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                 itinerary: data.itinerary,
             };
 
+            track("Itinerary Generated", { transit_mode: selectedTransitOption.mode, has_hotel: Boolean(selectedHotelOption) });
             setResult(tripResult);
             setOptionsData(null);
             onPlanComplete(tripResult);
@@ -475,6 +479,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
 
     const handleAskAI = async () => {
         if (!aiQuestion.trim()) return;
+        track("AI Question Asked");
         setIsAskingAI(true);
 
         try {
@@ -533,7 +538,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             const data = await response.json();
             const url = `${window.location.origin}/shared/${data.id}`;
             setShareUrl(url);
-            
+            track("Itinerary Shared");
             // Copy to clipboard
             await navigator.clipboard.writeText(url);
         } catch (err) {

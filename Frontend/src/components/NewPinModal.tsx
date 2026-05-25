@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import "./styles/NewPinModal.css";
 import { BASE_API_URL } from '../../constants';
 import { CategoryBadge } from "./Post";
+import { track } from "@/utils/analytics";
 
 interface NewPinModalProps {
     onClose: () => void;
@@ -276,6 +277,7 @@ export default function NewPinModal({
                 return;
             }
 
+            track("Pin Created", { tag_count: selectedTags.length, has_image: Boolean(imageUrl) });
             onSubmit({
                 title,
                 message,

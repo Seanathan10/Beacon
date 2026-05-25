@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { BASE_API_URL } from "../../constants";
+import { track } from "@/utils/analytics";
 
 export function LoginPage() {
     const navigate = useNavigate();
@@ -43,8 +44,10 @@ export function LoginPage() {
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
             if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 
+            track("Login");
             navigate("/home");
         } catch (err) {
+            track("Login Failed");
             setError(
                 err instanceof Error
                     ? err.message

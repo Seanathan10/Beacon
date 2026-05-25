@@ -24,6 +24,7 @@ import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
 import FilterPanel, { PinFilters, DEFAULT_FILTERS, loadSavedFilters } from "@/components/FilterPanel";
+import { track } from "@/utils/analytics";
 
 interface PinData {
     lat: number;
@@ -173,6 +174,7 @@ function HomePage() {
     const [searchParams, setSearchParams] = useSearchParams();
 
     const handleLogout = useCallback(() => {
+        track("Logout");
         logout();
         setIsDropdownOpen(false);
     }, [logout]);
@@ -333,6 +335,7 @@ function HomePage() {
     }, []);
 
     const handleSortChange = (next: "recent" | "trending" | "distance") => {
+        track("Pin Sort Changed", { sort: next });
         setPinSort(next);
         if (next === "distance" && !geoCoords) {
             requestGeo();
@@ -434,7 +437,7 @@ function HomePage() {
                 isLoggedIn={isLoggedIn}
                 isSearchFocused={isSearchFocused}
                 showTripPlanner={showTripPlanner}
-                onOpenTripPlanner={() => setShowTripPlanner(true)}
+                onOpenTripPlanner={() => { track("Trip Planner Opened"); setShowTripPlanner(true); }}
                 onCloseTripPlanner={() => {
                     setShowTripPlanner(false);
                     setFlightLine(null);

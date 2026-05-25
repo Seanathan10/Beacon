@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { BASE_API_URL } from "../../constants";
+import { track } from "@/utils/analytics";
 
 export function RegistrationPage() {
     const navigate = useNavigate();
@@ -45,8 +46,10 @@ export function RegistrationPage() {
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
             if (data.user?.id) localStorage.setItem("userId", data.user.id.toString());
 
+            track("Register");
             navigate("/home");
         } catch (err) {
+            track("Register Failed");
             setError(err instanceof Error ? err.message : "An error occurred during registration");
         } finally {
             setIsLoading(false);

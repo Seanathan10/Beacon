@@ -4,6 +4,7 @@ import "./styles/DetailedPinModal.css";
 import { BASE_API_URL, PIN_COLOR } from '../../constants';
 import { EmojiReactionPicker } from "./EmojiReactionPicker";
 import ShareMenu from "./ShareMenu";
+import { track } from "@/utils/analytics";
 
 interface DetailedPinModalProps {
     selectedPoint: {
@@ -214,6 +215,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
             if (response.ok) {
                 const newCommentData = await response.json();
+                track("Pin Comment Added");
                 setComments([newCommentData, ...comments]);
                 setNewComment("");
             } else {
@@ -457,6 +459,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
             if (response.ok) {
                 const updatedPin = await response.json();
+                track("Pin Edited");
                 onUpdate?.({
                     id: selectedPoint.id,
                     description: updatedPin.description || description,
@@ -475,6 +478,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
     };
 
     const handleClone = () => {
+        track("Pin Cloned");
         onClone?.({
             title: selectedPoint.title?.trim() || "",
             description: selectedPoint.description?.trim() || "",
@@ -496,6 +500,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
             );
 
             if (response.ok) {
+                track("Pin Deleted");
                 onDelete?.(selectedPoint.id);
                 handleClose();
             } else {
