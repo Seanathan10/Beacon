@@ -151,3 +151,7 @@ vite.config.ts.timestamp-*
 
 .env.production
 .env.development
+
+__pycache__
+
+
