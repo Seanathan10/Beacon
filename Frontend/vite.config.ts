@@ -22,6 +22,11 @@ export default defineConfig({
                 changeOrigin: true,
                 secure: false,
             },
+            "/metrics": {
+                target: "http://localhost:3000",
+                changeOrigin: true,
+                secure: false,
+            },
         },
     },
     // Environment variable prefix (default is VITE_)

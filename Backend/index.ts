@@ -21,6 +21,7 @@ import * as stats from "./routes/stats.ts";
 import * as users from "./routes/users.ts";
 import * as follows from "./routes/follows.ts";
 import { shareRouter } from "./routes/share.ts";
+import * as plausible from "./routes/plausible.ts";
 
 const REQUIRED_ENV_VARS = ["SECRET"];
 const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
@@ -190,6 +191,9 @@ app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
 app.post("/api/bookmarks/folders", auth.check, bookmarks.createFolder);
 app.patch("/api/bookmarks/folders/:id", auth.check, bookmarks.updateFolder);
 app.delete("/api/bookmarks/folders/:id", auth.check, bookmarks.deleteFolder);
+
+app.get("/metrics/js/script.js", plausible.proxyScript);
+app.post("/metrics/event", plausible.proxyEvent);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
