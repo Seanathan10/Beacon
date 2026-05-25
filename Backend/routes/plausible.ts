@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 
-const PLAUSIBLE_BASE = "https://analytics.beaconapp.live";
-const SCRIPT_URL = `${PLAUSIBLE_BASE}/js/pa-Msl0sbVvx_d7q7B157Vh5.js`;
+const PLAUSIBLE_BASE = "https://analytics.byseansingh.com";
+const SCRIPT_URL = `${PLAUSIBLE_BASE}/js/script.js`;
 const EVENT_URL = `${PLAUSIBLE_BASE}/api/event`;
 
 export async function proxyScript(_req: Request, res: Response) {
