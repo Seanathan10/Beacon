@@ -118,7 +118,7 @@ app.use((req, res, next) => {
 // Plausible proxy routes must be registered before OpenAPI validator,
 // which rejects paths not defined in the spec.
 app.get("/metrics/js/script.js", plausible.proxyScript);
-app.post("/metrics/event", plausible.proxyEvent);
+app.post("/metrics/event", express.text({ type: "*/*" }), plausible.proxyEvent);
 
 app.use(
     OpenApiValidator.middleware({

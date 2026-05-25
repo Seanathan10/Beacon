@@ -16,11 +16,11 @@ export async function proxyEvent(req: Request, res: Response) {
     const upstream = await fetch(EVENT_URL, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
+            "Content-Type": req.headers["content-type"] ?? "text/plain",
             "User-Agent": req.headers["user-agent"] ?? "",
             "X-Forwarded-For": req.ip ?? "",
         },
-        body: JSON.stringify(req.body),
+        body: req.body,
     });
     res.status(upstream.status).end();
 }
