@@ -25,6 +25,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
 import FilterPanel, { PinFilters, DEFAULT_FILTERS, loadSavedFilters } from "@/components/FilterPanel";
 import { track } from "@/utils/analytics";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface PinData {
     lat: number;
@@ -683,6 +684,10 @@ function HomePage() {
                         </button>
                         {isDropdownOpen && (
                             <div className="user-dropdown">
+                                <div className="dropdown-item theme-toggle-row">
+                                    <span>Theme</span>
+                                    <ThemeToggle />
+                                </div>
                                 <button
                                     onClick={handleLogout}
                                     className="dropdown-item logout"

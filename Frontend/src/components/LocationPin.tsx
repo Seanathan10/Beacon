@@ -12,7 +12,28 @@ interface LocationPinProps {
 	onStatusChange?: (pinId: number, status: "visited" | "wishlist" | null) => void;
 }
 
-function HeartIcon({ filled }: { filled: boolean }) {
+function useIsDark() {
+	const getIsDark = () => {
+		const theme = localStorage.getItem("beacon-theme");
+		if (theme === "dark") return true;
+		if (theme === "light") return false;
+		return window.matchMedia("(prefers-color-scheme: dark)").matches;
+	};
+	const [isDark, setIsDark] = useState(getIsDark);
+	useEffect(() => {
+		const handler = () => setIsDark(getIsDark());
+		window.addEventListener("theme-changed", handler);
+		const mq = window.matchMedia("(prefers-color-scheme: dark)");
+		mq.addEventListener("change", handler);
+		return () => {
+			window.removeEventListener("theme-changed", handler);
+			mq.removeEventListener("change", handler);
+		};
+	}, []);
+	return isDark;
+}
+
+function HeartIcon({ filled, iconColor }: { filled: boolean; iconColor: string }) {
 	return filled ? (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
 			fill="#4db688">
@@ -22,7 +43,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 		</svg>
 	) : (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
-			fill="#1f1f1f">
+			fill={iconColor}>
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path
 				d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z" />
@@ -30,7 +51,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 	)
 }
 
-function BookmarkIcon({ filled }: { filled: boolean }) {
+function BookmarkIcon({ filled, iconColor }: { filled: boolean; iconColor: string }) {
 	return filled ? (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
 			fill="#4db688">
@@ -39,40 +60,40 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
 		</svg>
 	) : (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
-			fill="#1f1f1f">
+			fill={iconColor}>
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z" />
 		</svg>
 	)
 }
 
-function CheckIcon({ filled }: { filled: boolean }) {
+function CheckIcon({ filled, iconColor }: { filled: boolean; iconColor: string }) {
 	return (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
-			fill={filled ? "#4db688" : "#1f1f1f"}>
+			fill={filled ? "#4db688" : iconColor}>
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path d="M9 16.2l-3.5-3.5a.984.984 0 0 0-1.4 0 .984.984 0 0 0 0 1.4l4.19 4.19c.39.39 1.02.39 1.41 0L20.3 7.7a.984.984 0 0 0 0-1.4.984.984 0 0 0-1.4 0L9 16.2z" />
 		</svg>
 	);
 }
 
-function StarIcon({ filled }: { filled: boolean }) {
+function StarIcon({ filled, iconColor }: { filled: boolean; iconColor: string }) {
 	return filled ? (
 		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#4db688">
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
 		</svg>
 	) : (
-		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#1f1f1f">
+		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill={iconColor}>
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z" />
 		</svg>
 	);
 }
 
-function InfoIcon() {
+function InfoIcon({ iconColor }: { iconColor: string }) {
 	return (
-		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#1f1f1f">
+		<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill={iconColor}>
 			<path d="M0 0h24v24H0V0z" fill="none" />
 			<path
 				d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
@@ -81,6 +102,11 @@ function InfoIcon() {
 }
 
 export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails, onBookmarkChange, onStatusChange }: LocationPinProps) {
+	const isDark = useIsDark();
+	const textPrimary = isDark ? "#e5e7eb" : "#1a1a1a";
+	const textSecondary = isDark ? "#9ca3af" : "#6b7280";
+	const iconColor = isDark ? "#e5e7eb" : "#1f1f1f";
+
 	const titleText = selectedPoint.title?.trim() || selectedPoint.description?.trim() || "Untitled Pin";
 	const messageText = selectedPoint.description?.trim() || "";
 	const showMessage = messageText && messageText !== titleText;
@@ -212,7 +238,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 					style={{
 						margin: "0 4px 8px 4px",
 						fontWeight: "700",
-						color: "#1a1a1a",
+						color: textPrimary,
 						fontSize: "16px",
 						lineHeight: "1.4",
 					}}
@@ -246,7 +272,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 						style={{
 							margin: "0 4px 8px 4px",
 							fontWeight: "500",
-							color: "#6b7280",
+							color: textSecondary,
 							fontSize: "14px",
 							lineHeight: "1.4",
 						}}
@@ -262,7 +288,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 						onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
 						onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
 					>
-						<InfoIcon />
+						<InfoIcon iconColor={iconColor} />
 					</button>
 
 					<button
@@ -276,12 +302,12 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 							alignItems: 'center',
 							justifyContent: 'center',
 							background: 'none',
-							color: '#1a1a1a',
+							color: textPrimary,
 							padding: '4px 8px',
 							opacity: likesLoading ? 0.5 : 1,
 						}}
 					>
-						<HeartIcon filled={isLiked} />
+						<HeartIcon filled={isLiked} iconColor={iconColor} />
 						<p>{likesLoading ? '...' : likes}</p>
 					</button>
 
@@ -296,12 +322,12 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 							alignItems: 'center',
 							justifyContent: 'center',
 							background: 'none',
-							color: '#1a1a1a',
+							color: textPrimary,
 							padding: '4px 8px',
 							opacity: likesLoading ? 0.5 : 1,
 						}}
 					>
-						<BookmarkIcon filled={isBookmarked} />
+						<BookmarkIcon filled={isBookmarked} iconColor={iconColor} />
 					</button>
 
 					<button
@@ -316,11 +342,11 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 							alignItems: 'center',
 							justifyContent: 'center',
 							background: 'none',
-							color: '#1a1a1a',
+							color: textPrimary,
 							padding: '4px 8px',
 						}}
 					>
-						<CheckIcon filled={userStatus === "visited"} />
+						<CheckIcon filled={userStatus === "visited"} iconColor={iconColor} />
 					</button>
 
 					<button
@@ -335,11 +361,11 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 							alignItems: 'center',
 							justifyContent: 'center',
 							background: 'none',
-							color: '#1a1a1a',
+							color: textPrimary,
 							padding: '4px 8px',
 						}}
 					>
-						<StarIcon filled={userStatus === "wishlist"} />
+						<StarIcon filled={userStatus === "wishlist"} iconColor={iconColor} />
 					</button>
 				</div>
 			</div>

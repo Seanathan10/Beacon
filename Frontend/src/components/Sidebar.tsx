@@ -3,7 +3,6 @@ import mapboxgl from "mapbox-gl";
 import "./styles/Sidebar.css";
 import { PIN_COLOR } from "../../constants";
 import TripPlanner, { TripPlanResult } from "./TripPlanner";
-import ThemeToggle from "./ThemeToggle";
 import QuickStatsWidget from "./QuickStatsWidget";
 
 const KM_TO_MILES = 0.621371;
@@ -195,10 +194,7 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
 
     return (
         <aside className={`sidebar-container ${isSearchFocused ? "collapsed" : ""} ${isWide ? "wide" : ""}`}>
-            <div className="sidebar-theme-toggle">
-                <ThemeToggle />
-            </div>
-            {showTripPlanner ? (
+{showTripPlanner ? (
                 <TripPlanner
                     isOpen={showTripPlanner}
                     onClose={onCloseTripPlanner}

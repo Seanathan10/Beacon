@@ -140,6 +140,13 @@
     background-color: rgba(239, 68, 68, 0.1);
 }
 
+.dropdown-item.theme-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: default;
+}
+
 /* Auth Modal Overlay */
 .auth-modal-overlay {
     position: fixed;

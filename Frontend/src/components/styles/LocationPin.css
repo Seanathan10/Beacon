@@ -4,6 +4,7 @@
 	padding: 12px;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 	border: 1px solid var(--color-border-primary);
+	/*border: 5px solid green;*/
 }
 
 .location-pin-popup .mapboxgl-popup-tip {

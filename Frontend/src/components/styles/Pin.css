@@ -4,6 +4,7 @@
 }
 
 .pin-popup .mapboxgl-popup-content {
+    /*border: 5px solid green;*/
     background: transparent;
     padding: 0;
     box-shadow: none;
