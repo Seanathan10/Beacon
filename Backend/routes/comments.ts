@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { logError } from "../utils/logger";
 
 // Get all comments for a specific pin with reactions and badges
 export function getPinComments(req: Request, res: Response) {
@@ -15,7 +16,7 @@ export function getPinComments(req: Request, res: Response) {
     
     const results = db.query(
         `
-        SELECT 
+        SELECT
             c.id,
             c.pinID,
             c.accountID,
@@ -29,47 +30,66 @@ export function getPinComments(req: Request, res: Response) {
         `,
         [pinID]
     );
-    
-    // Enrich comments with reactions and badges
-    const enrichedComments = results.map((comment: any) => {
-        // Get reactions for this comment
-        const reactions = db.query(
-            `
-            SELECT emoji, COUNT(*) as count
-            FROM comment_reaction
-            WHERE commentID = ?
-            GROUP BY emoji
-            `,
-            [comment.id]
+
+    // Batch-load reactions for all comments at once instead of querying per
+    // comment (which was 3 queries × N comments). Reaction aggregates + the
+    // viewer's own reactions + the pin-like check collapse to 3 total queries.
+    const commentIDs: number[] = results.map((c: any) => c.id);
+    const reactionsByComment = new Map<number, { emoji: string; count: number }[]>();
+    const userReactedByComment = new Map<number, Set<string>>();
+
+    if (commentIDs.length > 0) {
+        const placeholders = commentIDs.map(() => "?").join(",");
+
+        const reactionRows = db.query(
+            `SELECT commentID, emoji, COUNT(*) as count
+             FROM comment_reaction
+             WHERE commentID IN (${placeholders})
+             GROUP BY commentID, emoji`,
+            commentIDs
         );
-        
-        // Get user's reactions
-        const userReactions = userID ? db.query(
-            `
-            SELECT emoji FROM comment_reaction
-            WHERE commentID = ? AND accountID = ?
-            `,
-            [comment.id, userID]
-        ).map((r: any) => r.emoji) : [];
-        
-        // Check if user has liked this pin
-        const hasLiked = userID ? db.query(
-            "SELECT 1 FROM likes WHERE pinID = ? AND accountID = ?",
-            [pinID, userID]
-        ).length > 0 : false;
-        
+        for (const r of reactionRows) {
+            const list = reactionsByComment.get(r.commentID) ?? [];
+            list.push({ emoji: r.emoji, count: r.count });
+            reactionsByComment.set(r.commentID, list);
+        }
+
+        if (userID) {
+            const userRows = db.query(
+                `SELECT commentID, emoji
+                 FROM comment_reaction
+                 WHERE accountID = ? AND commentID IN (${placeholders})`,
+                [userID, ...commentIDs]
+            );
+            for (const r of userRows) {
+                const set = userReactedByComment.get(r.commentID) ?? new Set<string>();
+                set.add(r.emoji);
+                userReactedByComment.set(r.commentID, set);
+            }
+        }
+    }
+
+    // hasLiked is per-pin, identical for every comment — compute it once.
+    const hasLiked = userID ? db.query(
+        "SELECT 1 FROM likes WHERE pinID = ? AND accountID = ?",
+        [pinID, userID]
+    ).length > 0 : false;
+
+    const enrichedComments = results.map((comment: any) => {
+        const reactions = reactionsByComment.get(comment.id) ?? [];
+        const userReacted = userReactedByComment.get(comment.id) ?? new Set<string>();
         return {
             ...comment,
             isCreator: comment.accountID === pin.creatorID,
             hasLiked,
-            reactions: reactions.map((r: any) => ({
+            reactions: reactions.map((r) => ({
                 emoji: r.emoji,
                 count: r.count,
-                userReacted: userReactions.includes(r.emoji)
+                userReacted: userReacted.has(r.emoji)
             }))
         };
     });
-    
+
     res.json(enrichedComments);
 }
 
@@ -228,6 +248,18 @@ export function addCommentReaction(req: Request, res: Response) {
         return;
     }
 
+    // Validate: must fit the VARCHAR(8) column and be a single emoji grapheme.
+    // (Without this, SQLite silently truncates oversized input at 8 bytes.)
+    if (emoji.length > 8) {
+        res.status(400).json({ message: "Emoji must be 8 characters or less" });
+        return;
+    }
+    const codepoints = Array.from(emoji);
+    if (codepoints.length > 1 && !/\p{Emoji}/u.test(emoji)) {
+        res.status(400).json({ message: "Reaction must be a single emoji" });
+        return;
+    }
+
     // Verify comment exists
     const comment = db.query("SELECT id FROM comment WHERE id = ?", [commentID])[0];
     if (!comment) {
@@ -243,7 +275,7 @@ export function addCommentReaction(req: Request, res: Response) {
         );
         res.status(201).json({ message: "Reaction added" });
     } catch (error) {
-        console.error("Reaction error:", error);
+        logError(req, "Reaction error", error);
         res.status(500).json({ message: "Failed to add reaction" });
     }
 }

@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { logError } from "../utils/logger";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_TAGS_LENGTH = 200;
 
 function stripHtml(str: string): string {
     return str.replace(/<[^>]*>/g, '');
@@ -242,6 +244,12 @@ export function createPin(req: Request, res: Response) {
         tags = JSON.stringify(req.body.tags);
     }
 
+    // tags is stored in a VARCHAR(200) column; reject oversized input instead of
+    // letting SQLite silently truncate it.
+    if (tags.length > MAX_TAGS_LENGTH) {
+        return res.status(400).json({ error: `Tags must be ${MAX_TAGS_LENGTH} characters or less` });
+    }
+
     try {
         const results = db.query(`
 		INSERT INTO pin(creatorID, latitude, longitude, title, address, description, image, tags, likes)
@@ -262,7 +270,7 @@ export function createPin(req: Request, res: Response) {
 
         res.status(201).json(results[0]);
     } catch (e) {
-        console.error('Create Pin Error:', e);
+        logError(req, 'Create Pin Error', e);
         res.status(400).json({ error: "Failed to create pin" });
     }
 }

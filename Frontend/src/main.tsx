@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import { initializeTheme } from "./utils/theme";
 
 import Landing from "./pages/Landing";
+import { RouteBoundary } from "./components/RouteBoundary";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 
@@ -30,31 +31,31 @@ const router = createBrowserRouter([
     },
     {
         path: '/explore',
-        element: <Suspense fallback={null}><PostsPage /></Suspense>,
+        element: <RouteBoundary><PostsPage /></RouteBoundary>,
     },
     {
         path: '/shared/:id',
-        element: <Suspense fallback={null}><SharedItinerary /></Suspense>,
+        element: <RouteBoundary><SharedItinerary /></RouteBoundary>,
     },
     {
         path: '/collection/:folderID',
-        element: <Suspense fallback={null}><PublicCollection /></Suspense>,
+        element: <RouteBoundary><PublicCollection /></RouteBoundary>,
     },
     {
         path: '/profile/:userID',
-        element: <Suspense fallback={null}><UserProfile /></Suspense>,
+        element: <RouteBoundary><UserProfile /></RouteBoundary>,
     },
     {
         path: '/users/:userID/followers',
-        element: <Suspense fallback={null}><FollowersList /></Suspense>,
+        element: <RouteBoundary><FollowersList /></RouteBoundary>,
     },
     {
         path: '/users/:userID/following',
-        element: <Suspense fallback={null}><FollowingList /></Suspense>,
+        element: <RouteBoundary><FollowingList /></RouteBoundary>,
     },
     {
         path: '/activity',
-        element: <Suspense fallback={null}><ActivityPage /></Suspense>,
+        element: <RouteBoundary><ActivityPage /></RouteBoundary>,
     },
 ]);
 

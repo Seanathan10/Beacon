@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { logError } from "../utils/logger";
+
+const MAX_CURSOR = 2_147_483_647; // upper bound for a pin ID cursor
 
 export function followUser(req: Request, res: Response) {
     const followerID = req.user.id;
@@ -12,14 +15,29 @@ export function followUser(req: Request, res: Response) {
     const target = db.query("SELECT id FROM account WHERE id = ?", [followingID])[0];
     if (!target) return res.status(404).json({ message: "User not found" });
 
+    // Idempotent, but we no longer use INSERT OR IGNORE — that would also swallow
+    // genuine constraint/schema errors and report success. Instead we explicitly
+    // treat an existing relationship (or a UNIQUE race) as success and surface
+    // anything else as a 500.
+    const existing = db.query(
+        "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
+        [followerID, followingID]
+    );
+    if (existing.length > 0) {
+        return res.status(204).send();
+    }
+
     try {
         db.query(
-            "INSERT OR IGNORE INTO user_follow(followerID, followingID) VALUES(?, ?)",
+            "INSERT INTO user_follow(followerID, followingID) VALUES(?, ?)",
             [followerID, followingID]
         );
         res.status(204).send();
     } catch (err: any) {
-        console.error("Follow error:", err);
+        if (err.code === 'SQLITE_CONSTRAINT' || err.message?.includes('UNIQUE constraint failed')) {
+            return res.status(204).send(); // concurrent follow — already following
+        }
+        logError(req, "Follow error", err);
         res.status(500).json({ message: "Failed to follow user" });
     }
 }
@@ -41,7 +59,15 @@ export function unfollowUser(req: Request, res: Response) {
 
 export function getFollowFeed(req: Request, res: Response) {
     const userID = req.user.id;
-    const cursor = req.query.cursor ? parseInt(req.query.cursor as string, 10) : null;
+
+    let cursor: number | null = null;
+    if (req.query.cursor !== undefined) {
+        const parsed = parseInt(req.query.cursor as string, 10);
+        if (isNaN(parsed) || parsed < 1 || parsed > MAX_CURSOR) {
+            return res.status(400).json({ message: "Invalid cursor" });
+        }
+        cursor = parsed;
+    }
     const limit = 10;
 
     const rows: any[] = cursor

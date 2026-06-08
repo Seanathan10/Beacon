@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { logError } from "../utils/logger";
 
 export function getLikes(req: Request, res: Response) {
 	const results = db.query(`
@@ -22,11 +23,14 @@ export function getLikes(req: Request, res: Response) {
 export function addLike(req: Request, res: Response) {
     try {
         const results = db.query(`INSERT INTO likes(pinID, accountID) VALUES(?, ?);`, [req.params.id, req.user.id]);
-        
+
         // This won't be reached if duplicate (throws error)
         if (results.changes === 0) {
             return res.status(404).send();
         }
+
+        // Keep the denormalized pin.likes counter in sync with the likes table.
+        db.query(`UPDATE pin SET likes = likes + 1 WHERE id = ?;`, [req.params.id]);
 
         res.status(204).send();
     } catch (error: any) {
@@ -40,7 +44,7 @@ export function addLike(req: Request, res: Response) {
              return res.status(404).json({ message: "Pin not found" });
         }
         // Generic 500 otherwise
-        console.error("Like error:", error);
+        logError(req, "Like error", error);
         res.status(500).send();
     }
 }
@@ -51,6 +55,9 @@ export function removeLike(req: Request, res: Response) {
 	if (results.changes === 0) {
 		return res.status(404).send();
 	}
+
+    // Keep the denormalized pin.likes counter in sync (clamp at 0 defensively).
+    db.query(`UPDATE pin SET likes = MAX(0, likes - 1) WHERE id = ?;`, [req.params.id]);
 
     res.status(204).send();
 }

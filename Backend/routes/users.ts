@@ -10,6 +10,33 @@ function isValidUrl(url: string): boolean {
     }
 }
 
+const MAX_PAGE = 10_000; // cap pagination so a huge `page` can't force a giant OFFSET scan
+
+function parsePage(raw: unknown): number {
+    const page = parseInt(String(raw ?? "1"), 10);
+    if (isNaN(page) || page < 1) return 1;
+    return Math.min(page, MAX_PAGE);
+}
+
+/**
+ * Whether `viewerID` may see `target`'s profile/data based on profileVisibility.
+ * - public: anyone
+ * - friends: the owner, or a viewer who follows the target
+ * - private: the owner only
+ */
+function canViewProfile(viewerID: number | null, targetID: number, visibility: string | null): boolean {
+    if (visibility === 'private') return viewerID === targetID;
+    if (visibility === 'friends') {
+        if (viewerID === targetID) return true;
+        if (!viewerID) return false;
+        return db.query(
+            "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
+            [viewerID, targetID]
+        ).length > 0;
+    }
+    return true; // public or null
+}
+
 export function getUser(req: Request, res: Response) {
     const targetID = parseInt(String(req.params.userID), 10);
     const viewerID = req.user?.id ?? null;
@@ -23,7 +50,7 @@ export function getUser(req: Request, res: Response) {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+    if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
@@ -95,14 +122,14 @@ export function updateMe(req: Request, res: Response) {
 export function getUserPins(req: Request, res: Response) {
     const targetID = parseInt(String(req.params.userID), 10);
     const viewerID = req.user?.id ?? null;
-    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
+    const page = parsePage(req.query.page);
     const limit = 20;
     const offset = (page - 1) * limit;
 
     const user = db.query("SELECT profileVisibility FROM account WHERE id = ?", [targetID])[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+    if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.json({ pins: [], page, hasMore: false });
     }
 
@@ -121,7 +148,7 @@ export function getUserPins(req: Request, res: Response) {
 
 export function getUserFollowers(req: Request, res: Response) {
     const targetID = parseInt(String(req.params.userID), 10);
-    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
+    const page = parsePage(req.query.page);
     const limit = 20;
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
@@ -129,26 +156,27 @@ export function getUserFollowers(req: Request, res: Response) {
     const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+    if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
+    // Single query: the LEFT JOIN computes the viewer's mutual-follow status
+    // instead of firing one SELECT per returned user (N+1).
     const rows = db.query(`
         SELECT a.id, a.name, a.email, a.bio, a.avatar,
-            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount
+            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount,
+            CASE WHEN vf.followerID IS NOT NULL THEN 1 ELSE 0 END AS isFollowedFlag
         FROM user_follow uf
         JOIN account a ON a.id = uf.followerID
+        LEFT JOIN user_follow vf ON vf.followingID = a.id AND vf.followerID = ?
         WHERE uf.followingID = ?
         ORDER BY uf.createdAt DESC
         LIMIT ? OFFSET ?
-    `, [targetID, limit + 1, offset]);
+    `, [viewerID, targetID, limit + 1, offset]);
 
-    const enriched = rows.slice(0, limit).map((f: any) => ({
+    const enriched = rows.slice(0, limit).map(({ isFollowedFlag, ...f }: any) => ({
         ...f,
-        isFollowed: viewerID ? db.query(
-            "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
-            [viewerID, f.id]
-        ).length > 0 : false,
+        isFollowed: isFollowedFlag === 1,
     }));
 
     res.json({ followers: enriched, page, hasMore: rows.length > limit });
@@ -156,7 +184,7 @@ export function getUserFollowers(req: Request, res: Response) {
 
 export function getUserFollowing(req: Request, res: Response) {
     const targetID = parseInt(String(req.params.userID), 10);
-    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
+    const page = parsePage(req.query.page);
     const limit = 20;
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
@@ -164,26 +192,26 @@ export function getUserFollowing(req: Request, res: Response) {
     const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.profileVisibility === 'private' && viewerID !== targetID) {
+    if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
+    // Single query with a LEFT JOIN for mutual-follow status (avoids N+1).
     const rows = db.query(`
         SELECT a.id, a.name, a.email, a.bio, a.avatar,
-            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount
+            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount,
+            CASE WHEN vf.followerID IS NOT NULL THEN 1 ELSE 0 END AS isFollowedFlag
         FROM user_follow uf
         JOIN account a ON a.id = uf.followingID
+        LEFT JOIN user_follow vf ON vf.followingID = a.id AND vf.followerID = ?
         WHERE uf.followerID = ?
         ORDER BY uf.createdAt DESC
         LIMIT ? OFFSET ?
-    `, [targetID, limit + 1, offset]);
+    `, [viewerID, targetID, limit + 1, offset]);
 
-    const enriched = rows.slice(0, limit).map((f: any) => ({
+    const enriched = rows.slice(0, limit).map(({ isFollowedFlag, ...f }: any) => ({
         ...f,
-        isFollowed: viewerID ? db.query(
-            "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
-            [viewerID, f.id]
-        ).length > 0 : false,
+        isFollowed: isFollowedFlag === 1,
     }));
 
     res.json({ following: enriched, page, hasMore: rows.length > limit });

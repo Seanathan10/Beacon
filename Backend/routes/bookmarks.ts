@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { randomUUID } from "crypto";
+import { logError } from "../utils/logger";
 
 /**
  * GET /api/bookmarks - List all bookmarked pins for the authenticated user
@@ -72,7 +73,7 @@ export function addBookmark(req: Request, res: Response) {
 		if (error.message?.includes("FOREIGN KEY constraint failed")) {
 			return res.status(404).json({ message: "Pin or folder not found" });
 		}
-		console.error("Bookmark error:", error);
+		logError(req, "Bookmark error", error);
 		res.status(500).json({ message: "Internal server error" });
 	}
 }
@@ -137,7 +138,7 @@ export function updateBookmark(req: Request, res: Response) {
 		if (error.message?.includes("FOREIGN KEY constraint failed")) {
 			return res.status(404).json({ message: "Folder not found" });
 		}
-		console.error("Update bookmark error:", error);
+		logError(req, "Update bookmark error", error);
 		res.status(500).json({ message: "Internal server error" });
 	}
 }
@@ -203,7 +204,7 @@ export function createFolder(req: Request, res: Response) {
 			pinCount: 0
 		});
 	} catch (error: any) {
-		console.error("Create folder error:", error);
+		logError(req, "Create folder error", error);
 		res.status(500).json({ message: "Internal server error" });
 	}
 }
@@ -270,7 +271,7 @@ export function updateFolder(req: Request, res: Response) {
 
 		res.status(200).json({ message: "Folder updated" });
 	} catch (error: any) {
-		console.error("Update folder error:", error);
+		logError(req, "Update folder error", error);
 		res.status(500).json({ message: "Internal server error" });
 	}
 }
@@ -300,25 +301,36 @@ export function deleteFolder(req: Request, res: Response) {
 	}
 
 	try {
-		// Move bookmarks in this folder to uncategorized (folderID = NULL)
-		db.query(
-			`UPDATE bookmark SET folderID = NULL WHERE folderID = ?`,
-			[id]
-		);
+		// Wrap both statements in a transaction so we never leave bookmarks
+		// orphaned (folder gone but folderID still set) if one statement fails.
+		db.query("BEGIN");
+		try {
+			// Move bookmarks in this folder to uncategorized (folderID = NULL)
+			db.query(
+				`UPDATE bookmark SET folderID = NULL WHERE folderID = ?`,
+				[id]
+			);
 
-		// Delete the folder
-		const results = db.query(
-			`DELETE FROM bookmark_folder WHERE id = ? AND accountID = ?`,
-			[id, req.user.id]
-		);
+			// Delete the folder
+			const results = db.query(
+				`DELETE FROM bookmark_folder WHERE id = ? AND accountID = ?`,
+				[id, req.user.id]
+			);
 
-		if (results.changes === 0) {
-			return res.status(404).json({ message: "Folder not found" });
+			if (results.changes === 0) {
+				db.query("ROLLBACK");
+				return res.status(404).json({ message: "Folder not found" });
+			}
+
+			db.query("COMMIT");
+		} catch (txErr) {
+			db.query("ROLLBACK");
+			throw txErr;
 		}
 
 		res.status(204).send();
 	} catch (error: any) {
-		console.error("Delete folder error:", error);
+		logError(req, "Delete folder error", error);
 		res.status(500).json({ message: "Internal server error" });
 	}
 }

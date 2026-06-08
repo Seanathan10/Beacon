@@ -228,6 +228,21 @@ function sendSSE(res: Response, update: ProgressUpdate) {
     }
 }
 
+// Upper bound on any single upstream call so a hung external service can't keep
+// the SSE socket (and an Express connection slot) open indefinitely.
+const EXTERNAL_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return new Promise<T>((resolve) => {
+        const timer = setTimeout(() => resolve(fallback), ms);
+        timer.unref?.();
+        promise.then(
+            (value) => { clearTimeout(timer); resolve(value); },
+            () => { clearTimeout(timer); resolve(fallback); }
+        );
+    });
+}
+
 /**
  * Plan a trip with streaming progress - SSE endpoint
  */
@@ -265,8 +280,8 @@ export async function planTripStream(req: Request, res: Response) {
         });
 
         const [originCoords, destCoords] = await Promise.all([
-            geocodeCity(startLocation),
-            geocodeCity(endLocation),
+            withTimeout(geocodeCity(startLocation), EXTERNAL_TIMEOUT_MS, null),
+            withTimeout(geocodeCity(endLocation), EXTERNAL_TIMEOUT_MS, null),
         ]);
 
         if (!originCoords) {
@@ -329,7 +344,7 @@ export async function planTripStream(req: Request, res: Response) {
         });
 
         // Wait for flight search to complete (may already be done)
-        const flights = await flightSearchPromise;
+        const flights = await withTimeout(flightSearchPromise, EXTERNAL_TIMEOUT_MS, [] as FlightResult[]);
 
         sendSSE(res, {
             stage: 'flights',
@@ -354,7 +369,7 @@ export async function planTripStream(req: Request, res: Response) {
             progress: 30,
         });
 
-        const transitResults = await transitSearchPromise;
+        const transitResults = await withTimeout(transitSearchPromise, EXTERNAL_TIMEOUT_MS, [] as TransitResult[]);
 
         sendSSE(res, {
             stage: 'transit',
@@ -378,7 +393,7 @@ export async function planTripStream(req: Request, res: Response) {
             progress: 45,
         });
 
-        const drivingResult = await drivingSearchPromise;
+        const drivingResult = await withTimeout(drivingSearchPromise, EXTERNAL_TIMEOUT_MS, null);
 
         sendSSE(res, {
             stage: 'driving',
@@ -402,7 +417,7 @@ export async function planTripStream(req: Request, res: Response) {
             progress: 55,
         });
 
-        const ecoHotels = await hotelSearchPromise;
+        const ecoHotels = await withTimeout(hotelSearchPromise, EXTERNAL_TIMEOUT_MS, [] as EcoHotel[]);
 
         sendSSE(res, {
             stage: 'hotels',

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { geocodeLocation } from "../utils/geocoding";
+import { logError } from "../utils/logger";
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_LENGTH = 500;
@@ -137,7 +138,7 @@ export async function createPost(req: Request, res: Response) {
             tags: newPost.tags ? newPost.tags.split(',').map((t: string) => t.trim()) : [],
         });
     } catch (err) {
-        console.error("Error creating post:", err);
+        logError(req, "Error creating post", err);
         res.status(500).json({ message: "Failed to create post" });
     }
 }
@@ -161,37 +162,60 @@ export async function updatePost(req: Request, res: Response) {
     const params: any[] = [];
 
     if (title !== undefined) {
+        const titleStr = String(title).trim();
+        if (titleStr.length > MAX_TITLE_LENGTH) {
+            return res.status(400).json({ message: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
+        }
         updates.push("title = ?");
-        params.push(title);
+        params.push(titleStr);
     }
     if (location !== undefined) {
+        const locationStr = String(location).trim();
+        if (locationStr.length > MAX_LOCATION_LENGTH) {
+            return res.status(400).json({ message: `Location must be ${MAX_LOCATION_LENGTH} characters or less` });
+        }
         updates.push("location = ?");
-        params.push(location);
+        params.push(locationStr);
     }
     if (category !== undefined) {
+        const categoryStr = String(category).trim();
+        if (categoryStr.length > MAX_CATEGORY_LENGTH) {
+            return res.status(400).json({ message: `Category must be ${MAX_CATEGORY_LENGTH} characters or less` });
+        }
         updates.push("category = ?");
-        params.push(category);
+        params.push(categoryStr);
     }
     if (tags !== undefined) {
         updates.push("tags = ?");
         params.push(Array.isArray(tags) ? tags.join(',') : tags);
     }
     if (message !== undefined) {
+        const messageStr = String(message).trim();
+        if (messageStr.length > MAX_MESSAGE_LENGTH) {
+            return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
+        }
         updates.push("message = ?");
-        params.push(message);
+        params.push(messageStr);
     }
     if (image !== undefined) {
+        if (image && !isValidUrl(String(image).trim())) {
+            return res.status(400).json({ message: "Invalid image URL" });
+        }
         updates.push("image = ?");
-        params.push(image);
+        params.push(image ? String(image).trim() : null);
     }
 
-    // If location is updated, geocode it
+    // If location is updated, geocode it. Only overwrite coordinates when geocoding
+    // succeeds — otherwise a transient failure would blank out valid coordinates and
+    // break map features. The previous coordinates are left intact.
     if (location !== undefined) {
-        const coords = await geocodeLocation(location);
-        updates.push("latitude = ?");
-        params.push(coords?.latitude ?? null);
-        updates.push("longitude = ?");
-        params.push(coords?.longitude ?? null);
+        const coords = await geocodeLocation(String(location).trim());
+        if (coords) {
+            updates.push("latitude = ?");
+            params.push(coords.latitude);
+            updates.push("longitude = ?");
+            params.push(coords.longitude);
+        }
     }
 
     if (updates.length > 0) {
@@ -252,7 +276,7 @@ export function upvotePost(req: Request, res: Response) {
         if (error.code === 'SQLITE_CONSTRAINT' || error.message?.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ message: "Already upvoted" });
         }
-        console.error("Upvote error:", error);
+        logError(req, "Upvote error", error);
         return res.status(500).send();
     }
 
@@ -311,7 +335,7 @@ export function getNearbyPosts(req: Request, res: Response) {
 
         res.json(posts);
     } catch (error) {
-        console.error("Error fetching nearby posts:", error);
+        logError(req, "Error fetching nearby posts", error);
         res.status(500).json({ message: "Failed to fetch nearby posts" });
     }
 }

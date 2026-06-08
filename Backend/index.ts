@@ -45,6 +45,10 @@ app.use(cookieParser());
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
+// Hard cap on distinct keys so an attacker rotating IPs cannot grow the map
+// without bound between cleanup sweeps and exhaust process memory.
+const MAX_RATE_LIMIT_ENTRIES = 50_000;
+
 function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Request) => string) {
     return (req: Request, res: Response, next: NextFunction) => {
         const key = keyFn
@@ -55,6 +59,17 @@ function rateLimiter(maxRequests: number, windowMs: number, keyFn?: (req: Reques
         const entry = rateLimitStore.get(key);
 
         if (!entry || now > entry.resetAt) {
+            // Bound the store: a new key would be added. If we're at capacity,
+            // first evict expired entries; if still full, fail closed.
+            if (!entry && rateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+                for (const [k, e] of rateLimitStore.entries()) {
+                    if (now > e.resetAt) rateLimitStore.delete(k);
+                }
+                if (rateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+                    res.setHeader("Retry-After", Math.ceil(windowMs / 1000));
+                    return res.status(429).json({ message: "Server busy, please try again later" });
+                }
+            }
             rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
             return next();
         }
@@ -74,6 +89,11 @@ const authRateLimit = rateLimiter(10, 15 * 60 * 1000); // 10 per 15 min per IP
 const tripRateLimit = rateLimiter(20, 60 * 1000, (req) => `trip:${req.user?.id ?? req.ip}`);
 
 const shareRateLimit = rateLimiter(100, 60 * 1000, (req) => `share:${req.ip}`); // 100 per minute per IP
+
+// General write limiter for content-mutating endpoints (pins, posts, comments,
+// likes, bookmarks, follows, etc.) so an authenticated user cannot flood the DB
+// with unlimited writes. Keyed per user (falls back to IP if unauthenticated).
+const writeRateLimit = rateLimiter(120, 60 * 1000, (req) => `write:${req.user?.id ?? req.ip}`);
 
 if (process.env.NODE_ENV !== "test") {
     setInterval(() => {
@@ -115,6 +135,22 @@ app.use((req, res, next) => {
     next();
 });
 
+// CSRF defense-in-depth: for state-changing requests, reject any browser-issued
+// cross-origin request. Browsers always send `Origin` on cross-site writes, so a
+// forged form/XHR from an attacker's page is blocked server-side even though the
+// auth cookie is SameSite=strict. Same-origin and non-browser clients (no Origin
+// header, e.g. server-to-server or the test runner) are unaffected.
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+app.use((req, res, next) => {
+    if (MUTATING_METHODS.has(req.method)) {
+        const origin = req.headers.origin;
+        if (origin && !allowedOrigins.has(origin)) {
+            return res.status(403).json({ message: "Cross-origin request blocked" });
+        }
+    }
+    next();
+});
+
 // Plausible proxy routes must be registered before OpenAPI validator,
 // which rejects paths not defined in the spec.
 app.get("/metrics/js/script.js", plausible.proxyScript);
@@ -145,33 +181,33 @@ app.get("/api/pins/user", auth.check, pins.getUserPins);
 app.post("/api/pins/nearby", auth.check, pins.getPinsNearCoordinate);
 app.get("/api/pins/:id/similar", auth.check, pins.getSimilarPins);
 app.get("/api/pins/:id", auth.check, pins.getPin);
-app.put("/api/pins/:id", auth.check, pins.updatePin);
-app.post("/api/pins", auth.check, pins.createPin);
-app.delete("/api/pins/:id", auth.check, pins.deletePin);
+app.put("/api/pins/:id", auth.check, writeRateLimit, pins.updatePin);
+app.post("/api/pins", auth.check, writeRateLimit, pins.createPin);
+app.delete("/api/pins/:id", auth.check, writeRateLimit, pins.deletePin);
 
 app.get("/api/posts", auth.check, posts.getAllPosts);
 app.get("/api/posts/:id", auth.check, posts.getPost);
-app.post("/api/posts", auth.check, posts.createPost);
-app.put("/api/posts/:id", auth.check, posts.updatePost);
-app.delete("/api/posts/:id", auth.check, posts.deletePost);
-app.post("/api/posts/:id/upvote", auth.check, posts.upvotePost);
+app.post("/api/posts", auth.check, writeRateLimit, posts.createPost);
+app.put("/api/posts/:id", auth.check, writeRateLimit, posts.updatePost);
+app.delete("/api/posts/:id", auth.check, writeRateLimit, posts.deletePost);
+app.post("/api/posts/:id/upvote", auth.check, writeRateLimit, posts.upvotePost);
 app.get("/api/posts/nearby", auth.check, posts.getNearbyPosts);
 
 app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
-app.post("/api/pins/:pinId/comments", auth.check, comments.createComment);
-app.put("/api/comments/:commentId", auth.check, comments.updateComment);
-app.delete("/api/comments/:commentId", auth.check, comments.deleteComment);
-app.post("/api/comments/:id/reactions", auth.check, comments.addCommentReaction);
-app.delete("/api/comments/:id/reactions/:emoji", auth.check, comments.removeCommentReaction);
+app.post("/api/pins/:pinId/comments", auth.check, writeRateLimit, comments.createComment);
+app.put("/api/comments/:commentId", auth.check, writeRateLimit, comments.updateComment);
+app.delete("/api/comments/:commentId", auth.check, writeRateLimit, comments.deleteComment);
+app.post("/api/comments/:id/reactions", auth.check, writeRateLimit, comments.addCommentReaction);
+app.delete("/api/comments/:id/reactions/:emoji", auth.check, writeRateLimit, comments.removeCommentReaction);
 
 app.get("/api/likes/user", auth.check, likes.getLikedPins);
 app.get("/api/likes/:id", auth.check, likes.getLikes);
-app.post("/api/likes/:id", auth.check, likes.addLike);
-app.delete("/api/likes/:id", auth.check, likes.removeLike);
+app.post("/api/likes/:id", auth.check, writeRateLimit, likes.addLike);
+app.delete("/api/likes/:id", auth.check, writeRateLimit, likes.removeLike);
 
 app.get("/api/pin-status", auth.check, pinStatus.getUserPinStatuses);
-app.put("/api/pins/:id/status", auth.check, pinStatus.setPinStatus);
-app.delete("/api/pins/:id/status", auth.check, pinStatus.deletePinStatus);
+app.put("/api/pins/:id/status", auth.check, writeRateLimit, pinStatus.setPinStatus);
+app.delete("/api/pins/:id/status", auth.check, writeRateLimit, pinStatus.deletePinStatus);
 
 app.get("/api/search/history", auth.check, search.getSearchHistory);
 app.post("/api/search/history", auth.check, search.addSearchHistory);
@@ -188,25 +224,25 @@ app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsF
 app.use("/api/share", shareRateLimit, shareRouter);
 
 app.get("/api/bookmarks", auth.check, bookmarks.getBookmarks);
-app.post("/api/bookmarks", auth.check, bookmarks.addBookmark);
-app.delete("/api/bookmarks/:pinID", auth.check, bookmarks.deleteBookmark);
-app.patch("/api/bookmarks/:pinID", auth.check, bookmarks.updateBookmark);
+app.post("/api/bookmarks", auth.check, writeRateLimit, bookmarks.addBookmark);
+app.delete("/api/bookmarks/:pinID", auth.check, writeRateLimit, bookmarks.deleteBookmark);
+app.patch("/api/bookmarks/:pinID", auth.check, writeRateLimit, bookmarks.updateBookmark);
 
 app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
-app.post("/api/bookmarks/folders", auth.check, bookmarks.createFolder);
-app.patch("/api/bookmarks/folders/:id", auth.check, bookmarks.updateFolder);
-app.delete("/api/bookmarks/folders/:id", auth.check, bookmarks.deleteFolder);
+app.post("/api/bookmarks/folders", auth.check, writeRateLimit, bookmarks.createFolder);
+app.patch("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.updateFolder);
+app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.deleteFolder);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
-app.patch("/api/me", auth.check, users.updateMe);
+app.patch("/api/me", auth.check, writeRateLimit, users.updateMe);
 
 app.get("/api/users/:userID", auth.optional, users.getUser);
 app.get("/api/users/:userID/pins", auth.optional, users.getUserPins);
 app.get("/api/users/:userID/followers", auth.optional, users.getUserFollowers);
 app.get("/api/users/:userID/following", auth.optional, users.getUserFollowing);
-app.post("/api/users/:userID/follow", auth.check, follows.followUser);
-app.delete("/api/users/:userID/follow", auth.check, follows.unfollowUser);
+app.post("/api/users/:userID/follow", auth.check, writeRateLimit, follows.followUser);
+app.delete("/api/users/:userID/follow", auth.check, writeRateLimit, follows.unfollowUser);
 app.get("/api/me/feed", auth.check, follows.getFollowFeed);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

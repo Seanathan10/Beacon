@@ -3,10 +3,34 @@ import express from 'express';
 import { db } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import { check } from './auth.ts';
+import { logError } from '../utils/logger';
 
 export const shareRouter = express.Router();
 
 const MAX_SHARE_PAYLOAD_BYTES = 512 * 1024; // 512 KB
+
+/**
+ * Recursively strip HTML tags from every string in an AI-generated payload before
+ * persisting it. The itinerary blob comes from Gemini and is later rendered on the
+ * client; stripping tags here removes any injected <script>/HTML as a stored-XSS
+ * defense regardless of how the frontend renders it.
+ */
+function sanitizeDeep(value: unknown): unknown {
+    if (typeof value === 'string') {
+        return value.replace(/<[^>]*>/g, '');
+    }
+    if (Array.isArray(value)) {
+        return value.map(sanitizeDeep);
+    }
+    if (value && typeof value === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) {
+            out[k] = sanitizeDeep(v);
+        }
+        return out;
+    }
+    return value;
+}
 
 shareRouter.post('/', (req, res) => {
     try {
@@ -18,9 +42,9 @@ shareRouter.post('/', (req, res) => {
 
         const id = uuidv4();
         const data = JSON.stringify({
-            itinerary,
-            itineraryType,
-            settings: settings || {}
+            itinerary: sanitizeDeep(itinerary),
+            itineraryType: typeof itineraryType === 'string' ? itineraryType.replace(/<[^>]*>/g, '') : itineraryType,
+            settings: sanitizeDeep(settings || {})
         });
 
         if (Buffer.byteLength(data, 'utf8') > MAX_SHARE_PAYLOAD_BYTES) {
@@ -33,7 +57,7 @@ shareRouter.post('/', (req, res) => {
 
         res.status(201).json({ id });
     } catch (error) {
-        console.error('Error sharing itinerary:', error);
+        logError(req, 'Error sharing itinerary', error);
         res.status(500).json({ error: 'Failed to share itinerary' });
     }
 });
@@ -59,7 +83,7 @@ shareRouter.get('/:id', (req, res) => {
             createdAt
         });
     } catch (error) {
-        console.error('Error fetching shared itinerary:', error);
+        logError(req, 'Error fetching shared itinerary', error);
         res.status(500).json({ error: 'Failed to fetch itinerary' });
     }
 });
@@ -69,6 +93,12 @@ shareRouter.delete('/:id', check, (req, res) => {
     try {
         const id = String(req.params.id);
         const userId = req.user?.id;
+
+        // Hard guard: never reach the ownership comparison without an authenticated
+        // user. (Otherwise `undefined !== Number(creatorID)` would skip the 403.)
+        if (userId === undefined || userId === null) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
 
         const stmt = db.prepare('SELECT creatorID FROM itinerary WHERE id = ?');
         const result = stmt.get(id) as { creatorID: number | null } | undefined;
@@ -86,7 +116,7 @@ shareRouter.delete('/:id', check, (req, res) => {
 
         res.status(200).json({ message: 'Itinerary deleted successfully' });
     } catch (error) {
-        console.error('Error deleting shared itinerary:', error);
+        logError(req, 'Error deleting shared itinerary', error);
         res.status(500).json({ error: 'Failed to delete itinerary' });
     }
 });
@@ -145,7 +175,7 @@ shareRouter.get('/collection/:folderID', (req, res) => {
             pins
         });
     } catch (error) {
-        console.error('Error fetching collection:', error);
+        logError(req, 'Error fetching collection', error);
         res.status(500).json({ error: 'Failed to fetch collection' });
     }
 });
