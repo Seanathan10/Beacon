@@ -376,7 +376,7 @@
 /* Submit Button */
 .auth-submit-btn {
     padding: 14px 24px;
-    background: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
     color: white;
     border: none;
     border-radius: 999px;
@@ -389,7 +389,7 @@
 }
 
 .auth-submit-btn:hover {
-    background: var(--color-text-primary);
+    /*background: var(--color-text-primary);*/
     transform: translateY(-2px);
     box-shadow: 0 8px 20px var(--color-shadow-xl);
 }
