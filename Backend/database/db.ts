@@ -24,6 +24,23 @@ export function query(sql: string, params: any[] = []): any {
     }
 }
 
+/**
+ * Run `fn` inside a single SQLite transaction. Commits if it returns,
+ * rolls back and rethrows if it throws. Use for multi-statement writes that
+ * must stay consistent (e.g. an insert plus a denormalized counter update).
+ */
+export function transaction<T>(fn: () => T): T {
+    db.exec("BEGIN");
+    try {
+        const result = fn();
+        db.exec("COMMIT");
+        return result;
+    } catch (err) {
+        db.exec("ROLLBACK");
+        throw err;
+    }
+}
+
 function initPostsTable() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS post (

@@ -22,15 +22,18 @@ export function getLikes(req: Request, res: Response) {
 
 export function addLike(req: Request, res: Response) {
     try {
-        const results = db.query(`INSERT INTO likes(pinID, accountID) VALUES(?, ?);`, [req.params.id, req.user.id]);
+        // Insert the like and bump the denormalized counter atomically so the
+        // pin.likes column can never drift from the authoritative likes table.
+        const results = db.transaction(() => {
+            const r = db.query(`INSERT INTO likes(pinID, accountID) VALUES(?, ?);`, [req.params.id, req.user.id]);
+            db.query(`UPDATE pin SET likes = likes + 1 WHERE id = ?;`, [req.params.id]);
+            return r;
+        });
 
         // This won't be reached if duplicate (throws error)
         if (results.changes === 0) {
             return res.status(404).send();
         }
-
-        // Keep the denormalized pin.likes counter in sync with the likes table.
-        db.query(`UPDATE pin SET likes = likes + 1 WHERE id = ?;`, [req.params.id]);
 
         res.status(204).send();
     } catch (error: any) {
@@ -50,14 +53,19 @@ export function addLike(req: Request, res: Response) {
 }
 
 export function removeLike(req: Request, res: Response) {
-    const results = db.query(`DELETE FROM likes WHERE pinID = ? AND accountID = ?;`, [req.params.id, req.user.id]);
+    // Delete the like and decrement the denormalized counter atomically.
+    const results = db.transaction(() => {
+        const r = db.query(`DELETE FROM likes WHERE pinID = ? AND accountID = ?;`, [req.params.id, req.user.id]);
+        if (r.changes > 0) {
+            // Clamp at 0 defensively against any prior drift.
+            db.query(`UPDATE pin SET likes = MAX(0, likes - 1) WHERE id = ?;`, [req.params.id]);
+        }
+        return r;
+    });
 
 	if (results.changes === 0) {
 		return res.status(404).send();
 	}
-
-    // Keep the denormalized pin.likes counter in sync (clamp at 0 defensively).
-    db.query(`UPDATE pin SET likes = MAX(0, likes - 1) WHERE id = ?;`, [req.params.id]);
 
     res.status(204).send();
 }

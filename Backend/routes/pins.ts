@@ -1,15 +1,13 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
+import { visibilityFilter } from "../utils/visibility";
+import { stripHtml } from "../utils/sanitize";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_TAGS_LENGTH = 200;
-
-function stripHtml(str: string): string {
-    return str.replace(/<[^>]*>/g, '');
-}
 
 function isValidUrl(url: string): boolean {
     try {
@@ -84,6 +82,11 @@ export function getAllPins(req: Request, res: Response) {
         params.push(userID, bookmarkStatus);
     }
 
+    // Only return pins whose creator's profileVisibility allows this viewer.
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
+    conditions.push(vis.sql);
+    params.push(...vis.params);
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     let sql = `
@@ -147,6 +150,7 @@ export function getTrendingPins(req: Request, res: Response) {
 
     // trendingScore = likes + 3 * max(0, 1 - age_days / days)
     // Pins outside the window still appear but with recencyScore 0.
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
     const results = db.query(`
         SELECT
             p.id,
@@ -170,9 +174,10 @@ export function getTrendingPins(req: Request, res: Response) {
             ) AS trendingScore
         FROM pin p
         LEFT JOIN account a ON a.id = p.creatorID
+        WHERE ${vis.sql}
         ORDER BY trendingScore DESC, p.createdAt DESC
         LIMIT 20;
-    `, [userID, days]);
+    `, [userID, days, ...vis.params]);
 
     res.json(results);
 }
@@ -394,11 +399,14 @@ function distBetweenCoordinates(lat1: number, lon1: number, lat2: number, lon2: 
 
 export function getSimilarPins(req: Request, res: Response) {
     const pinID = req.params.id;
+    const userID = req.user?.id ?? null;
 
     const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
     if (!pin) return res.status(404).json({ message: "Pin not found" });
 
-    // Find pins that users who liked this pin also liked, excluding pins from private creators
+    // Find pins that users who liked this pin also liked, respecting the
+    // creator's profileVisibility (private/friends honoured for this viewer).
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
     const results = db.query(`
         SELECT
             p.id, p.creatorID, a.email, p.latitude, p.longitude,
@@ -409,11 +417,11 @@ export function getSimilarPins(req: Request, res: Response) {
         JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
         JOIN pin p ON p.id = l2.pinID
         JOIN account a ON a.id = p.creatorID
-        WHERE l1.pinID = ? AND (a.profileVisibility IS NULL OR a.profileVisibility != 'private')
+        WHERE l1.pinID = ? AND ${vis.sql}
         GROUP BY p.id
         ORDER BY sharedLikers DESC, likes DESC
         LIMIT 10
-    `, [pinID, pinID]);
+    `, [pinID, pinID, ...vis.params]);
 
     res.json(results);
 }

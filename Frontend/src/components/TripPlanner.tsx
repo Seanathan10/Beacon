@@ -427,7 +427,6 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         if (!optionsData) return;
 
         setIsGeneratingItinerary(true);
-        setIsGeneratingItinerary(true);
         setError(null);
 
         try {

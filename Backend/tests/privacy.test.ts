@@ -5,7 +5,7 @@
  * A private user's data must not appear through any read path for a third party.
  */
 import request from 'supertest';
-import { createTestApp, createTestUser, createTestPin } from './helpers/testApp';
+import { createTestApp, createTestUser, createTestPin, createTestPost } from './helpers/testApp';
 import { query } from '../database/db';
 
 let app: any;
@@ -17,6 +17,116 @@ beforeAll(async () => {
 function makePrivate(userId: number) {
     query("UPDATE account SET profileVisibility = 'private' WHERE id = ?", [userId]);
 }
+
+function setVisibility(userId: number, visibility: string) {
+    query("UPDATE account SET profileVisibility = ? WHERE id = ?", [visibility, userId]);
+}
+
+describe('Private profile — global pins list (GET /api/pins)', () => {
+    it('omits pins from a private creator for a third-party viewer', async () => {
+        const privateUser = await createTestUser('priv-allpins@example.com', 'pass123', 'Private');
+        const viewer = await createTestUser('viewer-allpins@example.com', 'pass123', 'Viewer');
+        const hiddenPinId = createTestPin(privateUser.userId, { title: 'Hidden from list' });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get('/api/pins')
+            .set('Authorization', `Bearer ${viewer.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.map((p: any) => p.id)).not.toContain(hiddenPinId);
+    });
+
+    it('still shows a private creator their own pins', async () => {
+        const privateUser = await createTestUser('priv-allpins-self@example.com', 'pass123', 'Private');
+        const ownPinId = createTestPin(privateUser.userId, { title: 'My own pin' });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get('/api/pins')
+            .set('Authorization', `Bearer ${privateUser.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.map((p: any) => p.id)).toContain(ownPinId);
+    });
+
+    it('friends-only pins are visible to a follower but not a non-follower', async () => {
+        const friendUser = await createTestUser('friend-allpins@example.com', 'pass123', 'Friend');
+        const follower = await createTestUser('follower-allpins@example.com', 'pass123', 'Follower');
+        const stranger = await createTestUser('stranger-allpins@example.com', 'pass123', 'Stranger');
+        const pinId = createTestPin(friendUser.userId, { title: 'Friends only pin' });
+        query('INSERT INTO user_follow (followerID, followingID) VALUES (?, ?)', [follower.userId, friendUser.userId]);
+        setVisibility(friendUser.userId, 'friends');
+
+        const followerRes = await request(app)
+            .get('/api/pins')
+            .set('Authorization', `Bearer ${follower.token}`);
+        expect(followerRes.body.map((p: any) => p.id)).toContain(pinId);
+
+        const strangerRes = await request(app)
+            .get('/api/pins')
+            .set('Authorization', `Bearer ${stranger.token}`);
+        expect(strangerRes.body.map((p: any) => p.id)).not.toContain(pinId);
+    });
+});
+
+describe('Private profile — trending pins (GET /api/pins/trending)', () => {
+    it('omits pins from a private creator for a third-party viewer', async () => {
+        const privateUser = await createTestUser('priv-trend@example.com', 'pass123', 'Private');
+        const viewer = await createTestUser('viewer-trend@example.com', 'pass123', 'Viewer');
+        const hiddenPinId = createTestPin(privateUser.userId, { title: 'Hidden trending', likes: 50 });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get('/api/pins/trending')
+            .set('Authorization', `Bearer ${viewer.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.map((p: any) => p.id)).not.toContain(hiddenPinId);
+    });
+});
+
+describe('Private profile — posts (GET /api/posts and /api/posts/:id)', () => {
+    it('omits posts from a private creator in the list for a third-party viewer', async () => {
+        const privateUser = await createTestUser('priv-posts@example.com', 'pass123', 'Private');
+        const viewer = await createTestUser('viewer-posts@example.com', 'pass123', 'Viewer');
+        const hiddenPostId = createTestPost(privateUser.userId, { title: 'Hidden post' });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get('/api/posts')
+            .set('Authorization', `Bearer ${viewer.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.map((p: any) => p.id)).not.toContain(hiddenPostId);
+    });
+
+    it('returns 404 (not 403) for a single post from a private creator', async () => {
+        const privateUser = await createTestUser('priv-post-single@example.com', 'pass123', 'Private');
+        const viewer = await createTestUser('viewer-post-single@example.com', 'pass123', 'Viewer');
+        const hiddenPostId = createTestPost(privateUser.userId, { title: 'Hidden single post' });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get(`/api/posts/${hiddenPostId}`)
+            .set('Authorization', `Bearer ${viewer.token}`);
+
+        expect(res.status).toBe(404);
+    });
+
+    it('lets the private creator still read their own post', async () => {
+        const privateUser = await createTestUser('priv-post-own@example.com', 'pass123', 'Private');
+        const ownPostId = createTestPost(privateUser.userId, { title: 'My own post' });
+        makePrivate(privateUser.userId);
+
+        const res = await request(app)
+            .get(`/api/posts/${ownPostId}`)
+            .set('Authorization', `Bearer ${privateUser.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.id).toBe(ownPostId);
+    });
+});
 
 describe('Private profile — direct profile access', () => {
     it('GET /api/users/:userID returns 403 for private profile (authenticated viewer)', async () => {

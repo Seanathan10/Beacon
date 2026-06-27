@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 export async function geocodeLocation(location: string): Promise<{ latitude: number; longitude: number } | null> {
     if (!location || location.trim().length === 0) {
         return null;
@@ -8,7 +10,7 @@ export async function geocodeLocation(location: string): Promise<{ latitude: num
     // Try Google Maps first if API key available
     if (apiKey) {
         try {
-            const response = await fetch(
+            const response = await fetchWithTimeout(
                 `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`
             );
             if (response.ok) {
@@ -28,7 +30,7 @@ export async function geocodeLocation(location: string): Promise<{ latitude: num
 
     // Fallback: Nominatim (OpenStreetMap) — no key required
     try {
-        const response = await fetch(
+        const response = await fetchWithTimeout(
             `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
             { headers: { "User-Agent": "BeaconApp/1.0" } }
         );

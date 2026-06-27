@@ -3,6 +3,8 @@
  * Provides flight search functionality for the trip planner.
  */
 
+import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+
 const AMADEUS_AUTH_URL = "https://test.api.amadeus.com/v1/security/oauth2/token";
 const AMADEUS_FLIGHTS_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers";
 
@@ -67,7 +69,7 @@ async function getAccessToken(): Promise<string> {
         throw new Error("Amadeus API credentials not configured");
     }
 
-    const response = await fetch(AMADEUS_AUTH_URL, {
+    const response = await fetchWithTimeout(AMADEUS_AUTH_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -83,10 +85,16 @@ async function getAccessToken(): Promise<string> {
         throw new Error(`Amadeus auth failed: ${response.status}`);
     }
 
-    cachedToken = await response.json();
+    const token = await response.json();
+    // Guard against a 200 with an unexpected body — without these fields the
+    // token is useless and `expires_in` arithmetic would yield NaN.
+    if (!token || typeof token.access_token !== "string" || typeof token.expires_in !== "number") {
+        throw new Error("Amadeus auth returned an unexpected response shape");
+    }
+    cachedToken = token;
     // Expire 1 minute early to be safe
-    tokenExpiry = Date.now() + (cachedToken!.expires_in - 60) * 1000;
-    return cachedToken!.access_token;
+    tokenExpiry = Date.now() + (token.expires_in - 60) * 1000;
+    return token.access_token;
 }
 
 /**
@@ -164,10 +172,10 @@ export async function searchFlights(
     });
 
     const [nonstopResponse, allResponse] = await Promise.all([
-        fetch(`${AMADEUS_FLIGHTS_URL}?${nonstopParams}`, {
+        fetchWithTimeout(`${AMADEUS_FLIGHTS_URL}?${nonstopParams}`, {
             headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${AMADEUS_FLIGHTS_URL}?${allFlightsParams}`, {
+        fetchWithTimeout(`${AMADEUS_FLIGHTS_URL}?${allFlightsParams}`, {
             headers: { Authorization: `Bearer ${token}` },
         }),
     ]);

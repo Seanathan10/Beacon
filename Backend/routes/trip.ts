@@ -12,6 +12,8 @@ import {
     calculateTypicalTouristCarbon,
     calculateOffsetCost,
     getSustainabilityRating,
+    calculateFlightCarbon,
+    calculateCarCarbon,
 } from "../utils/carbon";
 import * as db from "../database/db";
 
@@ -75,18 +77,21 @@ interface SelectablePin extends LocalPin {
  * @param userId - Optional user ID to prioritize their pins
  */
 function getNearbyPins(lat: number, lng: number, radiusKm: number = 50, userId?: number): SelectablePin[] {
-    // Haversine formula approximation: 1 degree ≈ 111km
-    const radiusDeg = radiusKm / 111;
+    // Bounding box: 1 latitude degree ≈ 111km everywhere, but a longitude degree
+    // shrinks by cos(latitude), so widen the longitude window accordingly or the
+    // box gets too narrow away from the equator and misses nearby pins.
+    const latDeg = radiusKm / 111;
+    const lngDeg = radiusKm / (111 * Math.max(Math.cos(lat * Math.PI / 180), 0.01));
 
     // Query nearby pins, marking whether they belong to the current user
     const results = db.query(`
-        SELECT 
-            id, 
-            title, 
-            description, 
-            latitude, 
-            longitude, 
-            tags, 
+        SELECT
+            id,
+            title,
+            description,
+            latitude,
+            longitude,
+            tags,
             image,
             creatorID,
             CASE WHEN creatorID = ? THEN 1 ELSE 0 END as isUserPin
@@ -97,10 +102,10 @@ function getNearbyPins(lat: number, lng: number, radiusKm: number = 50, userId?:
         LIMIT 30
     `, [
         userId ?? -1,  // Use -1 if no userId to ensure no matches
-        lat - radiusDeg,
-        lat + radiusDeg,
-        lng - radiusDeg,
-        lng + radiusDeg,
+        lat - latDeg,
+        lat + latDeg,
+        lng - lngDeg,
+        lng + lngDeg,
     ]);
 
     return results.map((row: any) => ({
@@ -231,6 +236,13 @@ function sendSSE(res: Response, update: ProgressUpdate) {
 // Upper bound on any single upstream call so a hung external service can't keep
 // the SSE socket (and an Express connection slot) open indefinitely.
 const EXTERNAL_TIMEOUT_MS = 15_000;
+
+// Carbon intensity per km, guarding against a zero/near-zero distance
+// (e.g. origin == destination geocodes to the same point) which would
+// otherwise produce NaN/Infinity in the response and break option ranking.
+function computeCarbonPerKm(carbonKg: number, distanceKm: number): number {
+    return distanceKm > 0 ? carbonKg / distanceKm : 0;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
     return new Promise<T>((resolve) => {
@@ -460,7 +472,7 @@ export async function planTripStream(req: Request, res: Response) {
             const flightsToShow = hasGroundTransit ? [flights[0]] : flights.slice(0, 3);
 
             for (const flight of flightsToShow) {
-                const carbonPerKm = flight.carbonEstimateKg / distanceKm;
+                const carbonPerKm = computeCarbonPerKm(flight.carbonEstimateKg, distanceKm);
                 // Build flight number string from segments, separating outbound and return
                 const outboundSegments = flight.segments.filter(s => s.direction === 'outbound');
                 const returnSegments = flight.segments.filter(s => s.direction === 'return');
@@ -505,7 +517,7 @@ export async function planTripStream(req: Request, res: Response) {
             );
 
             if (trainResult) {
-                const carbonPerKm = trainResult.carbonEstimateKg / trainResult.distanceKm;
+                const carbonPerKm = computeCarbonPerKm(trainResult.carbonEstimateKg, trainResult.distanceKm);
                 transitOptions.push({
                     mode: "train",
                     duration: trainResult.duration,
@@ -520,7 +532,7 @@ export async function planTripStream(req: Request, res: Response) {
             }
 
             if (busResult) {
-                const carbonPerKm = busResult.carbonEstimateKg / busResult.distanceKm;
+                const carbonPerKm = computeCarbonPerKm(busResult.carbonEstimateKg, busResult.distanceKm);
                 transitOptions.push({
                     mode: "bus",
                     duration: busResult.duration,
@@ -537,7 +549,7 @@ export async function planTripStream(req: Request, res: Response) {
 
         // Add driving option
         if (drivingResult) {
-            const carbonPerKm = drivingResult.carbonEstimateKg / drivingResult.distanceKm;
+            const carbonPerKm = computeCarbonPerKm(drivingResult.carbonEstimateKg, drivingResult.distanceKm);
             transitOptions.push({
                 mode: "driving",
                 duration: drivingResult.duration,
@@ -555,24 +567,24 @@ export async function planTripStream(req: Request, res: Response) {
 
         // Add fallback options if needed
         if (transitOptions.length === 0 && distanceKm > 0) {
-            const flightCarbonKg = Math.round(distanceKm * 0.2);
+            const flightCarbonKg = Math.round(calculateFlightCarbon(distanceKm));
             const flightDurationHours = Math.round(distanceKm / 800);
             transitOptions.push({
                 mode: "flight",
                 provider: "Estimated",
                 duration: `PT${flightDurationHours}H`,
                 carbonKg: flightCarbonKg,
-                carbonRating: getSustainabilityRating(0.2),
+                carbonRating: getSustainabilityRating(computeCarbonPerKm(flightCarbonKg, distanceKm)),
             });
 
             if (distanceKm < 2000) {
-                const drivingCarbonKg = Math.round(distanceKm * 0.21);
+                const drivingCarbonKg = Math.round(calculateCarCarbon(distanceKm));
                 const drivingDurationHours = Math.round(distanceKm / 80);
                 transitOptions.push({
                     mode: "driving",
                     duration: `${drivingDurationHours}h`,
                     carbonKg: drivingCarbonKg,
-                    carbonRating: getSustainabilityRating(0.21),
+                    carbonRating: getSustainabilityRating(computeCarbonPerKm(drivingCarbonKg, distanceKm)),
                 });
             }
             transitOptions.sort((a, b) => a.carbonKg - b.carbonKg);
@@ -745,7 +757,7 @@ export async function planTrip(req: Request, res: Response) {
             const flightsToShow = hasGroundTransit ? [flights[0]] : flights.slice(0, 5);
 
             for (const flight of flightsToShow) {
-                const carbonPerKm = flight.carbonEstimateKg / distanceKm;
+                const carbonPerKm = computeCarbonPerKm(flight.carbonEstimateKg, distanceKm);
                 // Build flight number string from segments
                 const flightNumbers = flight.segments
                     .map(seg => seg.flightNumber)
@@ -786,7 +798,7 @@ export async function planTrip(req: Request, res: Response) {
 
             // Add train option if available
             if (trainResult) {
-                const carbonPerKm = trainResult.carbonEstimateKg / trainResult.distanceKm;
+                const carbonPerKm = computeCarbonPerKm(trainResult.carbonEstimateKg, trainResult.distanceKm);
                 transitOptions.push({
                     mode: "train",
                     duration: trainResult.duration,
@@ -802,7 +814,7 @@ export async function planTrip(req: Request, res: Response) {
 
             // Add bus option if available
             if (busResult) {
-                const carbonPerKm = busResult.carbonEstimateKg / busResult.distanceKm;
+                const carbonPerKm = computeCarbonPerKm(busResult.carbonEstimateKg, busResult.distanceKm);
                 transitOptions.push({
                     mode: "bus",
                     duration: busResult.duration,
@@ -819,7 +831,7 @@ export async function planTrip(req: Request, res: Response) {
 
         // Add driving option
         if (drivingResult) {
-            const carbonPerKm = drivingResult.carbonEstimateKg / drivingResult.distanceKm;
+            const carbonPerKm = computeCarbonPerKm(drivingResult.carbonEstimateKg, drivingResult.distanceKm);
             transitOptions.push({
                 mode: "driving",
                 duration: drivingResult.duration,
@@ -839,7 +851,7 @@ export async function planTrip(req: Request, res: Response) {
         // Add fallback options if no transit options were found (e.g., for long-distance international routes)
         if (transitOptions.length === 0 && distanceKm > 0) {
             // Estimate flight carbon for this distance
-            const flightCarbonKg = Math.round(distanceKm * 0.2);
+            const flightCarbonKg = Math.round(calculateFlightCarbon(distanceKm));
             const flightDurationHours = Math.round(distanceKm / 800);
 
             transitOptions.push({
@@ -847,19 +859,19 @@ export async function planTrip(req: Request, res: Response) {
                 provider: "Estimated",
                 duration: `PT${flightDurationHours}H`,
                 carbonKg: flightCarbonKg,
-                carbonRating: getSustainabilityRating(0.2),
+                carbonRating: getSustainabilityRating(computeCarbonPerKm(flightCarbonKg, distanceKm)),
             });
 
             // Add driving option (if distance is reasonable for driving)
             if (distanceKm < 2000) {
-                const drivingCarbonKg = Math.round(distanceKm * 0.21); // Single driver
+                const drivingCarbonKg = Math.round(calculateCarCarbon(distanceKm)); // Single driver
                 const drivingDurationHours = Math.round(distanceKm / 80);
 
                 transitOptions.push({
                     mode: "driving",
                     duration: `${drivingDurationHours}h`,
                     carbonKg: drivingCarbonKg,
-                    carbonRating: getSustainabilityRating(0.21),
+                    carbonRating: getSustainabilityRating(computeCarbonPerKm(drivingCarbonKg, distanceKm)),
                 });
             }
 

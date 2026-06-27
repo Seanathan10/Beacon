@@ -3,6 +3,8 @@
  * Uses Google Places API Text Search to find eco-friendly hotels.
  */
 
+import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+
 const PLACES_API_URL = "https://places.googleapis.com/v1/places:searchText";
 
 export interface EcoHotel {
@@ -75,7 +77,7 @@ export async function searchEcoHotels(
         languageCode: "en",
     };
 
-    const response = await fetch(PLACES_API_URL, {
+    const response = await fetchWithTimeout(PLACES_API_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
