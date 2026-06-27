@@ -31,7 +31,7 @@ import polyline from '@mapbox/polyline';
 import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
-import FilterPanel, { PinFilters, DEFAULT_FILTERS, loadSavedFilters } from "@/components/FilterPanel";
+import FilterPanel, { PinFilters, loadSavedFilters } from "@/components/FilterPanel";
 import { track } from "@/utils/analytics";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -92,8 +92,14 @@ interface PinApiResponse {
 }
 
 type MapLayerMode = "pins" | "heatmap";
+type ClusterSource = {
+    getClusterExpansionZoom: (
+        clusterId: number,
+        callback?: (err: Error | null, zoom: number) => void,
+    ) => Promise<number> | void;
+};
 
-function getClusterExpansionZoom(source: any, clusterId: number): Promise<number> {
+function getClusterExpansionZoom(source: ClusterSource, clusterId: number): Promise<number> {
     return new Promise((resolve, reject) => {
         const maybePromise = source.getClusterExpansionZoom(clusterId, (err: Error | null, zoom: number) => {
             if (err) reject(err);
@@ -425,7 +431,8 @@ function HomePage() {
             const clusterId = features[0].properties?.cluster_id;
             const coordinates = (features[0].geometry as { coordinates: [number, number] }).coordinates;
             if (typeof clusterId === "number") {
-                const source = e.target.getSource("my-data") as any;
+                const source = e.target.getSource("my-data") as unknown as ClusterSource | undefined;
+                if (!source) return;
                 try {
                     const zoom = await getClusterExpansionZoom(source, clusterId);
                     e.target.easeTo({
