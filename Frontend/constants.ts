@@ -1,4 +1,4 @@
-import { CircleLayerSpecification } from "react-map-gl/mapbox";
+import { CircleLayerSpecification, SymbolLayerSpecification } from "react-map-gl/mapbox";
 
 
 const API_URL_DEV = "http://localhost:3000";
@@ -14,6 +14,7 @@ export const PIN_LAYER_STYLE: CircleLayerSpecification = {
 	id: "point",
 	type: "circle",
 	source: "my-data",
+	filter: ["!", ["has", "point_count"]],
 	paint: {
 		"circle-radius": ["interpolate", ["linear"], ["get", "likes"], 0, 5, 20, 10],
 		"circle-color": [
@@ -32,6 +33,51 @@ export const PIN_LAYER_STYLE: CircleLayerSpecification = {
 	},
 	maxzoom: 22,
 	minzoom: 5,
+};
+
+export const CLUSTER_LAYER_STYLE: CircleLayerSpecification = {
+	id: "clusters",
+	type: "circle",
+	source: "my-data",
+	filter: ["has", "point_count"],
+	paint: {
+		"circle-color": [
+			"step",
+			["get", "point_count"],
+			"#2d6a4f",
+			25,
+			"#f59e0b",
+			75,
+			"#dc2626",
+		],
+		"circle-radius": [
+			"step",
+			["get", "point_count"],
+			18,
+			25,
+			24,
+			75,
+			32,
+		],
+		"circle-opacity": 0.86,
+		"circle-stroke-color": "#ffffff",
+		"circle-stroke-width": 2,
+	},
+};
+
+export const CLUSTER_COUNT_LAYER_STYLE: SymbolLayerSpecification = {
+	id: "cluster-count",
+	type: "symbol",
+	source: "my-data",
+	filter: ["has", "point_count"],
+	layout: {
+		"text-field": ["get", "point_count_abbreviated"],
+		"text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+		"text-size": 12,
+	},
+	paint: {
+		"text-color": "#ffffff",
+	},
 };
 
 export const HEATMAP_LAYER_STYLE = {

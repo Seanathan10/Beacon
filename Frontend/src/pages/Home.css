@@ -461,7 +461,20 @@
     gap: 2px;
 }
 
-.pin-sort-option {
+.map-layer-control {
+    display: inline-flex;
+    align-items: stretch;
+    height: 48px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px var(--color-shadow-lg);
+    padding: 4px;
+    gap: 2px;
+}
+
+.pin-sort-option,
+.map-layer-option {
     appearance: none;
     border: none;
     background: transparent;
@@ -474,13 +487,44 @@
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.pin-sort-option:hover {
+.pin-sort-option:hover,
+.map-layer-option:hover {
     color: var(--color-text-primary);
 }
 
-.pin-sort-option.active {
+.pin-sort-option.active,
+.map-layer-option.active {
     background: var(--color-accent, #111);
     color: #fff;
+}
+
+.search-area-button {
+    height: 48px;
+    padding: 0 16px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px var(--color-shadow-lg);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.search-area-button:hover {
+    color: var(--color-text-primary);
+}
+
+.search-area-button.active {
+    border-color: var(--color-accent, #111);
+    color: var(--color-text-primary);
+}
+
+.search-area-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
 }
 
 .search-bar {
@@ -586,8 +630,27 @@
     transition: background 0.15s ease;
 }
 
+.search-result-item--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .search-result-item:hover {
     background: var(--color-bg-tertiary);
+}
+
+.search-result-item--disabled:hover {
+    background: transparent;
+}
+
+.search-group-header {
+    padding: 8px 16px 6px;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    list-style: none;
+    text-transform: uppercase;
 }
 
 .search-result-item:first-child {
@@ -603,10 +666,26 @@
 }
 
 .result-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--color-text-primary);
     margin-bottom: 2px;
+}
+
+.result-badge {
+    border: 1px solid var(--color-border-primary);
+    border-radius: 999px;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    text-transform: uppercase;
 }
 
 .result-secondary {

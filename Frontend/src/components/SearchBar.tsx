@@ -13,6 +13,8 @@ interface SearchBarProps {
         lat: number;
         address?: string;
     }) => void;
+    onSelectBeaconPin?: (pin: BeaconPinResult) => void;
+    onSelectBeaconPost?: (post: BeaconPostResult) => void;
     onFocusChange?: (isFocused: boolean) => void;
     isFocused?: boolean;
 }
@@ -30,16 +32,49 @@ interface MapboxSuggestion {
     place_formatted?: string;
 }
 
+export interface BeaconPinResult {
+    id: number;
+    creatorID?: number;
+    email?: string;
+    title?: string;
+    address?: string;
+    description?: string;
+    image?: string;
+    latitude: number;
+    longitude: number;
+    tags?: string;
+    likes?: number;
+    userStatus?: "visited" | "wishlist" | null;
+}
+
+export interface BeaconPostResult {
+    id: number;
+    creatorID?: number | null;
+    email?: string;
+    title: string;
+    location?: string;
+    message?: string;
+    image?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    tags?: string[];
+    upvotes?: number;
+}
+
 export default function SearchBar({
     mapRef,
     searchMarkerRef,
     onSelectPlace,
+    onSelectBeaconPin,
+    onSelectBeaconPost,
     onFocusChange,
     isFocused,
 }: SearchBarProps) {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isSearching, setIsSearching] = useState<boolean>(false);
     const [searchResults, setSearchResults] = useState<MapboxSuggestion[]>([]);
+    const [beaconPins, setBeaconPins] = useState<BeaconPinResult[]>([]);
+    const [beaconPosts, setBeaconPosts] = useState<BeaconPostResult[]>([]);
     const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
 
     const fetchHistory = async () => {
@@ -103,6 +138,8 @@ export default function SearchBar({
         if (!token || !mapRef.current) return;
         if (!searchQuery.trim()) {
             setSearchResults([]);
+            setBeaconPins([]);
+            setBeaconPosts([]);
             return;
         }
 
@@ -110,18 +147,31 @@ export default function SearchBar({
         const timeout = setTimeout(async () => {
             setIsSearching(true);
             try {
-                if (!mapRef.current) return;
-                const center = mapRef.current.getCenter();
-                const proximity = `${center.lng},${center.lat}`;
-                const url = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(
+                const map = mapRef.current;
+                const proximity = map ? `${map.getCenter().lng},${map.getCenter().lat}` : "";
+                const mapboxUrl = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(
                     searchQuery,
-                )}&access_token=${token}&session_token=${sessionToken}&proximity=${proximity}&language=en&limit=7`;
-                const resp = await fetch(url, { signal: controller.signal });
-                const data = await resp.json();
-                setSearchResults(data?.suggestions ?? []);
+                )}&access_token=${token}&session_token=${sessionToken}${proximity ? `&proximity=${proximity}` : ""}&language=en&limit=5`;
+                const beaconUrl = `${BASE_API_URL}/api/search?q=${encodeURIComponent(searchQuery)}&limit=4`;
+
+                const [mapboxResp, beaconResp] = await Promise.all([
+                    fetch(mapboxUrl, { signal: controller.signal }),
+                    fetch(beaconUrl, { credentials: "include", signal: controller.signal }),
+                ]);
+                const mapboxData = await mapboxResp.json();
+                setSearchResults(mapboxData?.suggestions ?? []);
+
+                if (beaconResp.ok) {
+                    const beaconData = await beaconResp.json();
+                    setBeaconPins(Array.isArray(beaconData?.pins) ? beaconData.pins : []);
+                    setBeaconPosts(Array.isArray(beaconData?.posts) ? beaconData.posts : []);
+                } else {
+                    setBeaconPins([]);
+                    setBeaconPosts([]);
+                }
             } catch (err) {
                 if ((err as Error)?.name !== "AbortError") {
-                    console.error("Search Box API error:", err);
+                    console.error("Search error:", err);
                 }
             } finally {
                 setIsSearching(false);
@@ -181,6 +231,34 @@ export default function SearchBar({
         }
     };
 
+    const handleSelectBeaconPin = (pin: BeaconPinResult) => {
+        if (!mapRef.current) return;
+        mapRef.current.flyTo({
+            center: [pin.longitude, pin.latitude],
+            zoom: 14,
+            essential: true,
+        });
+        setSearchQuery(pin.title || pin.address || "");
+        setSearchResults([]);
+        setBeaconPins([]);
+        setBeaconPosts([]);
+        onSelectBeaconPin?.(pin);
+    };
+
+    const handleSelectBeaconPost = (post: BeaconPostResult) => {
+        if (!mapRef.current || post.latitude == null || post.longitude == null) return;
+        mapRef.current.flyTo({
+            center: [post.longitude, post.latitude],
+            zoom: 14,
+            essential: true,
+        });
+        setSearchQuery(post.title || post.location || "");
+        setSearchResults([]);
+        setBeaconPins([]);
+        setBeaconPosts([]);
+        onSelectBeaconPost?.(post);
+    };
+
     const handleSearchSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmed = searchQuery.trim();
@@ -189,6 +267,10 @@ export default function SearchBar({
         void recordHistory(trimmed);
         if (searchResults[0]) {
             await handleSelectResult(searchResults[0]);
+        } else if (beaconPins[0]) {
+            handleSelectBeaconPin(beaconPins[0]);
+        } else if (beaconPosts[0]) {
+            handleSelectBeaconPost(beaconPosts[0]);
         }
     };
 
@@ -240,8 +322,11 @@ export default function SearchBar({
                 </button>
             </form>
 
-            {isFocused && searchResults.length > 0 && (
+            {isFocused && (searchResults.length > 0 || beaconPins.length > 0 || beaconPosts.length > 0) && (
                 <ul className="search-results">
+                    {searchResults.length > 0 && (
+                        <li className="search-group-header">Map locations</li>
+                    )}
                     {searchResults.map((suggestion) => (
                         <li
                             key={suggestion.mapbox_id}
@@ -258,6 +343,43 @@ export default function SearchBar({
                             )}
                         </li>
                     ))}
+
+                    {(beaconPins.length > 0 || beaconPosts.length > 0) && (
+                        <li className="search-group-header">Beacon places and posts</li>
+                    )}
+                    {beaconPins.map((pin) => (
+                        <li
+                            key={`pin-${pin.id}`}
+                            className="search-result-item"
+                            onMouseDown={() => handleSelectBeaconPin(pin)}
+                        >
+                            <div className="result-primary">
+                                <span>{pin.title || "Untitled pin"}</span>
+                                <span className="result-badge">Pin</span>
+                            </div>
+                            <div className="result-secondary">
+                                {pin.address || pin.description || `${pin.latitude.toFixed(3)}, ${pin.longitude.toFixed(3)}`}
+                            </div>
+                        </li>
+                    ))}
+                    {beaconPosts.map((post) => {
+                        const hasCoords = post.latitude != null && post.longitude != null;
+                        return (
+                            <li
+                                key={`post-${post.id}`}
+                                className={`search-result-item ${hasCoords ? "" : "search-result-item--disabled"}`}
+                                onMouseDown={() => hasCoords && handleSelectBeaconPost(post)}
+                            >
+                                <div className="result-primary">
+                                    <span>{post.title}</span>
+                                    <span className="result-badge">Post</span>
+                                </div>
+                                <div className="result-secondary">
+                                    {post.location || post.message || (hasCoords ? "Community post" : "No map location")}
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
 
