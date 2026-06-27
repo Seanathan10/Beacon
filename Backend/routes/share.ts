@@ -34,7 +34,7 @@ function sanitizeDeep(value: unknown): unknown {
 
 shareRouter.post('/', (req, res) => {
     try {
-        const { itinerary, itineraryType, settings } = req.body;
+        const { itinerary, itineraryType, settings, title } = req.body;
 
         if (!itinerary) {
             return res.status(400).json({ error: 'Missing itinerary data' });
@@ -51,9 +51,13 @@ shareRouter.post('/', (req, res) => {
             return res.status(413).json({ error: 'Itinerary payload too large' });
         }
 
-        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, data) VALUES (?, ?, ?)');
+        // Sharing publishes an immutable, publicly viewable snapshot (isPublic = 1).
+        const cleanTitle = typeof title === 'string'
+            ? title.replace(/<[^>]*>/g, '').trim().slice(0, 120) || null
+            : null;
+        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, title, data, isPublic) VALUES (?, ?, ?, ?, 1)');
         const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id, 10) : (req.user?.id || null);
-        stmt.run(id, userId, data);
+        stmt.run(id, userId, cleanTitle, data);
 
         res.status(201).json({ id });
     } catch (error) {
@@ -66,7 +70,9 @@ shareRouter.post('/', (req, res) => {
 shareRouter.get('/:id', (req, res) => {
     try {
         const { id } = req.params;
-        const stmt = db.prepare('SELECT data, createdAt FROM itinerary WHERE id = ?');
+        // Only published snapshots are publicly viewable; private drafts (isPublic = 0)
+        // are reachable solely through the owner-authenticated /api/me/trips routes.
+        const stmt = db.prepare('SELECT data, createdAt FROM itinerary WHERE id = ? AND isPublic = 1');
         const result = stmt.get(id) as { data: string, createdAt: string } | undefined;
 
         if (!result) {

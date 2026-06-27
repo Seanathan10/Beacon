@@ -111,7 +111,9 @@ CREATE TABLE search_history (
 CREATE TABLE itinerary (
 	id TEXT PRIMARY KEY,
 	creatorID INTEGER,
+	title TEXT,
 	data TEXT NOT NULL,
+	isPublic INTEGER NOT NULL DEFAULT 0,
 	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );
@@ -184,3 +186,4 @@ CREATE INDEX idx_post_coords ON post(latitude, longitude);
 CREATE INDEX idx_user_follow_follower ON user_follow(followerID);
 CREATE INDEX idx_user_follow_following ON user_follow(followingID);
 CREATE INDEX idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC);
+CREATE INDEX idx_itinerary_creator ON itinerary(creatorID, createdAt DESC);

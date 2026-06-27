@@ -21,6 +21,7 @@ import * as stats from "./routes/stats.ts";
 import * as users from "./routes/users.ts";
 import * as follows from "./routes/follows.ts";
 import * as notifications from "./routes/notifications.ts";
+import * as trips from "./routes/trips.ts";
 import { shareRouter } from "./routes/share.ts";
 import * as plausible from "./routes/plausible.ts";
 
@@ -222,8 +223,12 @@ app.post("/api/trip/ask", auth.check, tripRateLimit, trip.askQuestion);
 app.post("/api/trip/generate-itinerary", auth.check, tripRateLimit, trip.generateItineraryWithSelections);
 app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute);
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
+app.post("/api/trip/save", auth.check, writeRateLimit, trips.saveTrip);
 
-app.use("/api/share", shareRateLimit, shareRouter);
+// auth.optional populates req.user when a token is present so a published
+// itinerary is associated with its creator (and shows up in their My Trips),
+// while still allowing anonymous shares.
+app.use("/api/share", shareRateLimit, auth.optional, shareRouter);
 
 app.get("/api/bookmarks", auth.check, bookmarks.getBookmarks);
 app.post("/api/bookmarks", auth.check, writeRateLimit, bookmarks.addBookmark);
@@ -234,6 +239,9 @@ app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
 app.post("/api/bookmarks/folders", auth.check, writeRateLimit, bookmarks.createFolder);
 app.patch("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.updateFolder);
 app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.deleteFolder);
+
+app.get("/api/me/trips", auth.check, trips.getMyTrips);
+app.get("/api/me/trips/:id", auth.check, trips.getMyTrip);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
