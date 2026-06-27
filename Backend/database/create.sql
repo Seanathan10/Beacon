@@ -161,12 +161,16 @@ CREATE TABLE notification (
 
 -- Indexes for common query patterns
 CREATE INDEX idx_pin_creatorID ON pin(creatorID);
+CREATE INDEX idx_pin_title ON pin(title);
+CREATE INDEX idx_pin_tags ON pin(tags);
 CREATE INDEX idx_comment_pinID ON comment(pinID);
 CREATE INDEX idx_comment_accountID ON comment(accountID);
 CREATE INDEX idx_likes_pinID ON likes(pinID);
 CREATE INDEX idx_likes_accountID ON likes(accountID);
 CREATE INDEX idx_account_email ON account(email);
 CREATE INDEX idx_post_creatorID ON post(creatorID);
+CREATE INDEX idx_post_title ON post(title);
+CREATE INDEX idx_post_tags ON post(tags);
 CREATE INDEX idx_post_upvote_postID ON post_upvote(postID);
 CREATE INDEX idx_pin_createdAt ON pin(createdAt);
 CREATE INDEX idx_pin_status_accountID ON pin_status(accountID);

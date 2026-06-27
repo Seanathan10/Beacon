@@ -430,6 +430,7 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
     const MAX_RADIUS_KM = 10;
+    const userID = req.user?.id ?? null;
 
     if (
         isNaN(latitude) || isNaN(longitude) ||
@@ -442,10 +443,38 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
     // Bounding box pre-filter to avoid loading all pins into memory
     const latDelta = MAX_RADIUS_KM / 111.0;
     const lngDelta = MAX_RADIUS_KM / (111.0 * Math.cos(latitude * Math.PI / 180));
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
 
     const results: any[] = db.query(
-        `SELECT * FROM pin WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?`,
-        [latitude - latDelta, latitude + latDelta, longitude - lngDelta, longitude + lngDelta]
+        `
+        SELECT
+            p.id,
+            p.creatorID,
+            COALESCE(a.email, '') AS email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
+        FROM pin p
+        LEFT JOIN account a ON a.id = p.creatorID
+        WHERE p.latitude BETWEEN ? AND ?
+          AND p.longitude BETWEEN ? AND ?
+          AND ${vis.sql}
+        `,
+        [
+            userID,
+            latitude - latDelta,
+            latitude + latDelta,
+            longitude - lngDelta,
+            longitude + lngDelta,
+            ...vis.params,
+        ]
     );
 
     const filtered = results

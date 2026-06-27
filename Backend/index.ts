@@ -187,12 +187,12 @@ app.post("/api/pins", auth.check, writeRateLimit, pins.createPin);
 app.delete("/api/pins/:id", auth.check, writeRateLimit, pins.deletePin);
 
 app.get("/api/posts", auth.check, posts.getAllPosts);
+app.get("/api/posts/nearby", auth.check, posts.getNearbyPosts);
 app.get("/api/posts/:id", auth.check, posts.getPost);
 app.post("/api/posts", auth.check, writeRateLimit, posts.createPost);
 app.put("/api/posts/:id", auth.check, writeRateLimit, posts.updatePost);
 app.delete("/api/posts/:id", auth.check, writeRateLimit, posts.deletePost);
 app.post("/api/posts/:id/upvote", auth.check, writeRateLimit, posts.upvotePost);
-app.get("/api/posts/nearby", auth.check, posts.getNearbyPosts);
 
 app.get("/api/pins/:pinId/comments", auth.check, comments.getPinComments);
 app.post("/api/pins/:pinId/comments", auth.check, writeRateLimit, comments.createComment);
@@ -210,6 +210,7 @@ app.get("/api/pin-status", auth.check, pinStatus.getUserPinStatuses);
 app.put("/api/pins/:id/status", auth.check, writeRateLimit, pinStatus.setPinStatus);
 app.delete("/api/pins/:id/status", auth.check, writeRateLimit, pinStatus.deletePinStatus);
 
+app.get("/api/search", auth.check, search.searchContent);
 app.get("/api/search/history", auth.check, search.getSearchHistory);
 app.post("/api/search/history", auth.check, search.addSearchHistory);
 app.delete("/api/search/history/:id", auth.check, search.deleteSearchHistoryEntry);
