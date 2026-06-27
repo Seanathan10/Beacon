@@ -21,6 +21,7 @@ import * as stats from "./routes/stats.ts";
 import * as users from "./routes/users.ts";
 import * as follows from "./routes/follows.ts";
 import * as notifications from "./routes/notifications.ts";
+import * as trips from "./routes/trips.ts";
 import { shareRouter } from "./routes/share.ts";
 import * as plausible from "./routes/plausible.ts";
 
@@ -234,6 +235,8 @@ app.get("/api/bookmarks/folders", auth.check, bookmarks.getFolders);
 app.post("/api/bookmarks/folders", auth.check, writeRateLimit, bookmarks.createFolder);
 app.patch("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.updateFolder);
 app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.deleteFolder);
+
+app.get("/api/me/trips", auth.check, trips.getMyTrips);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);
