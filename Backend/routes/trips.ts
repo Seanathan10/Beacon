@@ -1,9 +1,12 @@
 import { Request, Response } from "express";
+import { v4 as uuidv4 } from "uuid";
 import { db } from "../database/db";
 import { logError } from "../utils/logger";
+import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 
-const MAX_CURSOR = 9_223_372_036_854_775_807; // SQLite rowid upper bound
+const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
 const PAGE_LIMIT = 20;
+const MAX_DRAFT_PAYLOAD_BYTES = 512 * 1024; // 512 KB, mirrors /api/share
 
 interface TripSummary {
     origin: string | null;
@@ -118,5 +121,66 @@ export function getMyTrip(req: Request, res: Response) {
     } catch (err) {
         logError(req, "Get trip error", err);
         res.status(500).json({ message: "Failed to fetch trip" });
+    }
+}
+
+/**
+ * POST /api/trip/save — persist a private draft (isPublic = 0) without publishing.
+ * With no `id` it creates a new draft; with an `id` it updates an existing draft
+ * the viewer owns. Published snapshots (isPublic = 1) are immutable and cannot be
+ * overwritten here — clients must share again to produce a new public snapshot.
+ */
+export function saveTrip(req: Request, res: Response) {
+    const userID = req.user.id;
+    const { id, itinerary, itineraryType, settings, title } = req.body ?? {};
+
+    if (!itinerary) {
+        return res.status(400).json({ message: "Missing itinerary data" });
+    }
+
+    const data = JSON.stringify({
+        itinerary: sanitizeDeep(itinerary),
+        itineraryType: typeof itineraryType === "string" ? stripHtml(itineraryType) : itineraryType,
+        settings: sanitizeDeep(settings || {}),
+    });
+
+    if (Buffer.byteLength(data, "utf8") > MAX_DRAFT_PAYLOAD_BYTES) {
+        return res.status(413).json({ message: "Itinerary payload too large" });
+    }
+
+    const cleanTitle = typeof title === "string"
+        ? stripHtml(title).trim().slice(0, 120) || null
+        : null;
+
+    try {
+        if (id !== undefined && id !== null) {
+            const tripId = String(id);
+            const existing = db.prepare(
+                "SELECT creatorID, isPublic FROM itinerary WHERE id = ?"
+            ).get(tripId) as { creatorID: number | null; isPublic: number } | undefined;
+
+            if (!existing || existing.creatorID !== Number(userID)) {
+                return res.status(404).json({ message: "Trip not found" });
+            }
+            if (existing.isPublic === 1) {
+                return res.status(409).json({ message: "Published trips are immutable" });
+            }
+
+            db.prepare(
+                "UPDATE itinerary SET title = ?, data = ? WHERE id = ? AND creatorID = ?"
+            ).run(cleanTitle, data, tripId, Number(userID));
+
+            return res.status(200).json({ id: tripId, isPublic: false });
+        }
+
+        const newId = uuidv4();
+        db.prepare(
+            "INSERT INTO itinerary (id, creatorID, title, data, isPublic) VALUES (?, ?, ?, ?, 0)"
+        ).run(newId, Number(userID), cleanTitle, data);
+
+        res.status(201).json({ id: newId, isPublic: false });
+    } catch (err) {
+        logError(req, "Save trip error", err);
+        res.status(500).json({ message: "Failed to save trip" });
     }
 }

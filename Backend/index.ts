@@ -223,6 +223,7 @@ app.post("/api/trip/ask", auth.check, tripRateLimit, trip.askQuestion);
 app.post("/api/trip/generate-itinerary", auth.check, tripRateLimit, trip.generateItineraryWithSelections);
 app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute);
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
+app.post("/api/trip/save", auth.check, writeRateLimit, trips.saveTrip);
 
 app.use("/api/share", shareRateLimit, shareRouter);
 

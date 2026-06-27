@@ -2513,6 +2513,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/trip/save:
+    post:
+      tags: [Trip]
+      summary: Save a trip draft
+      description: Persist a private itinerary draft without publishing it. Omit id to create a new draft; provide id to update an owned draft (published snapshots are immutable).
+      operationId: saveTrip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itinerary
+              properties:
+                id:
+                  type: string
+                  description: Existing draft ID to update (optional)
+                title:
+                  type: string
+                  description: Optional human-friendly trip title
+                itinerary:
+                  type: object
+                  description: The complete itinerary data
+                itineraryType:
+                  type: string
+                  description: Type of itinerary
+                settings:
+                  type: object
+                  description: Additional settings
+      responses:
+        200:
+          description: Draft updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  isPublic: { type: boolean }
+        201:
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  isPublic: { type: boolean }
+        400:
+          description: Missing itinerary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Draft not found or not owned by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: Cannot overwrite a published trip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/share:
     post:
       tags: [Share]
@@ -2534,6 +2608,9 @@ paths:
                 itineraryType:
                   type: string
                   description: Type of itinerary
+                title:
+                  type: string
+                  description: Optional human-friendly trip title
                 settings:
                   type: object
                   description: Additional settings
