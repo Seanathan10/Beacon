@@ -234,7 +234,10 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
                         >
                             <div className="sidebar-panel">
                                 {isLoggedIn && (
-                                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingBottom: 4 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 4 }}>
+                                        <a href="/my-trips" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--accent, #3b82f6)", textDecoration: "none" }}>
+                                            🧳 My Trips
+                                        </a>
                                         <NotificationBell isLoggedIn={isLoggedIn} />
                                     </div>
                                 )}
