@@ -1960,6 +1960,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/me/trips/{id}:
+    get:
+      tags: [Trip]
+      summary: Get one of the current user's saved trips
+      description: Returns the full itinerary payload for a trip the authenticated user owns
+      operationId: getMyTrip
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The trip (itinerary) ID
+      responses:
+        200:
+          description: Trip retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedItinerary'
+        404:
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/me/stats:
     get:
       tags: [Auth]

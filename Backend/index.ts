@@ -237,6 +237,7 @@ app.patch("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.up
 app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.deleteFolder);
 
 app.get("/api/me/trips", auth.check, trips.getMyTrips);
+app.get("/api/me/trips/:id", auth.check, trips.getMyTrip);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);

@@ -85,3 +85,38 @@ export function getMyTrips(req: Request, res: Response) {
         res.status(500).json({ message: "Failed to list trips" });
     }
 }
+
+/**
+ * GET /api/me/trips/:id — fetch one of the viewer's own trips in full, including
+ * the complete itinerary blob. Owner-only: a non-owner (or unknown id) gets 404
+ * so the route never reveals the existence of another user's private draft.
+ */
+export function getMyTrip(req: Request, res: Response) {
+    const userID = req.user.id;
+    const id = String(req.params.id);
+
+    try {
+        const row = db.prepare(
+            "SELECT id, creatorID, title, data, isPublic, createdAt FROM itinerary WHERE id = ?"
+        ).get(id) as { id: string; creatorID: number | null; title: string | null; data: string; isPublic: number; createdAt: string } | undefined;
+
+        if (!row || row.creatorID !== Number(userID)) {
+            return res.status(404).json({ message: "Trip not found" });
+        }
+
+        const createdAt = row.createdAt
+            ? new Date(row.createdAt.replace(" ", "T") + "Z").toISOString()
+            : new Date().toISOString();
+
+        res.json({
+            id: row.id,
+            title: row.title ?? null,
+            isPublic: row.isPublic === 1,
+            createdAt,
+            ...JSON.parse(row.data),
+        });
+    } catch (err) {
+        logError(req, "Get trip error", err);
+        res.status(500).json({ message: "Failed to fetch trip" });
+    }
+}
