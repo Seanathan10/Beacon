@@ -16,7 +16,15 @@ import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { useSearchParams } from "react-router";
 import AuthHook from "./AuthHook";
-import { BASE_API_URL, PIN_COLOR, USER_PIN_COLOR, PIN_LAYER_STYLE, HEATMAP_LAYER_STYLE } from '../../constants';
+import {
+    BASE_API_URL,
+    PIN_COLOR,
+    USER_PIN_COLOR,
+    PIN_LAYER_STYLE,
+    HEATMAP_LAYER_STYLE,
+    CLUSTER_LAYER_STYLE,
+    CLUSTER_COUNT_LAYER_STYLE,
+} from '../../constants';
 import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
@@ -83,6 +91,20 @@ interface PinApiResponse {
     userStatus: "visited" | "wishlist" | null;
 }
 
+type MapLayerMode = "pins" | "heatmap";
+
+function getClusterExpansionZoom(source: any, clusterId: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const maybePromise = source.getClusterExpansionZoom(clusterId, (err: Error | null, zoom: number) => {
+            if (err) reject(err);
+            else resolve(zoom);
+        });
+        if (maybePromise && typeof maybePromise.then === "function") {
+            maybePromise.then(resolve, reject);
+        }
+    });
+}
+
 function HomePage() {
     useEffect(() => {
         const heartbeat = async () => {
@@ -132,6 +154,34 @@ function HomePage() {
     const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [geoError, setGeoError] = useState<string | null>(null);
     const [mapBounds, setMapBounds] = useState<{ minLng: number; minLat: number; maxLng: number; maxLat: number } | null>(null);
+    const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>("pins");
+    const [isAreaSearchActive, setIsAreaSearchActive] = useState(false);
+    const [isAreaSearching, setIsAreaSearching] = useState(false);
+    const [areaSearchError, setAreaSearchError] = useState<string | null>(null);
+
+    const toPinGeoJSON = useCallback((data: PinApiResponse[]) => ({
+        type: "FeatureCollection",
+        features: data.map((p) => ({
+            type: "Feature",
+            geometry: {
+                type: "Point",
+                coordinates: [p.longitude, p.latitude],
+            },
+            properties: {
+                id: p.id,
+                creatorID: p.creatorID,
+                email: p.email,
+                title: p.title,
+                description: p.description,
+                image: p.image,
+                color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
+                address: p.address,
+                likes: p.likes || 0,
+                tags: p.tags,
+                userStatus: p.userStatus || null,
+            },
+        })),
+    }), []);
 
     // Listen for theme changes and update map style
     useEffect(() => {
@@ -245,6 +295,7 @@ function HomePage() {
                     if (pinFilters.minDate) params.set("minDate", pinFilters.minDate);
                     if (pinFilters.maxDate) params.set("maxDate", pinFilters.maxDate);
                     if (pinFilters.minRating !== null) params.set("minRating", String(pinFilters.minRating));
+                    if (pinFilters.maxRating !== null) params.set("maxRating", String(pinFilters.maxRating));
                     if (pinFilters.bookmarkStatus) params.set("bookmarkStatus", pinFilters.bookmarkStatus);
                     const qs = params.toString();
                     url = `${BASE_API_URL}/api/pins${qs ? `?${qs}` : ""}`;
@@ -265,29 +316,7 @@ function HomePage() {
                 }
 
                 const data = await res.json() as PinApiResponse[];
-                const geojson = {
-                    type: "FeatureCollection",
-                    features: data.map((p) => ({
-                        type: "Feature",
-                        geometry: {
-                            type: "Point",
-                            coordinates: [p.longitude, p.latitude],
-                        },
-                            properties: {
-                                id: p.id,
-                                creatorID: p.creatorID,
-                                email: p.email,
-                                title: p.title,
-                            description: p.description,
-                            image: p.image,
-                            color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
-                            address: p.address,
-                            likes: p.likes || 0,
-                            tags: p.tags,
-                            userStatus: p.userStatus || null,
-                        },
-                    })),
-                };
+                const geojson = toPinGeoJSON(data);
                 setAllPins(geojson);
 
                 if (isLoggedIn) {
@@ -318,7 +347,7 @@ function HomePage() {
             fetchPins();
         }
         return () => controller.abort();
-    }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout]);
+    }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout, toPinGeoJSON]);
 
     const requestGeo = useCallback(() => {
         if (!navigator.geolocation) {
@@ -342,17 +371,73 @@ function HomePage() {
 
     const handleSortChange = (next: "recent" | "trending" | "distance") => {
         track("Pin Sort Changed", { sort: next });
+        setIsAreaSearchActive(false);
+        setAreaSearchError(null);
         setPinSort(next);
         if (next === "distance" && !geoCoords) {
             requestGeo();
         }
     };
 
+    const handleSearchThisArea = useCallback(async () => {
+        if (!mapRef.current) return;
+        const center = mapRef.current.getCenter();
+        setIsAreaSearching(true);
+        setAreaSearchError(null);
+        try {
+            const res = await fetch(`${BASE_API_URL}/api/pins/nearby`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    latitude: center.lat,
+                    longitude: center.lng,
+                }),
+            });
+
+            if (res.status === 401) {
+                handleLogout();
+                return;
+            }
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+
+            const data = await res.json() as PinApiResponse[];
+            setAllPins(toPinGeoJSON(data));
+            setIsAreaSearchActive(true);
+            track("Search This Area", { count: data.length });
+        } catch (error) {
+            console.error("Search this area failed:", error);
+            setAreaSearchError("Unable to search this area.");
+        } finally {
+            setIsAreaSearching(false);
+        }
+    }, [handleLogout, toPinGeoJSON]);
+
     const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
         // Check if we clicked on a point feature
-        const features = e.target.queryRenderedFeatures(e.point, {
-            layers: ["point"],
-        });
+        const features = mapLayerMode === "pins"
+            ? e.target.queryRenderedFeatures(e.point, { layers: ["clusters", "point"] })
+            : [];
+
+        if (features && features.length > 0 && features[0].layer.id === "clusters") {
+            const clusterId = features[0].properties?.cluster_id;
+            const coordinates = (features[0].geometry as { coordinates: [number, number] }).coordinates;
+            if (typeof clusterId === "number") {
+                const source = e.target.getSource("my-data") as any;
+                try {
+                    const zoom = await getClusterExpansionZoom(source, clusterId);
+                    e.target.easeTo({
+                        center: coordinates,
+                        zoom,
+                    });
+                } catch (error) {
+                    console.error("Failed to expand cluster:", error);
+                }
+            }
+            return;
+        }
 
         const { lat, lng } = e.lngLat;
         let geocodeResult = { fullAddress: "Unknown Location" };
@@ -694,8 +779,39 @@ function HomePage() {
 
                     <FilterPanel
                         isLoggedIn={isLoggedIn}
-                        onApply={(filters) => setPinFilters(filters)}
+                        onApply={(filters) => {
+                            setIsAreaSearchActive(false);
+                            setAreaSearchError(null);
+                            setPinFilters(filters);
+                        }}
                     />
+
+                    <div className="map-layer-control" role="group" aria-label="Map layer">
+                        <button
+                            type="button"
+                            className={`map-layer-option ${mapLayerMode === "pins" ? "active" : ""}`}
+                            onClick={() => setMapLayerMode("pins")}
+                        >
+                            Pins
+                        </button>
+                        <button
+                            type="button"
+                            className={`map-layer-option ${mapLayerMode === "heatmap" ? "active" : ""}`}
+                            onClick={() => setMapLayerMode("heatmap")}
+                        >
+                            Heatmap
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        className={`search-area-button ${isAreaSearchActive ? "active" : ""}`}
+                        onClick={handleSearchThisArea}
+                        disabled={isAreaSearching}
+                        title={areaSearchError || "Search pins near the current map center"}
+                    >
+                        {isAreaSearching ? "Searching..." : isAreaSearchActive ? "Area results" : "Search this area"}
+                    </button>
                 </div>
 
                 <AuthModal isOpen={!isLoggedIn} onAuthSuccess={authSuccess} />
@@ -755,7 +871,7 @@ function HomePage() {
                     onClick={handleMapClick}
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
-                    interactiveLayerIds={["point"]}
+                    interactiveLayerIds={mapLayerMode === "pins" ? ["clusters", "point"] : []}
                     cursor={cursor}
                     interactive={true}
                     doubleClickZoom={true}
@@ -952,9 +1068,23 @@ function HomePage() {
                         />
                     )}
 
-                    <Source id="my-data" type="geojson" data={allPins as unknown as GeoJSON.FeatureCollection}>
-                        <Layer {...PIN_LAYER_STYLE} />
-                        <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
+                    <Source
+                        key={mapLayerMode}
+                        id="my-data"
+                        type="geojson"
+                        data={allPins as unknown as GeoJSON.FeatureCollection}
+                        cluster={mapLayerMode === "pins"}
+                        clusterRadius={56}
+                    >
+                        {mapLayerMode === "pins" ? (
+                            <>
+                                <Layer {...CLUSTER_LAYER_STYLE} />
+                                <Layer {...CLUSTER_COUNT_LAYER_STYLE} />
+                                <Layer {...PIN_LAYER_STYLE} />
+                            </>
+                        ) : (
+                            <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
+                        )}
                     </Source>
 
                     {/* Trip Route Line */}

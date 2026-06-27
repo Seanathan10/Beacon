@@ -8,6 +8,7 @@ export interface PinFilters {
     minDate: string;
     maxDate: string;
     minRating: number | null;
+    maxRating: number | null;
     bookmarkStatus: "" | "bookmarked" | "visited" | "wishlist";
 }
 
@@ -16,6 +17,7 @@ export const DEFAULT_FILTERS: PinFilters = {
     minDate: "",
     maxDate: "",
     minRating: null,
+    maxRating: null,
     bookmarkStatus: "",
 };
 
@@ -45,6 +47,7 @@ function hasActiveFilters(filters: PinFilters): boolean {
         !!filters.minDate ||
         !!filters.maxDate ||
         filters.minRating !== null ||
+        filters.maxRating !== null ||
         !!filters.bookmarkStatus
     );
 }
@@ -170,6 +173,30 @@ export default function FilterPanel({ isLoggedIn, onApply }: FilterPanelProps) {
                             onChange={e => {
                                 const val = parseInt(e.target.value, 10);
                                 setDraft(p => ({ ...p, minRating: val === 0 ? null : val }));
+                            }}
+                        />
+                        <div className="filter-range-labels">
+                            <span>0</span>
+                            <span>50+</span>
+                        </div>
+                    </section>
+
+                    <section className="filter-section">
+                        <span className="filter-label">
+                            Max likes
+                            <span className="filter-value-hint">
+                                {draft.maxRating !== null ? ` (${draft.maxRating} or fewer)` : " (any)"}
+                            </span>
+                        </span>
+                        <input
+                            type="range"
+                            min={0}
+                            max={50}
+                            value={draft.maxRating ?? 50}
+                            className="filter-range"
+                            onChange={e => {
+                                const val = parseInt(e.target.value, 10);
+                                setDraft(p => ({ ...p, maxRating: val === 50 ? null : val }));
                             }}
                         />
                         <div className="filter-range-labels">
