@@ -4,6 +4,7 @@ import { geocodeLocation } from "../utils/geocoding";
 import { logError } from "../utils/logger";
 import { visibilityFilter } from "../utils/visibility";
 import { stripHtml } from "../utils/sanitize";
+import { createNotification } from "../services/notifications";
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_LENGTH = 500;
@@ -273,7 +274,7 @@ export function upvotePost(req: Request, res: Response) {
     const postID = req.params.id;
     const userID = req.user?.id;
 
-    const post = db.query("SELECT id FROM post WHERE id = ?", [postID])[0];
+    const post = db.query("SELECT id, creatorID FROM post WHERE id = ?", [postID])[0];
     if (!post) {
         return res.status(404).json({ message: "Post not found" });
     }
@@ -289,6 +290,17 @@ export function upvotePost(req: Request, res: Response) {
         }
         logError(req, "Upvote error", error);
         return res.status(500).send();
+    }
+
+    // Notify the post's creator that someone upvoted (best-effort).
+    if (post.creatorID != null) {
+        createNotification({
+            recipientID: Number(post.creatorID),
+            actorID: Number(userID),
+            type: "post_upvote",
+            entityType: "post",
+            entityID: Number(postID),
+        });
     }
 
     const updatedPost = db.query(`

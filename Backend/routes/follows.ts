@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
+import { createNotification } from "../services/notifications";
 
 const MAX_CURSOR = 2_147_483_647; // upper bound for a pin ID cursor
 
@@ -32,6 +33,14 @@ export function followUser(req: Request, res: Response) {
             "INSERT INTO user_follow(followerID, followingID) VALUES(?, ?)",
             [followerID, followingID]
         );
+        // Notify the followed user (best-effort).
+        createNotification({
+            recipientID: followingID,
+            actorID: followerID,
+            type: "follow",
+            entityType: "account",
+            entityID: followerID,
+        });
         res.status(204).send();
     } catch (err: any) {
         if (err.code === 'SQLITE_CONSTRAINT' || err.message?.includes('UNIQUE constraint failed')) {

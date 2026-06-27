@@ -16,6 +16,7 @@ const UserProfile = lazy(() => import("./pages/UserProfile"));
 const FollowersList = lazy(() => import("./pages/FollowersList").then((m) => ({ default: m.FollowersList })));
 const FollowingList = lazy(() => import("./pages/FollowersList").then((m) => ({ default: m.FollowingList })));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 
 // Initialize dark theme support
 initializeTheme();
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
     {
         path: '/activity',
         element: <RouteBoundary><ActivityPage /></RouteBoundary>,
+    },
+    {
+        path: '/notifications',
+        element: <RouteBoundary><NotificationsPage /></RouteBoundary>,
     },
 ]);
 

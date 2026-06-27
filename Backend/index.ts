@@ -20,6 +20,7 @@ import * as bookmarks from "./routes/bookmarks.ts";
 import * as stats from "./routes/stats.ts";
 import * as users from "./routes/users.ts";
 import * as follows from "./routes/follows.ts";
+import * as notifications from "./routes/notifications.ts";
 import { shareRouter } from "./routes/share.ts";
 import * as plausible from "./routes/plausible.ts";
 
@@ -244,6 +245,10 @@ app.get("/api/users/:userID/following", auth.optional, users.getUserFollowing);
 app.post("/api/users/:userID/follow", auth.check, writeRateLimit, follows.followUser);
 app.delete("/api/users/:userID/follow", auth.check, writeRateLimit, follows.unfollowUser);
 app.get("/api/me/feed", auth.check, follows.getFollowFeed);
+
+app.get("/api/notifications", auth.check, notifications.getNotifications);
+app.get("/api/notifications/unread-count", auth.check, notifications.getUnreadCount);
+app.post("/api/notifications/read", auth.check, writeRateLimit, notifications.markRead);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     if (err.type === 'cors') {

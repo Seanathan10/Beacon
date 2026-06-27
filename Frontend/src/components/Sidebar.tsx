@@ -4,6 +4,7 @@ import "./styles/Sidebar.css";
 import { PIN_COLOR } from "../../constants";
 import TripPlanner, { TripPlanResult } from "./TripPlanner";
 import QuickStatsWidget from "./QuickStatsWidget";
+import NotificationBell from "./NotificationBell";
 
 const KM_TO_MILES = 0.621371;
 
@@ -232,6 +233,11 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
                             style={{ transform: `translateX(${activeTab === "discovery" ? "0%" : "-50%"})` }}
                         >
                             <div className="sidebar-panel">
+                                {isLoggedIn && (
+                                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingBottom: 4 }}>
+                                        <NotificationBell isLoggedIn={isLoggedIn} />
+                                    </div>
+                                )}
                                 {isLoggedIn && followedUsers.length > 0 && (
                                     <div style={{ padding: "12px 0", borderBottom: "1px solid var(--border-color, #e5e7eb)", marginBottom: 8 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

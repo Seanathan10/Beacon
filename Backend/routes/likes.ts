@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
+import { createNotification } from "../services/notifications";
 
 export function getLikes(req: Request, res: Response) {
 	const results = db.query(`
@@ -33,6 +34,18 @@ export function addLike(req: Request, res: Response) {
         // This won't be reached if duplicate (throws error)
         if (results.changes === 0) {
             return res.status(404).send();
+        }
+
+        // Notify the pin's creator that someone liked their pin (best-effort).
+        const pin = db.query(`SELECT creatorID FROM pin WHERE id = ?;`, [req.params.id])[0];
+        if (pin?.creatorID != null) {
+            createNotification({
+                recipientID: Number(pin.creatorID),
+                actorID: req.user.id,
+                type: "pin_like",
+                entityType: "pin",
+                entityID: Number(req.params.id),
+            });
         }
 
         res.status(204).send();
