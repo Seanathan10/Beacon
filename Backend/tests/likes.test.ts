@@ -459,4 +459,35 @@ describe('Likes', () => {
       expect(pinIds).toContain(pin2);
     });
   });
+
+  describe('Denormalized pin.likes counter consistency', () => {
+    it('keeps pin.likes in sync with the likes table across like/unlike', async () => {
+      const db = getTestDb();
+      const counter = () =>
+        (db.prepare('SELECT likes FROM pin WHERE id = ?').get(pinId) as { likes: number }).likes;
+      const authoritative = () =>
+        (db.prepare('SELECT COUNT(*) AS n FROM likes WHERE pinID = ?').get(pinId) as { n: number }).n;
+
+      await request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${userToken}`);
+      await request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${otherUserToken}`);
+      expect(counter()).toBe(authoritative());
+      expect(counter()).toBe(2);
+
+      await request(app).delete(`/api/likes/${pinId}`).set('Authorization', `Bearer ${userToken}`);
+      expect(counter()).toBe(authoritative());
+      expect(counter()).toBe(1);
+    });
+
+    it('does not increment the counter on a duplicate like', async () => {
+      const db = getTestDb();
+      const counter = () =>
+        (db.prepare('SELECT likes FROM pin WHERE id = ?').get(pinId) as { likes: number }).likes;
+
+      await request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${userToken}`);
+      // Second like by the same user is rejected (409) and must not bump the counter.
+      const dup = await request(app).post(`/api/likes/${pinId}`).set('Authorization', `Bearer ${userToken}`);
+      expect(dup.status).toBe(409);
+      expect(counter()).toBe(1);
+    });
+  });
 });

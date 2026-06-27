@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 import { geocodeLocation } from "../utils/geocoding";
 import { logError } from "../utils/logger";
+import { visibilityFilter } from "../utils/visibility";
+import { stripHtml } from "../utils/sanitize";
 
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_LENGTH = 500;
@@ -18,13 +20,17 @@ function isValidUrl(url: string): boolean {
 }
 
 export function getAllPosts(req: Request, res: Response) {
+    const userID = req.user?.id ?? null;
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
     const results = db.query(`
         SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
                p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
         FROM post p
+        LEFT JOIN account a ON a.id = p.creatorID
+        WHERE ${vis.sql}
         ORDER BY createdAt DESC
-    `);
+    `, vis.params);
 
     const posts = results.map((post: any) => ({
         ...post,
@@ -36,13 +42,18 @@ export function getAllPosts(req: Request, res: Response) {
 
 export function getPost(req: Request, res: Response) {
     const postID = req.params.id;
+    const userID = req.user?.id ?? null;
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
     const results = db.query(`
         SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
                p.category, p.tags, p.message, p.image, p.createdAt,
                (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
-        FROM post p WHERE p.id = ?
-    `, [postID]);
+        FROM post p
+        LEFT JOIN account a ON a.id = p.creatorID
+        WHERE p.id = ? AND ${vis.sql}
+    `, [postID, ...vis.params]);
 
+    // 404 (not 403) when hidden by visibility — don't leak that the post exists.
     if (results.length === 0) {
         return res.status(404).json({ message: "Post not found" });
     }
@@ -65,7 +76,7 @@ export async function createPost(req: Request, res: Response) {
         return res.status(400).json({ message: "Message is required" });
     }
 
-    const titleStr = String(title).trim();
+    const titleStr = stripHtml(String(title).trim());
     if (titleStr.length > MAX_TITLE_LENGTH) {
         return res.status(400).json({ message: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
     }
@@ -75,7 +86,7 @@ export async function createPost(req: Request, res: Response) {
         return res.status(400).json({ message: `Location must be ${MAX_LOCATION_LENGTH} characters or less` });
     }
 
-    const messageStr = String(message).trim();
+    const messageStr = stripHtml(String(message).trim());
     if (messageStr.length > MAX_MESSAGE_LENGTH) {
         return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
     }
@@ -162,7 +173,7 @@ export async function updatePost(req: Request, res: Response) {
     const params: any[] = [];
 
     if (title !== undefined) {
-        const titleStr = String(title).trim();
+        const titleStr = stripHtml(String(title).trim());
         if (titleStr.length > MAX_TITLE_LENGTH) {
             return res.status(400).json({ message: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
         }
@@ -190,7 +201,7 @@ export async function updatePost(req: Request, res: Response) {
         params.push(Array.isArray(tags) ? tags.join(',') : tags);
     }
     if (message !== undefined) {
-        const messageStr = String(message).trim();
+        const messageStr = stripHtml(String(message).trim());
         if (messageStr.length > MAX_MESSAGE_LENGTH) {
             return res.status(400).json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or less` });
         }
@@ -316,17 +327,21 @@ export function getNearbyPosts(req: Request, res: Response) {
     }
 
     try {
+        const userID = req.user?.id ?? null;
+        const vis = visibilityFilter(userID, "a", "p.creatorID");
         const results = db.query(`
             SELECT p.id, p.creatorID, p.title, p.location, p.latitude, p.longitude,
                    p.category, p.tags, p.message, p.image, p.createdAt,
                    (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes
             FROM post p
+            LEFT JOIN account a ON a.id = p.creatorID
             WHERE p.latitude IS NOT NULL AND p.longitude IS NOT NULL
             AND p.latitude BETWEEN ? AND ?
             AND p.longitude BETWEEN ? AND ?
+            AND ${vis.sql}
             ORDER BY p.createdAt DESC
             LIMIT 20
-        `, [minLat, maxLat, minLng, maxLng]);
+        `, [minLat, maxLat, minLng, maxLng, ...vis.params]);
 
         const posts = results.map((post: any) => ({
             ...post,

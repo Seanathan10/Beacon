@@ -3,6 +3,8 @@
  * Provides transit (train/bus/metro) routing functionality.
  */
 
+import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
 interface RouteStep {
@@ -142,7 +144,7 @@ export async function searchTransit(
         };
     }
 
-    const response = await fetch(ROUTES_API_URL, {
+    const response = await fetchWithTimeout(ROUTES_API_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -161,11 +163,9 @@ export async function searchTransit(
     const data = await response.json();
     const routes: Route[] = data.routes || [];
 
+    // Avoid logging origin/destination coordinates (user location) to server logs.
     console.log("[searchTransit] API Response:", {
         routeCount: routes.length,
-        origin: typeof origin === "string" ? origin : `${origin.lat},${origin.lng}`,
-        destination: typeof destination === "string" ? destination : `${destination.lat},${destination.lng}`,
-        departureTime,
         firstRouteInfo: routes[0] ? {
             duration: routes[0].duration,
             distanceMeters: routes[0].distanceMeters,
@@ -269,7 +269,7 @@ export async function searchDriving(
         travelMode: "DRIVE",
     };
 
-    const response = await fetch(ROUTES_API_URL, {
+    const response = await fetchWithTimeout(ROUTES_API_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

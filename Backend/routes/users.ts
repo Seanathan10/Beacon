@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { canViewProfile } from "../utils/visibility";
 
 function isValidUrl(url: string): boolean {
     try {
@@ -16,25 +17,6 @@ function parsePage(raw: unknown): number {
     const page = parseInt(String(raw ?? "1"), 10);
     if (isNaN(page) || page < 1) return 1;
     return Math.min(page, MAX_PAGE);
-}
-
-/**
- * Whether `viewerID` may see `target`'s profile/data based on profileVisibility.
- * - public: anyone
- * - friends: the owner, or a viewer who follows the target
- * - private: the owner only
- */
-function canViewProfile(viewerID: number | null, targetID: number, visibility: string | null): boolean {
-    if (visibility === 'private') return viewerID === targetID;
-    if (visibility === 'friends') {
-        if (viewerID === targetID) return true;
-        if (!viewerID) return false;
-        return db.query(
-            "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
-            [viewerID, targetID]
-        ).length > 0;
-    }
-    return true; // public or null
 }
 
 export function getUser(req: Request, res: Response) {

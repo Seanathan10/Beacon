@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
+import { stripHtml } from "../utils/sanitize";
 
 // Get all comments for a specific pin with reactions and badges
 export function getPinComments(req: Request, res: Response) {
@@ -122,7 +123,7 @@ export function createComment(req: Request, res: Response) {
         VALUES(?, ?, ?, datetime('now'))
         RETURNING id, pinID, accountID, comment, createdAt;
         `,
-        [pinID, userID, comment.trim()]
+        [pinID, userID, stripHtml(comment.trim())]
     );
 
     if (results.length > 0) {
@@ -206,7 +207,7 @@ export function updateComment(req: Request, res: Response) {
 
     db.query(
         "UPDATE comment SET comment = ? WHERE id = ?",
-        [comment.trim(), commentID]
+        [stripHtml(comment.trim()), commentID]
     );
 
     const updatedComment = db.query(

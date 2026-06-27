@@ -228,6 +228,7 @@ function HomePage() {
     }, [allPins.features, searchParams, setSearchParams]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const fetchPins = async () => {
             try {
                 let url: string;
@@ -250,6 +251,7 @@ function HomePage() {
                 }
                 const res = await fetch(url, {
                     credentials: "include",
+                    signal: controller.signal,
                 });
 
                 if (res.status === 401) {
@@ -289,8 +291,8 @@ function HomePage() {
 
                 if (isLoggedIn) {
                     const savedPinsData = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
-                    const email = localStorage.getItem("userEmail")!;
-                    const savedPinIDs = savedPinsData[email] || [];
+                    const email = localStorage.getItem("userEmail");
+                    const savedPinIDs = (email && savedPinsData[email]) || [];
                     const saved = geojson.features
                         .filter((f) => savedPinIDs.includes(f.properties.id))
                         .map((f) => ({
@@ -306,6 +308,7 @@ function HomePage() {
                     setSavedPlaces(saved);
                 }
             } catch (error) {
+                if ((error as Error)?.name === "AbortError") return; // superseded by a newer fetch
                 console.error("Error fetching pins:", error);
             }
         };
@@ -313,6 +316,7 @@ function HomePage() {
         if (pinSort !== "distance" || geoCoords) {
             fetchPins();
         }
+        return () => controller.abort();
     }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout]);
 
     const requestGeo = useCallback(() => {
@@ -986,7 +990,7 @@ function HomePage() {
                         if (post.latitude !== undefined && post.longitude !== undefined) {
                             setSelectedPoint({
                                 id: post.id,
-                                creatorID: post.creatorID || "",
+                                creatorID: post.creatorID ?? undefined,
                                 longitude: post.longitude,
                                 latitude: post.latitude,
                                 title: post.title,

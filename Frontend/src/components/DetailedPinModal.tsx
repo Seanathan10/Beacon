@@ -157,20 +157,22 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
     useEffect(() => {
         if (!selectedPoint.id) return;
-        fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/similar`, { credentials: "include" })
+        const controller = new AbortController();
+        fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/similar`, { credentials: "include", signal: controller.signal })
             .then(r => r.ok ? r.json() : [])
             .then(data => setSimilarPins(Array.isArray(data) ? data : []))
-            .catch(() => setSimilarPins([]));
+            .catch((err) => { if (err?.name !== "AbortError") setSimilarPins([]); });
+        return () => controller.abort();
     }, [selectedPoint.id]);
 
-    const fetchComments = useCallback(async () => {
+    const fetchComments = useCallback(async (signal?: AbortSignal) => {
         if (!selectedPoint.id) return;
 
         setIsLoadingComments(true);
         try {
             const response = await fetch(
                 `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                { credentials: "include" }
+                { credentials: "include", signal }
             );
 
             if (response.ok) {
@@ -180,16 +182,19 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 console.error("Failed to fetch comments");
             }
         } catch (err) {
+            if ((err as Error)?.name === "AbortError") return; // unmounted/superseded
             console.error("Error fetching comments:", err);
         } finally {
-            setIsLoadingComments(false);
+            if (!signal?.aborted) setIsLoadingComments(false);
         }
     }, [selectedPoint.id]);
 
     // Fetch comments when modal opens
     useEffect(() => {
         if (selectedPoint.id) {
-            fetchComments();
+            const controller = new AbortController();
+            fetchComments(controller.signal);
+            return () => controller.abort();
         }
     }, [selectedPoint.id, fetchComments]);
 

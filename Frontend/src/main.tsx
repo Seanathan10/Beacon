@@ -8,6 +8,7 @@ import { RouteBoundary } from "./components/RouteBoundary";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 
+const Home = lazy(() => import("./pages/Home"));
 const PostsPage = lazy(() => import("./pages/PostsPage").then((m) => ({ default: m.PostsPage })));
 const SharedItinerary = lazy(() => import("./pages/SharedItinerary"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
@@ -26,8 +27,7 @@ const router = createBrowserRouter([
     },
     {
         path: "/home",
-        lazy: () =>
-            import("./pages/Home").then((m) => ({ Component: m.default })),
+        element: <RouteBoundary><Home /></RouteBoundary>,
     },
     {
         path: '/explore',
