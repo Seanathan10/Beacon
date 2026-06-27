@@ -225,7 +225,10 @@ app.post("/api/trip/local-route", auth.check, tripRateLimit, trip.getLocalRoute)
 app.post("/api/trip/nearby-pins", auth.check, tripRateLimit, trip.getNearbyPinsForSelection);
 app.post("/api/trip/save", auth.check, writeRateLimit, trips.saveTrip);
 
-app.use("/api/share", shareRateLimit, shareRouter);
+// auth.optional populates req.user when a token is present so a published
+// itinerary is associated with its creator (and shows up in their My Trips),
+// while still allowing anonymous shares.
+app.use("/api/share", shareRateLimit, auth.optional, shareRouter);
 
 app.get("/api/bookmarks", auth.check, bookmarks.getBookmarks);
 app.post("/api/bookmarks", auth.check, writeRateLimit, bookmarks.addBookmark);
