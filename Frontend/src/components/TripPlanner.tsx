@@ -250,6 +250,8 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
     // Share state
     const [isSharing, setIsSharing] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedTripId, setSavedTripId] = useState<string | null>(null);
 
     const handleClose = useCallback(() => {
         if (abortControllerRef.current) {
@@ -544,6 +546,46 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
             console.error('Error sharing itinerary:', err);
         } finally {
             setIsSharing(false);
+        }
+    };
+
+    const handleSaveTrip = async () => {
+        if (!result || isSaving) return;
+        setIsSaving(true);
+
+        try {
+            const response = await fetch(`${BASE_API_URL}/api/trip/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    // Re-saving updates the same draft instead of creating duplicates.
+                    id: savedTripId ?? undefined,
+                    itinerary: result.itinerary,
+                    itineraryType: result.itineraryType,
+                    settings: {
+                        origin: result.origin,
+                        destination: result.destination,
+                        durationDays: result.durationDays,
+                        transitOptions: result.transitOptions,
+                        ecoHotels: result.ecoHotels,
+                        localPins: result.localPins,
+                        carbonStats: result.carbonStats,
+                        originCoords: result.originCoords,
+                        destCoords: result.destCoords,
+                    },
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to save trip');
+
+            const data = await response.json();
+            setSavedTripId(data.id);
+            track("Trip Saved");
+        } catch (err) {
+            console.error('Error saving trip:', err);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -1112,6 +1154,16 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             <h2>{result.origin} → {result.destination}</h2>
                             <div className="trip-header-actions">
                                 <span className="trip-type-badge">✨ {result.itineraryType}</span>
+                                {!isSharedView && (
+                                    <button
+                                        className="trip-share-btn"
+                                        onClick={handleSaveTrip}
+                                        disabled={isSaving}
+                                        title={savedTripId ? 'Saved to My Trips' : 'Save trip as a draft'}
+                                    >
+                                        {isSaving ? '...' : savedTripId ? '✓ Saved' : '💾 Save'}
+                                    </button>
+                                )}
                                 {!isSharedView && (
                                     <button
                                         className="trip-share-btn"
