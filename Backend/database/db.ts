@@ -364,6 +364,21 @@ function runMigrations() {
             );
         `);
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS notification (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipientID INTEGER NOT NULL,
+                actorID INTEGER,
+                type TEXT NOT NULL,
+                entityType TEXT,
+                entityID INTEGER,
+                isRead INTEGER NOT NULL DEFAULT 0,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (recipientID) REFERENCES account(id) ON DELETE CASCADE,
+                FOREIGN KEY (actorID) REFERENCES account(id) ON DELETE CASCADE
+            );
+        `);
+
     } catch (err) {
         console.error("Failed to run migrations:", err);
     }
@@ -388,6 +403,7 @@ function createIndexes() {
             { table: 'search_history',   sql: 'CREATE INDEX IF NOT EXISTS idx_search_history_user_time ON search_history(accountID, createdAt DESC)' },
             { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_follower ON user_follow(followerID)' },
             { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
+            { table: 'notification',     sql: 'CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_public ON bookmark_folder(isPublic)' },
             { table: 'bookmark',         sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC)' },

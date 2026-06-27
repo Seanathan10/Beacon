@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
 import { stripHtml } from "../utils/sanitize";
+import { createNotification } from "../services/notifications";
 
 // Get all comments for a specific pin with reactions and badges
 export function getPinComments(req: Request, res: Response) {
@@ -111,7 +112,7 @@ export function createComment(req: Request, res: Response) {
     }
 
     // Verify pin exists
-    const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
+    const pin = db.query("SELECT id, creatorID FROM pin WHERE id = ?", [pinID])[0];
     if (!pin) {
         res.status(404).json({ message: "Pin not found" });
         return;
@@ -127,6 +128,16 @@ export function createComment(req: Request, res: Response) {
     );
 
     if (results.length > 0) {
+        // Notify the pin's creator that someone commented (best-effort).
+        if (pin.creatorID != null) {
+            createNotification({
+                recipientID: Number(pin.creatorID),
+                actorID: userID,
+                type: "pin_comment",
+                entityType: "pin",
+                entityID: Number(pinID),
+            });
+        }
         // Fetch the user email to return complete comment data
         const userEmail = db.query("SELECT email FROM account WHERE id = ?", [userID])[0]?.email;
         res.status(201).json({

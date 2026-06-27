@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS comment_reaction;
 DROP TABLE IF EXISTS bookmark;
 DROP TABLE IF EXISTS bookmark_folder;
@@ -145,6 +146,19 @@ CREATE TABLE comment_reaction (
 	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
 );
 
+CREATE TABLE notification (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	recipientID INTEGER NOT NULL,
+	actorID INTEGER,
+	type TEXT NOT NULL,
+	entityType TEXT,
+	entityID INTEGER,
+	isRead INTEGER NOT NULL DEFAULT 0,
+	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (recipientID) REFERENCES account(id) ON DELETE CASCADE,
+	FOREIGN KEY (actorID) REFERENCES account(id) ON DELETE CASCADE
+);
+
 -- Indexes for common query patterns
 CREATE INDEX idx_pin_creatorID ON pin(creatorID);
 CREATE INDEX idx_comment_pinID ON comment(pinID);
@@ -165,3 +179,4 @@ CREATE INDEX idx_comment_reaction_account ON comment_reaction(accountID);
 CREATE INDEX idx_post_coords ON post(latitude, longitude);
 CREATE INDEX idx_user_follow_follower ON user_follow(followerID);
 CREATE INDEX idx_user_follow_following ON user_follow(followingID);
+CREATE INDEX idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC);
