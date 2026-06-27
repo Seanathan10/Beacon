@@ -322,11 +322,31 @@ function runMigrations() {
             CREATE TABLE IF NOT EXISTS itinerary (
                 id TEXT PRIMARY KEY,
                 creatorID INTEGER,
+                title TEXT,
                 data TEXT NOT NULL,
+                isPublic INTEGER NOT NULL DEFAULT 0,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
             );
         `);
+
+        // ── Extend itinerary for My Trips / drafts (Stage 3) ─────────────────
+        // Older prod DBs created the table without title/isPublic. Add them and
+        // backfill: every pre-existing row was created via /api/share, i.e. a
+        // public shared snapshot, so mark those public.
+        if (tableNames.has('itinerary')) {
+            const itinCols = db.prepare("PRAGMA table_info(itinerary)").all() as { name: string }[];
+            const itinColNames = new Set(itinCols.map(c => c.name));
+            if (!itinColNames.has('title')) {
+                db.exec(`ALTER TABLE itinerary ADD COLUMN title TEXT`);
+                console.log("Migrated: added itinerary.title");
+            }
+            if (!itinColNames.has('isPublic')) {
+                db.exec(`ALTER TABLE itinerary ADD COLUMN isPublic INTEGER NOT NULL DEFAULT 0`);
+                db.exec(`UPDATE itinerary SET isPublic = 1`);
+                console.log("Migrated: added itinerary.isPublic (backfilled existing rows as public)");
+            }
+        }
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS bookmark_folder (
@@ -408,6 +428,7 @@ function createIndexes() {
             { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_follower ON user_follow(followerID)' },
             { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
             { table: 'notification',     sql: 'CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC)' },
+            { table: 'itinerary',        sql: 'CREATE INDEX IF NOT EXISTS idx_itinerary_creator ON itinerary(creatorID, createdAt DESC)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_public ON bookmark_folder(isPublic)' },
             { table: 'bookmark',         sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC)' },
