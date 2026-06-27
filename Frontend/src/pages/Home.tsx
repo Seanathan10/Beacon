@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import "./Home.css";
 import AuthModal from "@/components/AuthModal";
-import SearchBar from "@/components/SearchBar";
+import SearchBar, { BeaconPinResult, BeaconPostResult } from "@/components/SearchBar";
 import Sidebar from "@/components/Sidebar";
 import SavedPlacesPanel from "@/components/SavedPlacesPanel";
 import { NearbyPostsDrawer } from "@/components/NearbyPostsDrawer";
@@ -273,10 +273,11 @@ function HomePage() {
                             type: "Point",
                             coordinates: [p.longitude, p.latitude],
                         },
-                        properties: {
-                            id: p.id,
-                            email: p.email,
-                            title: p.title,
+                            properties: {
+                                id: p.id,
+                                creatorID: p.creatorID,
+                                email: p.email,
+                                title: p.title,
                             description: p.description,
                             image: p.image,
                             color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
@@ -627,6 +628,43 @@ function HomePage() {
                         }
                         onFocusChange={(focused) => setIsSearchFocused(focused)}
                         isFocused={isSearchFocused}
+                        onSelectBeaconPin={(pin: BeaconPinResult) => {
+                            setPinData(null);
+                            setSelectedPoint({
+                                id: pin.id,
+                                creatorID: pin.creatorID,
+                                longitude: pin.longitude,
+                                latitude: pin.latitude,
+                                title: pin.title || "",
+                                description: pin.description || "No description provided.",
+                                image: pin.image || "",
+                                color: localStorage.getItem("userEmail") === pin.email ? USER_PIN_COLOR : PIN_COLOR,
+                                email: pin.email || "",
+                                address: pin.address || "",
+                                tags: pin.tags,
+                                userStatus: pin.userStatus || null,
+                            });
+                            setShowDetailedModal(true);
+                        }}
+                        onSelectBeaconPost={(post: BeaconPostResult) => {
+                            if (post.latitude == null || post.longitude == null) return;
+                            setPinData(null);
+                            setSelectedPoint({
+                                id: post.id,
+                                creatorID: post.creatorID ?? undefined,
+                                longitude: post.longitude,
+                                latitude: post.latitude,
+                                title: post.title,
+                                description: post.message || "",
+                                image: post.image || "",
+                                color: PIN_COLOR,
+                                email: post.email || "",
+                                address: post.location || "Unknown Location",
+                                tags: Array.isArray(post.tags) ? post.tags.join(",") : undefined,
+                                userStatus: null,
+                            });
+                            setShowDetailedModal(true);
+                        }}
                     />
 
                     <div className="pin-sort-control" role="group" aria-label="Sort pins">
