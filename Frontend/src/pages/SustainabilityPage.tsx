@@ -18,6 +18,25 @@ interface CarbonStats {
     byMonth: MonthPoint[];
 }
 
+interface Challenge {
+    id: number;
+    title: string;
+    description: string | null;
+    goal: number;
+    icon: string | null;
+    progress: number;
+    completed: boolean;
+}
+
+interface LeaderRow {
+    rank: number;
+    accountID: number;
+    name: string | null;
+    avatar: string | null;
+    totalSavedKg: number;
+    tripCount: number;
+}
+
 const OFFSET_URL = "https://www.goldstandard.org/take-action/offset-your-emissions";
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
@@ -54,13 +73,35 @@ function MonthlyChart({ data }: { data: MonthPoint[] }) {
     );
 }
 
+function ChallengeRow({ c }: { c: Challenge }) {
+    const pct = Math.min(100, Math.round((c.progress / c.goal) * 100));
+    return (
+        <div style={{ padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 18 }}>{c.icon ?? "🎯"}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{c.title}</span>
+                {c.completed && <span style={{ fontSize: 11, fontWeight: 700, color: "#16a34a" }}>✓ Done</span>}
+                <span style={{ marginLeft: "auto", fontSize: 12, color: "#6b7280" }}>
+                    {Math.min(c.progress, c.goal)} / {c.goal}
+                </span>
+            </div>
+            <div style={{ height: 8, borderRadius: 999, background: "#f3f4f6", overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: c.completed ? "#16a34a" : "#86efac", transition: "width 0.3s" }} />
+            </div>
+            {c.description && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{c.description}</div>}
+        </div>
+    );
+}
+
 export default function SustainabilityPage() {
     const [stats, setStats] = useState<CarbonStats | null>(null);
+    const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [leaders, setLeaders] = useState<LeaderRow[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const load = useCallback(async (signal?: AbortSignal) => {
-        const res = await fetch(`${BASE_API_URL}/api/me/carbon-stats`, { credentials: "include", signal });
+    const fetchJson = useCallback(async (path: string, signal?: AbortSignal) => {
+        const res = await fetch(`${BASE_API_URL}${path}`, { credentials: "include", signal });
         if (res.status === 401) { navigate("/"); return null; }
         return res.ok ? res.json() : null;
     }, [navigate]);
@@ -68,12 +109,18 @@ export default function SustainabilityPage() {
     useEffect(() => {
         const controller = new AbortController();
         (async () => {
-            const data = await load(controller.signal);
-            if (data) setStats(data);
+            const [statsData, challengeData, leaderData] = await Promise.all([
+                fetchJson("/api/me/carbon-stats", controller.signal),
+                fetchJson("/api/me/challenges", controller.signal),
+                fetchJson("/api/leaderboard", controller.signal),
+            ]);
+            if (statsData) setStats(statsData);
+            if (challengeData) setChallenges(challengeData.items);
+            if (leaderData) setLeaders(leaderData.items);
             setLoading(false);
         })().catch(() => setLoading(false));
         return () => controller.abort();
-    }, [load]);
+    }, [fetchJson]);
 
     return (
         <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -119,6 +166,36 @@ export default function SustainabilityPage() {
                         </div>
                     )}
                 </>
+            )}
+
+            {!loading && challenges.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>Eco-challenges</h2>
+                    <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: "0 14px", background: "var(--card-bg, #fff)" }}>
+                        {challenges.map((c) => <ChallengeRow key={c.id} c={c} />)}
+                    </div>
+                </div>
+            )}
+
+            {!loading && leaders.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>Leaderboard</h2>
+                    <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden", background: "var(--card-bg, #fff)" }}>
+                        {leaders.map((l) => (
+                            <a key={l.accountID} href={`/profile/${l.accountID}`}
+                               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: "1px solid #f3f4f6", textDecoration: "none", color: "inherit" }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", width: 24 }}>#{l.rank}</span>
+                                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, overflow: "hidden", flexShrink: 0 }}>
+                                    {l.avatar ? <img src={l.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (l.name?.[0]?.toUpperCase() ?? "?")}
+                                </div>
+                                <span style={{ flex: 1, fontSize: 14, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {l.name ?? "Traveler"}
+                                </span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>{Math.round(l.totalSavedKg)} kg</span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
     );
