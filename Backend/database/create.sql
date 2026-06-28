@@ -114,6 +114,8 @@ CREATE TABLE itinerary (
 	title TEXT,
 	data TEXT NOT NULL,
 	isPublic INTEGER NOT NULL DEFAULT 0,
+	carbonKg REAL,
+	savedKg REAL,
 	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );

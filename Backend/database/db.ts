@@ -325,6 +325,8 @@ function runMigrations() {
                 title TEXT,
                 data TEXT NOT NULL,
                 isPublic INTEGER NOT NULL DEFAULT 0,
+                carbonKg REAL,
+                savedKg REAL,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
             );
@@ -345,6 +347,15 @@ function runMigrations() {
                 db.exec(`ALTER TABLE itinerary ADD COLUMN isPublic INTEGER NOT NULL DEFAULT 0`);
                 db.exec(`UPDATE itinerary SET isPublic = 1`);
                 console.log("Migrated: added itinerary.isPublic (backfilled existing rows as public)");
+            }
+            // Stage 4: per-trip carbon for the sustainability dashboard.
+            if (!itinColNames.has('carbonKg')) {
+                db.exec(`ALTER TABLE itinerary ADD COLUMN carbonKg REAL`);
+                console.log("Migrated: added itinerary.carbonKg");
+            }
+            if (!itinColNames.has('savedKg')) {
+                db.exec(`ALTER TABLE itinerary ADD COLUMN savedKg REAL`);
+                console.log("Migrated: added itinerary.savedKg");
             }
         }
 
