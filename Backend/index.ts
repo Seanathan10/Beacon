@@ -242,6 +242,7 @@ app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.d
 
 app.get("/api/me/trips", auth.check, trips.getMyTrips);
 app.get("/api/me/trips/:id", auth.check, trips.getMyTrip);
+app.get("/api/me/carbon-stats", auth.check, trips.getCarbonStats);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);

@@ -4,6 +4,7 @@ import { db } from "../database/db";
 import { logError } from "../utils/logger";
 import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 import { deriveTripCarbon } from "../utils/tripCarbon";
+import { calculateOffsetCost } from "../utils/carbon";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
 const PAGE_LIMIT = 20;
@@ -122,6 +123,62 @@ export function getMyTrip(req: Request, res: Response) {
     } catch (err) {
         logError(req, "Get trip error", err);
         res.status(500).json({ message: "Failed to fetch trip" });
+    }
+}
+
+function round2(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
+/**
+ * GET /api/me/carbon-stats — aggregate the viewer's saved/published trips into a
+ * personal sustainability summary. Only trips that carry carbon data count.
+ */
+export function getCarbonStats(req: Request, res: Response) {
+    const userID = req.user.id;
+
+    try {
+        const totals = db.prepare(`
+            SELECT COUNT(*) AS tripCount,
+                   COALESCE(SUM(carbonKg), 0) AS totalCarbonKg,
+                   COALESCE(SUM(savedKg), 0) AS totalSavedKg
+            FROM itinerary
+            WHERE creatorID = ? AND carbonKg IS NOT NULL
+        `).get(userID) as { tripCount: number; totalCarbonKg: number; totalSavedKg: number };
+
+        const byMonth = (db.prepare(`
+            SELECT strftime('%Y-%m', createdAt) AS month,
+                   COUNT(*) AS count,
+                   COALESCE(SUM(carbonKg), 0) AS carbonKg,
+                   COALESCE(SUM(savedKg), 0) AS savedKg
+            FROM itinerary
+            WHERE creatorID = ? AND carbonKg IS NOT NULL
+            GROUP BY month
+            ORDER BY month ASC
+        `).all(userID) as { month: string; count: number; carbonKg: number; savedKg: number }[])
+            .map((r) => ({
+                month: r.month,
+                count: r.count,
+                carbonKg: round2(r.carbonKg),
+                savedKg: round2(r.savedKg),
+            }));
+
+        const totalCarbonKg = round2(totals.totalCarbonKg);
+        const totalSavedKg = round2(totals.totalSavedKg);
+        const typicalTotal = totalCarbonKg + totalSavedKg;
+        const avgSavingsPct = typicalTotal > 0 ? Math.round((totalSavedKg / typicalTotal) * 100) : 0;
+
+        res.json({
+            tripCount: totals.tripCount,
+            totalCarbonKg,
+            totalSavedKg,
+            avgSavingsPct,
+            offsetCostUsd: calculateOffsetCost(totalCarbonKg),
+            byMonth,
+        });
+    } catch (err) {
+        logError(req, "Carbon stats error", err);
+        res.status(500).json({ message: "Failed to compute carbon stats" });
     }
 }
 

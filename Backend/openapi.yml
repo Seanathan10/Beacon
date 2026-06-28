@@ -1993,6 +1993,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/me/carbon-stats:
+    get:
+      tags: [Trip]
+      summary: Get the current user's carbon footprint summary
+      description: Aggregates the user's saved and shared trips into cumulative carbon, savings, and a monthly trend
+      operationId: getCarbonStats
+      responses:
+        200:
+          description: Carbon summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tripCount: { type: integer }
+                  totalCarbonKg: { type: number }
+                  totalSavedKg: { type: number }
+                  avgSavingsPct: { type: integer }
+                  offsetCostUsd: { type: number }
+                  byMonth:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: string }
+                        count: { type: integer }
+                        carbonKg: { type: number }
+                        savedKg: { type: number }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/me/stats:
     get:
       tags: [Auth]
