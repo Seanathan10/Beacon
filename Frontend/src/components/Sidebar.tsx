@@ -185,7 +185,7 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
                                 })()}
                             </div>
                             {showMessage && <p className="sidebar-pin-card-message">{messageText}</p>}
-                            {pin.image && <img src={pin.image} alt={titleText} className="sidebar-pin-card-image" />}
+                            {pin.image && <img src={pin.image} alt={titleText} className="sidebar-pin-card-image" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                         </li>
                     );
                 })}
