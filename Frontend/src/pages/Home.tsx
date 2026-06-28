@@ -28,7 +28,7 @@ import {
 import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
-import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
+import { getMapBoxStyleUrl, resolveTheme, onThemeChange } from "@/utils/theme";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
 import FilterPanel, { PinFilters, loadSavedFilters } from "@/components/FilterPanel";
@@ -152,7 +152,9 @@ function HomePage() {
     const [flightLine, setFlightLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [hotelLine, setHotelLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [transferPoints, setTransferPoints] = useState<GeoJSON.FeatureCollection | null>(null);
-    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
+    // Initialize from the user's resolved theme (saved choice, or OS when "system"),
+    // not the raw OS theme — otherwise a saved dark theme renders over a light map.
+    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(resolveTheme()));
     const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
     const [cloneValues, setCloneValues] = useState<CloneValues | null>(null);
     const [pinSort, setPinSort] = useState<"recent" | "trending" | "distance">("recent");
