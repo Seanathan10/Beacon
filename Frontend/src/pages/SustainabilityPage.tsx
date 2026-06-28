@@ -39,6 +39,13 @@ interface LeaderRow {
 
 const OFFSET_URL = "https://www.goldstandard.org/take-action/offset-your-emissions";
 
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatMonth(ym: string): string {
+    const [year, month] = ym.split("-");
+    const abbr = MONTH_ABBR[parseInt(month, 10) - 1];
+    return abbr ? `${abbr} '${year.slice(2)}` : ym;
+}
+
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
     return (
         <div style={{ flex: "1 1 120px", minWidth: 120, padding: 14, border: "1px solid #e5e7eb", borderRadius: 10, background: "var(--card-bg, #fff)" }}>
@@ -65,7 +72,7 @@ function MonthlyChart({ data }: { data: MonthPoint[] }) {
                         }}
                     />
                     <div style={{ fontSize: 10, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 44 }}>
-                        {d.month.slice(2)}
+                        {formatMonth(d.month)}
                     </div>
                 </div>
             ))}
