@@ -103,11 +103,11 @@ export default function MyTrips() {
             </div>
 
             {loading && (
-                <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>Loading...</div>
+                <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>Loading...</div>
             )}
 
             {!loading && items.length === 0 && (
-                <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>
+                <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>🧳</div>
                     <p>No saved trips yet.</p>
                     <a href="/home" style={{ color: "#2563eb", textDecoration: "none" }}>Plan a trip →</a>
@@ -121,32 +121,32 @@ export default function MyTrips() {
                         return (
                             <div key={t.id} style={{
                                 display: "flex", alignItems: "center", gap: 12, padding: 14,
-                                border: "1px solid #e5e7eb", borderRadius: 10, background: "var(--card-bg, #fff)",
+                                border: "1px solid var(--color-border-primary)", borderRadius: 10, background: "var(--color-card)",
                             }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                             {tripLabel(t)}
                                         </span>
                                         <span style={{
                                             fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 999,
-                                            background: t.isPublic ? "#dcfce7" : "#f3f4f6",
-                                            color: t.isPublic ? "#166534" : "#6b7280",
+                                            background: t.isPublic ? "#dcfce7" : "var(--color-border-primary)",
+                                            color: t.isPublic ? "#166534" : "var(--color-text-secondary)",
                                             flexShrink: 0,
                                         }}>
                                             {t.isPublic ? "SHARED" : "DRAFT"}
                                         </span>
                                     </div>
                                     {subtitle && (
-                                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{subtitle}</div>
+                                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>{subtitle}</div>
                                     )}
-                                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                                    <div style={{ fontSize: 11, color: "var(--color-text-light)", marginTop: 2 }}>
                                         {new Date(t.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => navigate(`/my-trips/${t.id}`)}
-                                    style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 13, flexShrink: 0 }}
+                                    style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--color-border-primary)", background: "var(--color-card)", color: "var(--color-text-primary)", cursor: "pointer", fontSize: 13, flexShrink: 0 }}
                                 >
                                     Open
                                 </button>
@@ -154,7 +154,7 @@ export default function MyTrips() {
                                     onClick={() => deleteTrip(t.id)}
                                     disabled={deletingId === t.id}
                                     title="Delete trip"
-                                    style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fff", color: "#dc2626", cursor: "pointer", fontSize: 13, flexShrink: 0 }}
+                                    style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "var(--color-card)", color: "#dc2626", cursor: "pointer", fontSize: 13, flexShrink: 0 }}
                                 >
                                     {deletingId === t.id ? "..." : "🗑"}
                                 </button>
@@ -169,7 +169,7 @@ export default function MyTrips() {
                     <button
                         onClick={loadMore}
                         disabled={loadingMore}
-                        style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 13 }}
+                        style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border-primary)", background: "var(--color-card)", color: "var(--color-text-primary)", cursor: "pointer", fontSize: 13 }}
                     >
                         {loadingMore ? "Loading..." : "Load more"}
                     </button>

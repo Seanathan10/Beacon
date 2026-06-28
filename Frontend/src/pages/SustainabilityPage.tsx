@@ -48,9 +48,9 @@ function formatMonth(ym: string): string {
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
     return (
-        <div style={{ flex: "1 1 120px", minWidth: 120, padding: 14, border: "1px solid #e5e7eb", borderRadius: 10, background: "var(--card-bg, #fff)" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: accent ?? "#111827" }}>{value}</div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{label}</div>
+        <div style={{ flex: "1 1 120px", minWidth: 120, padding: 14, border: "1px solid var(--color-border-primary)", borderRadius: 10, background: "var(--color-card)" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: accent ?? "var(--color-text-primary)" }}>{value}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>{label}</div>
         </div>
     );
 }
@@ -71,7 +71,7 @@ function MonthlyChart({ data }: { data: MonthPoint[] }) {
                             borderRadius: "4px 4px 0 0",
                         }}
                     />
-                    <div style={{ fontSize: 10, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 44 }}>
+                    <div style={{ fontSize: 10, color: "var(--color-text-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 44 }}>
                         {formatMonth(d.month)}
                     </div>
                 </div>
@@ -83,19 +83,19 @@ function MonthlyChart({ data }: { data: MonthPoint[] }) {
 function ChallengeRow({ c }: { c: Challenge }) {
     const pct = Math.min(100, Math.round((c.progress / c.goal) * 100));
     return (
-        <div style={{ padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+        <div style={{ padding: "10px 0", borderBottom: "1px solid var(--color-border-primary)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: 18 }}>{c.icon ?? "🎯"}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{c.title}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{c.title}</span>
                 {c.completed && <span style={{ fontSize: 11, fontWeight: 700, color: "#16a34a" }}>✓ Done</span>}
-                <span style={{ marginLeft: "auto", fontSize: 12, color: "#6b7280" }}>
+                <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--color-text-secondary)" }}>
                     {Math.min(c.progress, c.goal)} / {c.goal}
                 </span>
             </div>
-            <div style={{ height: 8, borderRadius: 999, background: "#f3f4f6", overflow: "hidden" }}>
+            <div style={{ height: 8, borderRadius: 999, background: "var(--color-border-primary)", overflow: "hidden" }}>
                 <div style={{ width: `${pct}%`, height: "100%", background: c.completed ? "#16a34a" : "#86efac", transition: "width 0.3s" }} />
             </div>
-            {c.description && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{c.description}</div>}
+            {c.description && <div style={{ fontSize: 11, color: "var(--color-text-light)", marginTop: 4 }}>{c.description}</div>}
         </div>
     );
 }
@@ -136,10 +136,10 @@ export default function SustainabilityPage() {
                 <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🌱 Sustainability</h1>
             </div>
 
-            {loading && <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>Loading...</div>}
+            {loading && <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>Loading...</div>}
 
             {!loading && (!stats || stats.tripCount === 0) && (
-                <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>
+                <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>🌍</div>
                     <p>Plan and save a trip to start tracking your carbon savings.</p>
                     <a href="/home" style={{ color: "#16a34a", textDecoration: "none" }}>Plan a trip →</a>
@@ -178,7 +178,7 @@ export default function SustainabilityPage() {
             {!loading && challenges.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                     <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>Eco-challenges</h2>
-                    <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: "0 14px", background: "var(--card-bg, #fff)" }}>
+                    <div style={{ border: "1px solid var(--color-border-primary)", borderRadius: 10, padding: "0 14px", background: "var(--color-card)" }}>
                         {challenges.map((c) => <ChallengeRow key={c.id} c={c} />)}
                     </div>
                 </div>
@@ -187,15 +187,15 @@ export default function SustainabilityPage() {
             {!loading && leaders.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                     <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>Leaderboard</h2>
-                    <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden", background: "var(--card-bg, #fff)" }}>
+                    <div style={{ border: "1px solid var(--color-border-primary)", borderRadius: 10, overflow: "hidden", background: "var(--color-card)" }}>
                         {leaders.map((l) => (
                             <a key={l.accountID} href={`/profile/${l.accountID}`}
-                               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: "1px solid #f3f4f6", textDecoration: "none", color: "inherit" }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7280", width: 24 }}>#{l.rank}</span>
+                               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: "1px solid var(--color-border-primary)", textDecoration: "none", color: "inherit" }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-secondary)", width: 24 }}>#{l.rank}</span>
                                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, overflow: "hidden", flexShrink: 0 }}>
                                     {l.avatar ? <img src={l.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (l.name?.[0]?.toUpperCase() ?? "?")}
                                 </div>
-                                <span style={{ flex: 1, fontSize: 14, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <span style={{ flex: 1, fontSize: 14, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {l.name ?? "Traveler"}
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>{Math.round(l.totalSavedKg)} kg</span>
