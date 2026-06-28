@@ -1083,21 +1083,16 @@ function HomePage() {
                         cluster={mapLayerMode === "pins"}
                         clusterRadius={56}
                     >
-                        {mapLayerMode === "pins" ? (
-                            <>
-                                <Layer {...CLUSTER_LAYER_STYLE} />
-                                <Layer {...CLUSTER_COUNT_LAYER_STYLE} />
-                                <Layer {...PIN_LAYER_STYLE} />
-                            </>
-                        ) : (
-                            <>
-                                {/* The heatmap fades out by zoom 9; the point layer fades in
-                                    over zoom 7→9 so zooming to city level reveals individual
-                                    dots instead of an empty map. */}
-                                <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
-                                <Layer {...PIN_LAYER_STYLE} />
-                            </>
-                        )}
+                        {/* Layers must be DIRECT children of <Source>: react-map-gl clones
+                            each child to inject the `source` prop, and a Fragment wrapper
+                            would receive that prop and spam "Invalid prop `source` supplied
+                            to React.Fragment" on every render. The heatmap fades out by zoom
+                            9 while PIN_LAYER_STYLE fades in over zoom 7→9, so zooming to city
+                            level reveals individual dots instead of an empty map. */}
+                        {mapLayerMode === "pins" && <Layer {...CLUSTER_LAYER_STYLE} />}
+                        {mapLayerMode === "pins" && <Layer {...CLUSTER_COUNT_LAYER_STYLE} />}
+                        {mapLayerMode === "heatmap" && <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />}
+                        <Layer {...PIN_LAYER_STYLE} />
                     </Source>
 
                     {/* Trip Route Line */}
