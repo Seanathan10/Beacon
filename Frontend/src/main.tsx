@@ -19,6 +19,7 @@ const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const MyTrips = lazy(() => import("./pages/MyTrips"));
 const MyTripView = lazy(() => import("./pages/MyTripView"));
+const SustainabilityPage = lazy(() => import("./pages/SustainabilityPage"));
 
 // Initialize dark theme support
 initializeTheme();
@@ -71,6 +72,10 @@ const router = createBrowserRouter([
     {
         path: '/my-trips/:id',
         element: <RouteBoundary><MyTripView /></RouteBoundary>,
+    },
+    {
+        path: '/sustainability',
+        element: <RouteBoundary><SustainabilityPage /></RouteBoundary>,
     },
 ]);
 
