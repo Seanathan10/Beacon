@@ -28,7 +28,7 @@ import {
 import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
-import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
+import { getMapBoxStyleUrl, resolveTheme, onThemeChange } from "@/utils/theme";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import ShortcutsHelpModal from "@/components/ShortcutsHelpModal";
 import FilterPanel, { PinFilters, loadSavedFilters } from "@/components/FilterPanel";
@@ -152,7 +152,9 @@ function HomePage() {
     const [flightLine, setFlightLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [hotelLine, setHotelLine] = useState<GeoJSON.FeatureCollection | null>(null);
     const [transferPoints, setTransferPoints] = useState<GeoJSON.FeatureCollection | null>(null);
-    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
+    // Initialize from the user's resolved theme (saved choice, or OS when "system"),
+    // not the raw OS theme — otherwise a saved dark theme renders over a light map.
+    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(resolveTheme()));
     const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
     const [cloneValues, setCloneValues] = useState<CloneValues | null>(null);
     const [pinSort, setPinSort] = useState<"recent" | "trending" | "distance">("recent");
@@ -1083,21 +1085,16 @@ function HomePage() {
                         cluster={mapLayerMode === "pins"}
                         clusterRadius={56}
                     >
-                        {mapLayerMode === "pins" ? (
-                            <>
-                                <Layer {...CLUSTER_LAYER_STYLE} />
-                                <Layer {...CLUSTER_COUNT_LAYER_STYLE} />
-                                <Layer {...PIN_LAYER_STYLE} />
-                            </>
-                        ) : (
-                            <>
-                                {/* The heatmap fades out by zoom 9; the point layer fades in
-                                    over zoom 7→9 so zooming to city level reveals individual
-                                    dots instead of an empty map. */}
-                                <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
-                                <Layer {...PIN_LAYER_STYLE} />
-                            </>
-                        )}
+                        {/* Layers must be DIRECT children of <Source>: react-map-gl clones
+                            each child to inject the `source` prop, and a Fragment wrapper
+                            would receive that prop and spam "Invalid prop `source` supplied
+                            to React.Fragment" on every render. The heatmap fades out by zoom
+                            9 while PIN_LAYER_STYLE fades in over zoom 7→9, so zooming to city
+                            level reveals individual dots instead of an empty map. */}
+                        {mapLayerMode === "pins" && <Layer {...CLUSTER_LAYER_STYLE} />}
+                        {mapLayerMode === "pins" && <Layer {...CLUSTER_COUNT_LAYER_STYLE} />}
+                        {mapLayerMode === "heatmap" && <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />}
+                        <Layer {...PIN_LAYER_STYLE} />
                     </Source>
 
                     {/* Trip Route Line */}

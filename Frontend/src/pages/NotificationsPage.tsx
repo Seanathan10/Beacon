@@ -109,11 +109,11 @@ export default function NotificationsPage() {
             </div>
 
             {loading && (
-                <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>Loading...</div>
+                <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>Loading...</div>
             )}
 
             {!loading && items.length === 0 && (
-                <div style={{ textAlign: "center", color: "#6b7280", padding: 40 }}>
+                <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 40 }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div>
                     <p>No notifications yet.</p>
                 </div>
@@ -126,19 +126,19 @@ export default function NotificationsPage() {
                         const row = (
                             <div style={{
                                 display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 8px",
-                                borderBottom: "1px solid #f3f4f6",
-                                background: n.isRead ? "transparent" : "var(--unread-bg, #eff6ff)",
+                                borderBottom: "1px solid var(--color-border-primary)",
+                                background: n.isRead ? "transparent" : "var(--color-bg-tertiary)",
                                 borderRadius: 6,
                             }}>
                                 <div style={{ fontSize: 18, flexShrink: 0, width: 28, textAlign: "center" }}>
                                     {TYPE_ICON[n.type] ?? "•"}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 14, color: "#374151" }}>
+                                    <div style={{ fontSize: 14, color: "var(--color-text-primary)" }}>
                                         <strong>{actorLabel(n)}</strong> {describe(n)}
                                     </div>
                                 </div>
-                                <div style={{ fontSize: 11, color: "#9ca3af", flexShrink: 0 }}>
+                                <div style={{ fontSize: 11, color: "var(--color-text-light)", flexShrink: 0 }}>
                                     {new Date(n.createdAt).toLocaleDateString()}
                                 </div>
                             </div>
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                     <button
                         onClick={loadMore}
                         disabled={loadingMore}
-                        style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 13 }}
+                        style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border-primary)", background: "var(--color-card)", color: "var(--color-text-primary)", cursor: "pointer", fontSize: 13 }}
                     >
                         {loadingMore ? "Loading..." : "Load more"}
                     </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { BASE_API_URL } from '../../constants';
 
 type AuthMode = "login" | "register";
@@ -8,7 +8,9 @@ interface AuthModalProps {
     onAuthSuccess: () => void;
 }
 
-export default function AuthModal({
+// Memoized: the parent (Home) re-renders frequently while the map is mounted;
+// without this the modal's entrance animation restarts on every parent render.
+function AuthModal({
     isOpen,
     onClose,
     onAuthSuccess,
@@ -234,3 +236,5 @@ export default function AuthModal({
         </div>
     );
 }
+
+export default memo(AuthModal);

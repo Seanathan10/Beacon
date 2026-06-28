@@ -528,7 +528,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 <div className="detailed-modal-header">
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <h2>{isEditing ? "Edit Pin" : selectedPoint.title}</h2>
-                        <p style={{ margin: 0, color: "black" }}>{selectedPoint.address}</p>
+                        <p style={{ margin: 0, color: "var(--color-text-secondary)" }}>{selectedPoint.address}</p>
                     </div>
                     <div className="detailed-modal-header-actions">
                         {selectedPoint.id && (
@@ -640,6 +640,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                                     src={selectedPoint.image}
                                     alt="Pin location"
                                     className="detailed-modal-image"
+                                    onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                             ) : (
                                 <div
@@ -674,12 +675,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                                 </div>
                             )}
 
-                            {selectedPoint.address && (
-                                <ModalSection
-                                    header={"Address"}
-                                    content={selectedPoint.address}
-                                />
-                            )}
+                            {/* Address is already shown beneath the title in the header. */}
 
                             {/* Comments Section */}
                             <div className="detailed-info-section comments-section">

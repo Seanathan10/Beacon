@@ -1123,7 +1123,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                             </div>
 
                             <div className="trip-input-group">
-                                <label>Duration: {durationDays} days</label>
+                                <label>Duration: {durationDays} {durationDays === 1 ? "day" : "days"}</label>
                                 <input
                                     type="range"
                                     min="1"

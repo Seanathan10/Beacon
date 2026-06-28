@@ -339,6 +339,13 @@ function runMigrations() {
         if (tableNames.has('itinerary')) {
             const itinCols = db.prepare("PRAGMA table_info(itinerary)").all() as { name: string }[];
             const itinColNames = new Set(itinCols.map(c => c.name));
+            // Very old itinerary tables predate creatorID entirely; without it every
+            // My-Trips / save / carbon-stats / leaderboard query throws and the
+            // idx_itinerary_creator index can't be created.
+            if (!itinColNames.has('creatorID')) {
+                db.exec(`ALTER TABLE itinerary ADD COLUMN creatorID INTEGER`);
+                console.log("Migrated: added itinerary.creatorID");
+            }
             if (!itinColNames.has('title')) {
                 db.exec(`ALTER TABLE itinerary ADD COLUMN title TEXT`);
                 console.log("Migrated: added itinerary.title");
