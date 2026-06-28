@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as db from "../database/db";
+import { recordChallengeEvent } from "../services/challenges";
 
 const VALID_STATUSES = new Set(["visited", "wishlist"]);
 
@@ -20,6 +21,14 @@ export function setPinStatus(req: Request, res: Response) {
         return res.status(404).json({ message: "Pin not found" });
     }
 
+    // Capture the prior status so we only credit a challenge the first time a
+    // pin actually transitions into 'visited' (toggling back and forth or
+    // re-saving 'visited' must not inflate progress).
+    const prior = db.query(
+        "SELECT status FROM pin_status WHERE pinID = ? AND accountID = ?",
+        [pinID, userID],
+    )[0] as { status: string } | undefined;
+
     db.query(
         `INSERT INTO pin_status (pinID, accountID, status, updatedAt)
          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
@@ -28,6 +37,10 @@ export function setPinStatus(req: Request, res: Response) {
             updatedAt = CURRENT_TIMESTAMP`,
         [pinID, userID, status],
     );
+
+    if (status === "visited" && prior?.status !== "visited") {
+        recordChallengeEvent(userID, "places_visited", 1);
+    }
 
     res.status(200).json({ pinID, status });
 }

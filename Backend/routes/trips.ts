@@ -5,6 +5,7 @@ import { logError } from "../utils/logger";
 import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 import { deriveTripCarbon } from "../utils/tripCarbon";
 import { calculateOffsetCost } from "../utils/carbon";
+import { recordChallengeEvent } from "../services/challenges";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
 const PAGE_LIMIT = 20;
@@ -236,6 +237,12 @@ export function saveTrip(req: Request, res: Response) {
         db.prepare(
             "INSERT INTO itinerary (id, creatorID, title, data, isPublic, carbonKg, savedKg) VALUES (?, ?, ?, ?, 0, ?, ?)"
         ).run(newId, Number(userID), cleanTitle, data, carbonKg, savedKg);
+
+        // Advance eco-challenges only when a new trip is created (not on updates).
+        recordChallengeEvent(Number(userID), "trips_saved", 1);
+        if (savedKg && savedKg > 0) {
+            recordChallengeEvent(Number(userID), "carbon_saved", savedKg);
+        }
 
         res.status(201).json({ id: newId, isPublic: false });
     } catch (err) {

@@ -22,6 +22,7 @@ import * as users from "./routes/users.ts";
 import * as follows from "./routes/follows.ts";
 import * as notifications from "./routes/notifications.ts";
 import * as trips from "./routes/trips.ts";
+import * as challenges from "./routes/challenges.ts";
 import { shareRouter } from "./routes/share.ts";
 import * as plausible from "./routes/plausible.ts";
 
@@ -243,6 +244,7 @@ app.delete("/api/bookmarks/folders/:id", auth.check, writeRateLimit, bookmarks.d
 app.get("/api/me/trips", auth.check, trips.getMyTrips);
 app.get("/api/me/trips/:id", auth.check, trips.getMyTrip);
 app.get("/api/me/carbon-stats", auth.check, trips.getCarbonStats);
+app.get("/api/me/challenges", auth.check, challenges.getMyChallenges);
 
 app.get("/api/me/stats", auth.check, stats.getUserStats);
 app.get("/api/me/activity", auth.check, stats.getUserActivity);

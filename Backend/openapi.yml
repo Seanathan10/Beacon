@@ -2028,6 +2028,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/me/challenges:
+    get:
+      tags: [Trip]
+      summary: List eco-challenges with the user's progress
+      description: Returns active challenges and the authenticated user's progress toward each
+      operationId: getMyChallenges
+      responses:
+        200:
+          description: Challenge list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        code: { type: string }
+                        title: { type: string }
+                        description: { type: string, nullable: true }
+                        metric: { type: string }
+                        goal: { type: number }
+                        icon: { type: string, nullable: true }
+                        progress: { type: number }
+                        completed: { type: boolean }
+                        completedAt: { type: string, nullable: true }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/me/stats:
     get:
       tags: [Auth]
