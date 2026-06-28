@@ -11,13 +11,15 @@ export type NotificationType =
     | "pin_like"
     | "follow"
     | "pin_comment"
-    | "post_upvote";
+    | "post_upvote"
+    | "challenge_complete";
 
-export type EntityType = "pin" | "post" | "account" | "comment";
+export type EntityType = "pin" | "post" | "account" | "comment" | "challenge";
 
 interface CreateNotificationArgs {
     recipientID: number;
-    actorID: number;
+    // null for system-generated notifications (e.g. completing a challenge).
+    actorID: number | null;
     type: NotificationType;
     entityType?: EntityType;
     entityID?: number;

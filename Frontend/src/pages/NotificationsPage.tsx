@@ -20,9 +20,12 @@ const TYPE_ICON: Record<string, string> = {
     follow: "➕",
     pin_comment: "💬",
     post_upvote: "⬆️",
+    challenge_complete: "🏆",
 };
 
 function actorLabel(n: NotificationItem): string {
+    // Challenge completions are system-generated (no actor).
+    if (n.type === "challenge_complete") return "You";
     return n.actorName || n.actorEmail || "Someone";
 }
 
@@ -32,11 +35,13 @@ function describe(n: NotificationItem): string {
         case "follow": return "started following you";
         case "pin_comment": return "commented on your pin";
         case "post_upvote": return "upvoted your post";
+        case "challenge_complete": return "completed an eco-challenge!";
         default: return n.type;
     }
 }
 
 function linkFor(n: NotificationItem): string | null {
+    if (n.type === "challenge_complete") return "/sustainability";
     if (n.type === "follow" && n.actorID) return `/profile/${n.actorID}`;
     if (n.entityType === "pin" && n.entityID) return `/home?pin=${n.entityID}`;
     if (n.entityType === "post" && n.entityID) return `/explore`;

@@ -1993,6 +1993,109 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/me/carbon-stats:
+    get:
+      tags: [Trip]
+      summary: Get the current user's carbon footprint summary
+      description: Aggregates the user's saved and shared trips into cumulative carbon, savings, and a monthly trend
+      operationId: getCarbonStats
+      responses:
+        200:
+          description: Carbon summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tripCount: { type: integer }
+                  totalCarbonKg: { type: number }
+                  totalSavedKg: { type: number }
+                  avgSavingsPct: { type: integer }
+                  offsetCostUsd: { type: number }
+                  byMonth:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: string }
+                        count: { type: integer }
+                        carbonKg: { type: number }
+                        savedKg: { type: number }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/me/challenges:
+    get:
+      tags: [Trip]
+      summary: List eco-challenges with the user's progress
+      description: Returns active challenges and the authenticated user's progress toward each
+      operationId: getMyChallenges
+      responses:
+        200:
+          description: Challenge list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        code: { type: string }
+                        title: { type: string }
+                        description: { type: string, nullable: true }
+                        metric: { type: string }
+                        goal: { type: number }
+                        icon: { type: string, nullable: true }
+                        progress: { type: number }
+                        completed: { type: boolean }
+                        completedAt: { type: string, nullable: true }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/leaderboard:
+    get:
+      tags: [Trip]
+      summary: Community carbon-savings leaderboard
+      description: Ranks public-profile users by total CO₂ saved across their trips
+      operationId: getLeaderboard
+      responses:
+        200:
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rank: { type: integer }
+                        accountID: { type: integer }
+                        name: { type: string, nullable: true }
+                        avatar: { type: string, nullable: true }
+                        totalSavedKg: { type: number }
+                        tripCount: { type: integer }
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/me/stats:
     get:
       tags: [Auth]

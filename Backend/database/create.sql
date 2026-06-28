@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS challenge_progress;
+DROP TABLE IF EXISTS challenge;
 DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS comment_reaction;
 DROP TABLE IF EXISTS bookmark;
@@ -114,6 +116,8 @@ CREATE TABLE itinerary (
 	title TEXT,
 	data TEXT NOT NULL,
 	isPublic INTEGER NOT NULL DEFAULT 0,
+	carbonKg REAL,
+	savedKg REAL,
 	createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (creatorID) REFERENCES account(id) ON DELETE CASCADE
 );
@@ -161,6 +165,28 @@ CREATE TABLE notification (
 	FOREIGN KEY (actorID) REFERENCES account(id) ON DELETE CASCADE
 );
 
+CREATE TABLE challenge (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	code TEXT UNIQUE NOT NULL,
+	title VARCHAR(120) NOT NULL,
+	description VARCHAR(300),
+	metric TEXT NOT NULL,
+	goal REAL NOT NULL,
+	icon VARCHAR(8),
+	active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE challenge_progress (
+	challengeID INTEGER NOT NULL,
+	accountID INTEGER NOT NULL,
+	progress REAL NOT NULL DEFAULT 0,
+	completedAt DATETIME,
+	updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (challengeID, accountID),
+	FOREIGN KEY (challengeID) REFERENCES challenge(id) ON DELETE CASCADE,
+	FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+);
+
 -- Indexes for common query patterns
 CREATE INDEX idx_pin_creatorID ON pin(creatorID);
 CREATE INDEX idx_pin_title ON pin(title);
@@ -187,3 +213,11 @@ CREATE INDEX idx_user_follow_follower ON user_follow(followerID);
 CREATE INDEX idx_user_follow_following ON user_follow(followingID);
 CREATE INDEX idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC);
 CREATE INDEX idx_itinerary_creator ON itinerary(creatorID, createdAt DESC);
+CREATE INDEX idx_challenge_progress_account ON challenge_progress(accountID);
+
+-- Default eco-challenges (keep in sync with seedChallenges() in db.ts)
+INSERT INTO challenge (code, title, description, metric, goal, icon) VALUES
+	('eco_explorer', 'Eco Explorer', 'Plan 5 low-carbon trips', 'trips_saved', 5, '🌍'),
+	('carbon_saver', 'Carbon Saver', 'Save 100 kg of CO₂ versus typical travel', 'carbon_saved', 100, '🌱'),
+	('climate_champion', 'Climate Champion', 'Save 500 kg of CO₂', 'carbon_saved', 500, '🏆'),
+	('local_legend', 'Local Legend', 'Visit 10 community places', 'places_visited', 10, '📍');
