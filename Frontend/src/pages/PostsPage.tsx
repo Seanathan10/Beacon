@@ -8,7 +8,6 @@ import { BASE_API_URL } from '../../constants';
 export function PostsPage() {
     const navigate = useNavigate();
     const [posts, setPosts] = useState<Post[]>([]);
-    const [, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const currentUserId = Number(localStorage.getItem("userId"));
@@ -177,9 +176,9 @@ export function PostsPage() {
                         </div>
                         <button
                             className="add-post-button posts-empty-cta"
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={() => navigate('/home')}
                         >
-                            + Add Post
+                            + Add Pin
                         </button>
                     </div>
                 ) : (
