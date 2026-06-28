@@ -4,6 +4,7 @@ import { db } from '../database/db';
 import { v4 as uuidv4 } from 'uuid';
 import { check } from './auth.ts';
 import { logError } from '../utils/logger';
+import { deriveTripCarbon } from '../utils/tripCarbon';
 
 export const shareRouter = express.Router();
 
@@ -55,9 +56,10 @@ shareRouter.post('/', (req, res) => {
         const cleanTitle = typeof title === 'string'
             ? title.replace(/<[^>]*>/g, '').trim().slice(0, 120) || null
             : null;
-        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, title, data, isPublic) VALUES (?, ?, ?, ?, 1)');
+        const { carbonKg, savedKg } = deriveTripCarbon(settings);
+        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, title, data, isPublic, carbonKg, savedKg) VALUES (?, ?, ?, ?, 1, ?, ?)');
         const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id, 10) : (req.user?.id || null);
-        stmt.run(id, userId, cleanTitle, data);
+        stmt.run(id, userId, cleanTitle, data, carbonKg, savedKg);
 
         res.status(201).json({ id });
     } catch (error) {

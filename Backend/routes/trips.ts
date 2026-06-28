@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "../database/db";
 import { logError } from "../utils/logger";
 import { sanitizeDeep, stripHtml } from "../utils/sanitize";
+import { deriveTripCarbon } from "../utils/tripCarbon";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
 const PAGE_LIMIT = 20;
@@ -151,6 +152,7 @@ export function saveTrip(req: Request, res: Response) {
     const cleanTitle = typeof title === "string"
         ? stripHtml(title).trim().slice(0, 120) || null
         : null;
+    const { carbonKg, savedKg } = deriveTripCarbon(settings);
 
     try {
         if (id !== undefined && id !== null) {
@@ -167,16 +169,16 @@ export function saveTrip(req: Request, res: Response) {
             }
 
             db.prepare(
-                "UPDATE itinerary SET title = ?, data = ? WHERE id = ? AND creatorID = ?"
-            ).run(cleanTitle, data, tripId, Number(userID));
+                "UPDATE itinerary SET title = ?, data = ?, carbonKg = ?, savedKg = ? WHERE id = ? AND creatorID = ?"
+            ).run(cleanTitle, data, carbonKg, savedKg, tripId, Number(userID));
 
             return res.status(200).json({ id: tripId, isPublic: false });
         }
 
         const newId = uuidv4();
         db.prepare(
-            "INSERT INTO itinerary (id, creatorID, title, data, isPublic) VALUES (?, ?, ?, ?, 0)"
-        ).run(newId, Number(userID), cleanTitle, data);
+            "INSERT INTO itinerary (id, creatorID, title, data, isPublic, carbonKg, savedKg) VALUES (?, ?, ?, ?, 0, ?, ?)"
+        ).run(newId, Number(userID), cleanTitle, data, carbonKg, savedKg);
 
         res.status(201).json({ id: newId, isPublic: false });
     } catch (err) {
