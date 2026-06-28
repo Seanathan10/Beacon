@@ -11,6 +11,7 @@ export function PostsPage() {
     const [, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const currentUserId = Number(localStorage.getItem("userId"));
 
     const fetchPosts = useCallback(async () => {
         setIsLoading(true);
@@ -186,13 +187,15 @@ export function PostsPage() {
                         {posts.map((post) => (
                             <div key={post.id} className="post-row">
                                 <PostCard content={post} />
-                                <button
-                                    className="remove-post-button"
-                                    onClick={() => removePost(post.id)}
-                                    aria-label={`Remove ${post.title}`}
-                                >
-                                    Remove
-                                </button>
+                                {post.creatorID != null && post.creatorID === currentUserId && (
+                                    <button
+                                        className="remove-post-button"
+                                        onClick={() => removePost(post.id)}
+                                        aria-label={`Remove ${post.title}`}
+                                    >
+                                        Remove
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>

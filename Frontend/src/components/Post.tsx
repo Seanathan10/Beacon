@@ -4,6 +4,7 @@ import ShareMenu from "./ShareMenu";
 
 export interface Post {
     id: number;
+    creatorID?: number | null;
     title: string;
     address: string;
     category?: string;
