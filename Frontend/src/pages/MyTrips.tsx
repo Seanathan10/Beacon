@@ -28,7 +28,7 @@ function tripLabel(t: TripItem): string {
 function tripSubtitle(t: TripItem): string {
     const parts: string[] = [];
     if (t.summary.itineraryType) parts.push(t.summary.itineraryType);
-    if (t.summary.durationDays) parts.push(`${t.summary.durationDays} days`);
+    if (t.summary.durationDays) parts.push(`${t.summary.durationDays} ${t.summary.durationDays === 1 ? "day" : "days"}`);
     return parts.join(" • ");
 }
 
