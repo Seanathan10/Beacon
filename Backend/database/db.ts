@@ -410,8 +410,55 @@ function runMigrations() {
             );
         `);
 
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS challenge (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE NOT NULL,
+                title VARCHAR(120) NOT NULL,
+                description VARCHAR(300),
+                metric TEXT NOT NULL,
+                goal REAL NOT NULL,
+                icon VARCHAR(8),
+                active INTEGER NOT NULL DEFAULT 1
+            );
+        `);
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS challenge_progress (
+                challengeID INTEGER NOT NULL,
+                accountID INTEGER NOT NULL,
+                progress REAL NOT NULL DEFAULT 0,
+                completedAt DATETIME,
+                updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (challengeID, accountID),
+                FOREIGN KEY (challengeID) REFERENCES challenge(id) ON DELETE CASCADE,
+                FOREIGN KEY (accountID) REFERENCES account(id) ON DELETE CASCADE
+            );
+        `);
+
+        seedChallenges();
+
     } catch (err) {
         console.error("Failed to run migrations:", err);
+    }
+}
+
+// Default eco-challenges. Idempotent: keyed by the UNIQUE `code`, so re-running
+// on every startup never duplicates. Keep in sync with the seed block in
+// database/create.sql (used by the test harness).
+function seedChallenges() {
+    const defaults: [string, string, string, string, number, string][] = [
+        ['eco_explorer', 'Eco Explorer', 'Plan 5 low-carbon trips', 'trips_saved', 5, '🌍'],
+        ['carbon_saver', 'Carbon Saver', 'Save 100 kg of CO₂ versus typical travel', 'carbon_saved', 100, '🌱'],
+        ['climate_champion', 'Climate Champion', 'Save 500 kg of CO₂', 'carbon_saved', 500, '🏆'],
+        ['local_legend', 'Local Legend', 'Visit 10 community places', 'places_visited', 10, '📍'],
+    ];
+    const stmt = db.prepare(
+        `INSERT OR IGNORE INTO challenge (code, title, description, metric, goal, icon)
+         VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    for (const [code, title, description, metric, goal, icon] of defaults) {
+        stmt.run(code, title, description, metric, goal, icon);
     }
 }
 
@@ -440,6 +487,7 @@ function createIndexes() {
             { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
             { table: 'notification',     sql: 'CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC)' },
             { table: 'itinerary',        sql: 'CREATE INDEX IF NOT EXISTS idx_itinerary_creator ON itinerary(creatorID, createdAt DESC)' },
+            { table: 'challenge_progress', sql: 'CREATE INDEX IF NOT EXISTS idx_challenge_progress_account ON challenge_progress(accountID)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC)' },
             { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_public ON bookmark_folder(isPublic)' },
             { table: 'bookmark',         sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC)' },
