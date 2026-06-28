@@ -425,7 +425,7 @@ function HomePage() {
         // Check if we clicked on a point feature
         const features = mapLayerMode === "pins"
             ? e.target.queryRenderedFeatures(e.point, { layers: ["clusters", "point"] })
-            : [];
+            : e.target.queryRenderedFeatures(e.point, { layers: ["point"] });
 
         if (features && features.length > 0 && features[0].layer.id === "clusters") {
             const clusterId = features[0].properties?.cluster_id;
@@ -878,7 +878,7 @@ function HomePage() {
                     onClick={handleMapClick}
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
-                    interactiveLayerIds={mapLayerMode === "pins" ? ["clusters", "point"] : []}
+                    interactiveLayerIds={mapLayerMode === "pins" ? ["clusters", "point"] : ["point"]}
                     cursor={cursor}
                     interactive={true}
                     doubleClickZoom={true}
@@ -1090,7 +1090,13 @@ function HomePage() {
                                 <Layer {...PIN_LAYER_STYLE} />
                             </>
                         ) : (
-                            <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
+                            <>
+                                {/* The heatmap fades out by zoom 9; the point layer fades in
+                                    over zoom 7→9 so zooming to city level reveals individual
+                                    dots instead of an empty map. */}
+                                <Layer {...(HEATMAP_LAYER_STYLE as HeatmapLayerSpecification)} />
+                                <Layer {...PIN_LAYER_STYLE} />
+                            </>
                         )}
                     </Source>
 
