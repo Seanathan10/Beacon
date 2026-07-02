@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
 import * as pinRepo from "../repositories/pinRepo";
 import { logError } from "../utils/logger";
-import { visibilityFilter } from "../utils/visibility";
 import { stripHtml } from "../utils/sanitize";
 
 const MAX_TITLE_LENGTH = 200;
@@ -51,76 +49,18 @@ export function getAllPins(req: Request, res: Response) {
         return res.status(401).json({ error: "Authentication required for bookmarkStatus filter" });
     }
 
-    // Build WHERE clause dynamically; params[0] is always userID for the userStatus subquery
-    const conditions: string[] = [];
-    const params: any[] = [userID];
-
-    if (tags.length > 0) {
-        conditions.push(`(${tags.map(() => "p.tags LIKE ?").join(" OR ")})`);
-        tags.forEach(t => params.push(`%${t}%`));
-    }
-
-    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    if (minDate && DATE_RE.test(minDate)) {
-        conditions.push("p.createdAt >= ?");
-        params.push(minDate);
-    }
-    if (maxDate && DATE_RE.test(maxDate)) {
-        conditions.push("p.createdAt <= ?");
-        params.push(maxDate + " 23:59:59");
-    }
-
-    if (creatorID !== null) {
-        conditions.push("p.creatorID = ?");
-        params.push(creatorID);
-    }
-
-    if (bookmarkStatus === 'bookmarked') {
-        conditions.push("EXISTS (SELECT 1 FROM bookmark WHERE pinID = p.id AND accountID = ?)");
-        params.push(userID);
-    } else if (bookmarkStatus === 'visited' || bookmarkStatus === 'wishlist') {
-        conditions.push("EXISTS (SELECT 1 FROM pin_status WHERE pinID = p.id AND accountID = ? AND status = ?)");
-        params.push(userID, bookmarkStatus);
-    }
-
-    // Only return pins whose creator's profileVisibility allows this viewer.
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    conditions.push(vis.sql);
-    params.push(...vis.params);
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-    let sql = `
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        ${whereClause}
-    `;
-
-    // Wrap in outer query to filter by the computed likes count (minRating / maxRating)
-    const validMin = minRating !== null && !isNaN(minRating);
-    const validMax = maxRating !== null && !isNaN(maxRating);
-    if (validMin || validMax) {
-        const ratingConds: string[] = [];
-        if (validMin) { ratingConds.push("likes >= ?"); params.push(minRating); }
-        if (validMax) { ratingConds.push("likes <= ?"); params.push(maxRating); }
-        sql = `SELECT * FROM (${sql}) WHERE ${ratingConds.join(" AND ")}`;
-    }
-
-    const results: any[] = db.query(sql, params);
+    // Data access (dynamic WHERE building + SQL) lives in the repository; the
+    // controller only parses the request and does the JS distance sort below.
+    const results: any[] = pinRepo.search({
+        userID,
+        tags,
+        minDate,
+        maxDate,
+        minRating,
+        maxRating,
+        bookmarkStatus,
+        creatorID,
+    });
 
     if (sort === "distance") {
         const lat = parseFloat(req.query.lat as string);
@@ -151,36 +91,7 @@ export function getTrendingPins(req: Request, res: Response) {
 
     // trendingScore = likes + 3 * max(0, 1 - age_days / days)
     // Pins outside the window still appear but with recencyScore 0.
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    const results = db.query(`
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus,
-            ((SELECT COUNT(*) FROM likes WHERE pinID = p.id)
-                + 3.0 * MAX(
-                    0.0,
-                    1.0 - (julianday('now') - julianday(p.createdAt)) / CAST(? AS REAL)
-                )
-            ) AS trendingScore
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE ${vis.sql}
-        ORDER BY trendingScore DESC, p.createdAt DESC
-        LIMIT 20;
-    `, [userID, days, ...vis.params]);
-
-    res.json(results);
+    res.json(pinRepo.findTrending(userID, days));
 }
 
 export function getUserPins(req: Request, res: Response) {
@@ -364,29 +275,11 @@ export function getSimilarPins(req: Request, res: Response) {
     const pinID = String(req.params.id);
     const userID = req.user?.id ?? null;
 
-    const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
-    if (!pin) return res.status(404).json({ message: "Pin not found" });
+    if (!pinRepo.existsById(pinID)) return res.status(404).json({ message: "Pin not found" });
 
     // Find pins that users who liked this pin also liked, respecting the
     // creator's profileVisibility (private/friends honoured for this viewer).
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    const results = db.query(`
-        SELECT
-            p.id, p.creatorID, a.email, p.latitude, p.longitude,
-            p.title, p.address, p.description, p.image, p.tags, p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            COUNT(*) AS sharedLikers
-        FROM likes l1
-        JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
-        JOIN pin p ON p.id = l2.pinID
-        JOIN account a ON a.id = p.creatorID
-        WHERE l1.pinID = ? AND ${vis.sql}
-        GROUP BY p.id
-        ORDER BY sharedLikers DESC, likes DESC
-        LIMIT 10
-    `, [pinID, pinID, ...vis.params]);
-
-    res.json(results);
+    res.json(pinRepo.findSimilar(pinID, userID));
 }
 
 export function getPinsNearCoordinate(req: Request, res: Response) {
@@ -406,38 +299,13 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
     // Bounding box pre-filter to avoid loading all pins into memory
     const latDelta = MAX_RADIUS_KM / 111.0;
     const lngDelta = MAX_RADIUS_KM / (111.0 * Math.cos(latitude * Math.PI / 180));
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
 
-    const results: any[] = db.query(
-        `
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE p.latitude BETWEEN ? AND ?
-          AND p.longitude BETWEEN ? AND ?
-          AND ${vis.sql}
-        `,
-        [
-            userID,
-            latitude - latDelta,
-            latitude + latDelta,
-            longitude - lngDelta,
-            longitude + lngDelta,
-            ...vis.params,
-        ]
+    const results: any[] = pinRepo.findInBoundingBox(
+        userID,
+        latitude - latDelta,
+        latitude + latDelta,
+        longitude - lngDelta,
+        longitude + lngDelta,
     );
 
     const filtered = results

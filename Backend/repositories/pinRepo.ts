@@ -1,4 +1,5 @@
 import * as db from "../database/db";
+import { visibilityFilter } from "../utils/visibility";
 
 /**
  * Data-access layer for the `pin` table.
@@ -76,4 +77,188 @@ export function update(id: string | number, fields: Record<string, unknown>): vo
 /** Delete a pin by id. Returns the raw run result (has `.changes`). */
 export function deleteById(id: string | number): { changes: number } {
     return db.query("DELETE FROM pin WHERE id = ?", [id]);
+}
+
+/** True when a pin with this id exists. */
+export function existsById(id: string | number): boolean {
+    return db.query("SELECT id FROM pin WHERE id = ?", [id]).length > 0;
+}
+
+// ── Map / list reads ────────────────────────────────────────────────────────
+// These join `account` for the creator email and compute a per-viewer
+// `userStatus`, and apply the creator's profile-visibility filter. Columns are
+// listed inline (rather than via PIN_COLUMNS) because they alias joined fields.
+
+export interface PinSearchFilters {
+    userID: number | null;
+    tags: string[];
+    /** validated YYYY-MM-DD, or "" for no bound */
+    minDate: string;
+    maxDate: string;
+    minRating: number | null;
+    maxRating: number | null;
+    /** "", "bookmarked", "visited" or "wishlist" */
+    bookmarkStatus: string;
+    creatorID: number | null;
+}
+
+/**
+ * Filterable pin search used by GET /api/pins. Builds the WHERE clause from a
+ * structured filter object; the controller owns request parsing and any
+ * distance sorting done in JS afterwards.
+ */
+export function search(f: PinSearchFilters): any[] {
+    // params[0] is always userID for the userStatus subquery in the SELECT.
+    const conditions: string[] = [];
+    const params: any[] = [f.userID];
+
+    if (f.tags.length > 0) {
+        conditions.push(`(${f.tags.map(() => "p.tags LIKE ?").join(" OR ")})`);
+        f.tags.forEach((t) => params.push(`%${t}%`));
+    }
+
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    if (f.minDate && DATE_RE.test(f.minDate)) {
+        conditions.push("p.createdAt >= ?");
+        params.push(f.minDate);
+    }
+    if (f.maxDate && DATE_RE.test(f.maxDate)) {
+        conditions.push("p.createdAt <= ?");
+        params.push(f.maxDate + " 23:59:59");
+    }
+
+    if (f.creatorID !== null) {
+        conditions.push("p.creatorID = ?");
+        params.push(f.creatorID);
+    }
+
+    if (f.bookmarkStatus === "bookmarked") {
+        conditions.push("EXISTS (SELECT 1 FROM bookmark WHERE pinID = p.id AND accountID = ?)");
+        params.push(f.userID);
+    } else if (f.bookmarkStatus === "visited" || f.bookmarkStatus === "wishlist") {
+        conditions.push("EXISTS (SELECT 1 FROM pin_status WHERE pinID = p.id AND accountID = ? AND status = ?)");
+        params.push(f.userID, f.bookmarkStatus);
+    }
+
+    const vis = visibilityFilter(f.userID, "a", "p.creatorID");
+    conditions.push(vis.sql);
+    params.push(...vis.params);
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    let sql = `
+        SELECT
+            p.id,
+            p.creatorID,
+            COALESCE(a.email, '') AS email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
+        FROM pin p
+        LEFT JOIN account a ON a.id = p.creatorID
+        ${whereClause}
+    `;
+
+    // Outer query to filter by the computed likes count (minRating / maxRating).
+    const validMin = f.minRating !== null && !isNaN(f.minRating);
+    const validMax = f.maxRating !== null && !isNaN(f.maxRating);
+    if (validMin || validMax) {
+        const ratingConds: string[] = [];
+        if (validMin) { ratingConds.push("likes >= ?"); params.push(f.minRating); }
+        if (validMax) { ratingConds.push("likes <= ?"); params.push(f.maxRating); }
+        sql = `SELECT * FROM (${sql}) WHERE ${ratingConds.join(" AND ")}`;
+    }
+
+    return db.query(sql, params);
+}
+
+/** Trending pins: likes plus a recency boost within the given window. */
+export function findTrending(userID: number | null, days: number): any[] {
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
+    return db.query(`
+        SELECT
+            p.id,
+            p.creatorID,
+            COALESCE(a.email, '') AS email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus,
+            ((SELECT COUNT(*) FROM likes WHERE pinID = p.id)
+                + 3.0 * MAX(
+                    0.0,
+                    1.0 - (julianday('now') - julianday(p.createdAt)) / CAST(? AS REAL)
+                )
+            ) AS trendingScore
+        FROM pin p
+        LEFT JOIN account a ON a.id = p.creatorID
+        WHERE ${vis.sql}
+        ORDER BY trendingScore DESC, p.createdAt DESC
+        LIMIT 20;
+    `, [userID, days, ...vis.params]);
+}
+
+/** Pins that co-likers of `pinID` also liked, ranked by shared likers. */
+export function findSimilar(pinID: string | number, userID: number | null): any[] {
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
+    return db.query(`
+        SELECT
+            p.id, p.creatorID, a.email, p.latitude, p.longitude,
+            p.title, p.address, p.description, p.image, p.tags, p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            COUNT(*) AS sharedLikers
+        FROM likes l1
+        JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
+        JOIN pin p ON p.id = l2.pinID
+        JOIN account a ON a.id = p.creatorID
+        WHERE l1.pinID = ? AND ${vis.sql}
+        GROUP BY p.id
+        ORDER BY sharedLikers DESC, likes DESC
+        LIMIT 10
+    `, [pinID, pinID, ...vis.params]);
+}
+
+/** Pins within a lat/lng bounding box (a pre-filter; caller refines by distance). */
+export function findInBoundingBox(
+    userID: number | null,
+    latMin: number,
+    latMax: number,
+    lngMin: number,
+    lngMax: number,
+): any[] {
+    const vis = visibilityFilter(userID, "a", "p.creatorID");
+    return db.query(`
+        SELECT
+            p.id,
+            p.creatorID,
+            COALESCE(a.email, '') AS email,
+            p.latitude,
+            p.longitude,
+            p.title,
+            p.address,
+            p.description,
+            p.image,
+            p.tags,
+            p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
+            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
+        FROM pin p
+        LEFT JOIN account a ON a.id = p.creatorID
+        WHERE p.latitude BETWEEN ? AND ?
+          AND p.longitude BETWEEN ? AND ?
+          AND ${vis.sql}
+    `, [userID, latMin, latMax, lngMin, lngMax, ...vis.params]);
 }
