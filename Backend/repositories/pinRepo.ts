@@ -36,6 +36,18 @@ export function findByCreator(creatorID: number): any[] {
     return db.query(`SELECT ${PIN_COLUMNS} FROM pin WHERE creatorID = ?`, [creatorID]);
 }
 
+/** A page of a creator's pins (newest first) with computed like counts. */
+export function findByCreatorPaged(creatorID: number, limit: number, offset: number): any[] {
+    return db.query(`
+        SELECT p.id, p.creatorID, p.latitude, p.longitude, p.title, p.address,
+               p.description, p.image, p.tags, p.createdAt,
+               (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
+        FROM pin p WHERE p.creatorID = ?
+        ORDER BY p.createdAt DESC
+        LIMIT ? OFFSET ?
+    `, [creatorID, limit, offset]);
+}
+
 /**
  * The owner row for a pin (`{ creatorID }`) or `undefined` when the pin does
  * not exist. Callers decide the 404/403 semantics themselves.
