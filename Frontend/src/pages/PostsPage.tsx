@@ -2,14 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { PostCard, Post, mapApiPost } from "@/components/Post";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import "./PostsPage.css";
 
 export function PostsPage() {
     const navigate = useNavigate();
+    const { userId: currentUserId } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const currentUserId = Number(localStorage.getItem("userId"));
 
     const fetchPosts = useCallback(async () => {
         setIsLoading(true);

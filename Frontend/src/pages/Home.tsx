@@ -17,7 +17,6 @@ import DetailedPinModal from "@/components/DetailedPinModal";
 import { useSearchParams } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import {
-    BASE_API_URL,
     PIN_COLOR,
     USER_PIN_COLOR,
     PIN_LAYER_STYLE,
@@ -25,6 +24,9 @@ import {
     CLUSTER_LAYER_STYLE,
     CLUSTER_COUNT_LAYER_STYLE,
 } from '../../constants';
+import * as pinsApi from "@/services/pins";
+import * as authApi from "@/services/auth";
+import { ApiError } from "@/lib/api";
 import { GeoJSON } from '../types/express/index';
 import { Avatar } from "@/components/Avatar";
 import polyline from '@mapbox/polyline';
@@ -115,13 +117,7 @@ function HomePage() {
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/heartbeat`);
-
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
-                }
-
-                await res.text();
+                await authApi.heartbeat();
             } catch {
                 // tunnel unreachable on initial load — non-fatal
             }
@@ -182,14 +178,14 @@ function HomePage() {
                 title: p.title,
                 description: p.description,
                 image: p.image,
-                color: localStorage.getItem("userEmail") === p.email ? USER_PIN_COLOR : PIN_COLOR,
+                color: userEmail === p.email ? USER_PIN_COLOR : PIN_COLOR,
                 address: p.address,
                 likes: p.likes || 0,
                 tags: p.tags,
                 userStatus: p.userStatus || null,
             },
         })),
-    }), []);
+    }), [userEmail]);
 
     // Listen for theme changes and update map style
     useEffect(() => {
@@ -289,9 +285,10 @@ function HomePage() {
         const controller = new AbortController();
         const fetchPins = async () => {
             try {
-                let url: string;
+                const opts = { signal: controller.signal };
+                let data: PinApiResponse[];
                 if (pinSort === "trending") {
-                    url = `${BASE_API_URL}/api/pins/trending?days=7`;
+                    data = await pinsApi.getTrendingPins<PinApiResponse[]>(7, opts);
                 } else {
                     const params = new URLSearchParams();
                     if (pinSort === "distance" && geoCoords) {
@@ -306,30 +303,15 @@ function HomePage() {
                     if (pinFilters.maxRating !== null) params.set("maxRating", String(pinFilters.maxRating));
                     if (pinFilters.bookmarkStatus) params.set("bookmarkStatus", pinFilters.bookmarkStatus);
                     const qs = params.toString();
-                    url = `${BASE_API_URL}/api/pins${qs ? `?${qs}` : ""}`;
-                }
-                const res = await fetch(url, {
-                    credentials: "include",
-                    signal: controller.signal,
-                });
-
-                if (res.status === 401) {
-                    handleLogout();
-                    return;
+                    data = await pinsApi.getAllPins<PinApiResponse[]>(qs ? `?${qs}` : "", opts);
                 }
 
-                if (!res.ok) {
-                    console.error("Failed to fetch pins:", res.status);
-                    return;
-                }
-
-                const data = await res.json() as PinApiResponse[];
                 const geojson = toPinGeoJSON(data);
                 setAllPins(geojson);
 
                 if (isLoggedIn) {
                     const savedPinsData = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
-                    const email = localStorage.getItem("userEmail");
+                    const email = userEmail;
                     const savedPinIDs = (email && savedPinsData[email]) || [];
                     const saved = geojson.features
                         .filter((f) => savedPinIDs.includes(f.properties.id))
@@ -347,6 +329,10 @@ function HomePage() {
                 }
             } catch (error) {
                 if ((error as Error)?.name === "AbortError") return; // superseded by a newer fetch
+                if (error instanceof ApiError && error.status === 401) {
+                    handleLogout();
+                    return;
+                }
                 console.error("Error fetching pins:", error);
             }
         };
@@ -355,7 +341,7 @@ function HomePage() {
             fetchPins();
         }
         return () => controller.abort();
-    }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout, toPinGeoJSON]);
+    }, [isLoggedIn, pinSort, geoCoords, pinFilters, handleLogout, toPinGeoJSON, userEmail]);
 
     const requestGeo = useCallback(() => {
         if (!navigator.geolocation) {
@@ -393,29 +379,18 @@ function HomePage() {
         setIsAreaSearching(true);
         setAreaSearchError(null);
         try {
-            const res = await fetch(`${BASE_API_URL}/api/pins/nearby`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    latitude: center.lat,
-                    longitude: center.lng,
-                }),
+            const data = await pinsApi.getNearbyPins<PinApiResponse[]>({
+                latitude: center.lat,
+                longitude: center.lng,
             });
-
-            if (res.status === 401) {
-                handleLogout();
-                return;
-            }
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-
-            const data = await res.json() as PinApiResponse[];
             setAllPins(toPinGeoJSON(data));
             setIsAreaSearchActive(true);
             track("Search This Area", { count: data.length });
         } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+                handleLogout();
+                return;
+            }
             console.error("Search this area failed:", error);
             setAreaSearchError("Unable to search this area.");
         } finally {
@@ -733,7 +708,7 @@ function HomePage() {
                                 title: pin.title || "",
                                 description: pin.description || "No description provided.",
                                 image: pin.image || "",
-                                color: localStorage.getItem("userEmail") === pin.email ? USER_PIN_COLOR : PIN_COLOR,
+                                color: userEmail === pin.email ? USER_PIN_COLOR : PIN_COLOR,
                                 email: pin.email || "",
                                 address: pin.address || "",
                                 tags: pin.tags,
@@ -953,7 +928,7 @@ function HomePage() {
                                                 location: pinData.address,
                                                 description: (data as { description?: string }).description ?? "",
                                                 image: data.image || "",
-                                                color: localStorage.getItem("userEmail") === pinData.email ? USER_PIN_COLOR : PIN_COLOR,
+                                                color: userEmail === pinData.email ? USER_PIN_COLOR : PIN_COLOR,
                                                 email: userEmail,
                                             },
                                         },
@@ -983,7 +958,7 @@ function HomePage() {
                             }}
                             onBookmarkChange={(_pinId, _isBookmarked) => {
                                 const savedPins = (() => { try { return JSON.parse(localStorage.getItem("savedPins") || '{}'); } catch { return {}; } })();
-                                const email = localStorage.getItem("userEmail")!;
+                                const email = userEmail;
                                 const savedPinIDs = savedPins[email] || [];
 
                                 const saved = allPins.features
@@ -1007,7 +982,7 @@ function HomePage() {
                         <DetailedPinModal
                             selectedPoint={selectedPoint}
                             currentUserId={userId}
-                            currentUserEmail={localStorage.getItem("userEmail")}
+                            currentUserEmail={userEmail}
                             onClose={() => setShowDetailedModal(false)}
                             onStatusChange={(pinId, status) => {
                                 setAllPins((prev) => ({
