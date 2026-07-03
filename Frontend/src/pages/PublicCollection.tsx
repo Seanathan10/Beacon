@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { Bookmark, PublicCollection as PublicCollectionData } from "../types/bookmarks";
-import { BASE_API_URL } from "../../constants";
+import * as tripsApi from "@/services/trips";
+import { ApiError } from "@/lib/api";
 import ShareMenu from "../components/ShareMenu";
 
 
@@ -17,24 +18,13 @@ export default function PublicCollection() {
     const fetchCollection = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${BASE_API_URL}/api/share/collection/${folderID}`);
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError("Collection not found");
-          } else if (response.status === 403) {
-            setError("This collection is private");
-          } else {
-            setError("Failed to load collection");
-          }
-          return;
-        }
-
-        const data = await response.json();
+        const data = await tripsApi.getPublicCollection<PublicCollectionData>(folderID!);
         setCollection(data);
         setError(null);
       } catch (err) {
-        setError("Failed to load collection");
+        if (err instanceof ApiError && err.status === 404) setError("Collection not found");
+        else if (err instanceof ApiError && err.status === 403) setError("This collection is private");
+        else setError("Failed to load collection");
         console.error(err);
       } finally {
         setLoading(false);

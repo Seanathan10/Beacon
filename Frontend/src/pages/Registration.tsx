@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import * as authApi from "@/services/auth";
+import { ApiError } from "@/lib/api";
 import { track } from "@/utils/analytics";
 
 export function RegistrationPage() {
@@ -25,22 +26,11 @@ export function RegistrationPage() {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${BASE_API_URL}/api/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    email: credentials.email,
-                    password: credentials.password,
-                    name: credentials.name || undefined,
-                }),
+            const data = await authApi.register({
+                email: credentials.email,
+                password: credentials.password,
+                name: credentials.name || undefined,
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Registration failed");
-            }
 
             localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
@@ -50,7 +40,13 @@ export function RegistrationPage() {
             navigate("/home");
         } catch (err) {
             track("Register Failed");
-            setError(err instanceof Error ? err.message : "An error occurred during registration");
+            setError(
+                err instanceof ApiError
+                    ? (err.message || "Registration failed")
+                    : err instanceof Error
+                        ? err.message
+                        : "An error occurred during registration",
+            );
         } finally {
             setIsLoading(false);
         }

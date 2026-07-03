@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, memo } from "react";
-import { BASE_API_URL } from '../../constants';
+import * as authApi from '@/services/auth';
+import { ApiError } from '@/lib/api';
 
 type AuthMode = "login" | "register";
 interface AuthModalProps {
@@ -61,30 +62,13 @@ function AuthModal({
         setIsLoading(true);
 
         try {
-            const endpoint =
-                authMode === "register" ? "/api/register" : "/api/login";
-
-            const response = await fetch(`${BASE_API_URL}${endpoint}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
+            const data = authMode === "register"
+                ? await authApi.register({
                     email: credentials.email,
                     password: credentials.password,
-                    ...(authMode === "register" && credentials.name ? { name: credentials.name } : {}),
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message ||
-                    (authMode === "register"
-                        ? "Registration failed"
-                        : "Login failed"),
-                );
-            }
+                    ...(credentials.name ? { name: credentials.name } : {}),
+                })
+                : await authApi.login(credentials.email, credentials.password);
 
             localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
@@ -93,7 +77,14 @@ function AuthModal({
             setCredentials({ email: "", password: "", name: "" });
             onAuthSuccess();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "An error occurred");
+            const fallback = authMode === "register" ? "Registration failed" : "Login failed";
+            setError(
+                err instanceof ApiError
+                    ? (err.message || fallback)
+                    : err instanceof Error
+                        ? err.message
+                        : "An error occurred",
+            );
         } finally {
             setIsLoading(false);
         }

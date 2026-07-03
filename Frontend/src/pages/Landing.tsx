@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { BASE_API_URL } from "../../constants";
+import * as authApi from "@/services/auth";
 import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
 
 
@@ -16,7 +16,7 @@ function Landing() {
     useEffect(() => {
         const heartbeat = async () => {
             try {
-                await fetch(`${BASE_API_URL}/heartbeat`);
+                await authApi.heartbeat();
             } catch {
                 // server unreachable on initial load — non-fatal
             }

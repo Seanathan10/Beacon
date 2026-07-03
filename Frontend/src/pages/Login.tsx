@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import * as authApi from "@/services/auth";
+import { ApiError } from "@/lib/api";
 import { track } from "@/utils/analytics";
 
 export function LoginPage() {
@@ -24,21 +25,7 @@ export function LoginPage() {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${BASE_API_URL}/api/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    email: credentials.email,
-                    password: credentials.password,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Login failed");
-            }
+            const data = await authApi.login(credentials.email, credentials.password);
 
             localStorage.setItem("isLoggedIn", "true");
             localStorage.setItem("userEmail", data.user?.email ?? credentials.email);
@@ -49,9 +36,11 @@ export function LoginPage() {
         } catch (err) {
             track("Login Failed");
             setError(
-                err instanceof Error
-                    ? err.message
-                    : "An error occurred during login",
+                err instanceof ApiError
+                    ? (err.message || "Login failed")
+                    : err instanceof Error
+                        ? err.message
+                        : "An error occurred during login",
             );
         } finally {
             setIsLoading(false);
