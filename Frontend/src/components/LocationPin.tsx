@@ -1,6 +1,10 @@
 import { Popup } from "react-map-gl/mapbox";
 import "./styles/LocationPin.css";
-import { PIN_COLOR, BASE_API_URL } from "../../constants";
+import { PIN_COLOR } from "../../constants";
+import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api";
+import * as likesApi from "@/services/likes";
+import * as pinStatusApi from "@/services/pinStatus";
 import { SelectedPoint } from "@/pages/Home";
 import { useEffect, useState } from "react";
 
@@ -102,6 +106,7 @@ function InfoIcon({ iconColor }: { iconColor: string }) {
 }
 
 export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDetails, onBookmarkChange, onStatusChange }: LocationPinProps) {
+	const { userEmail } = useAuth();
 	const isDark = useIsDark();
 	const textPrimary = isDark ? "#e5e7eb" : "#1a1a1a";
 	const textSecondary = isDark ? "#9ca3af" : "#6b7280";
@@ -128,15 +133,12 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	useEffect(() => {
 		// Check if pin is bookmarked
 		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
-		const email = localStorage.getItem("userEmail")!;
+		const email = userEmail;
 		const userSavedPins = saved[email] || [];
 		const bookmarked = userSavedPins.includes(selectedPoint.id);
 
 		// Fetch likes, then update all state in callbacks
-		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-			credentials: "include",
-		})
-			.then(res => res.json())
+		likesApi.getLikes(selectedPoint.id!)
 			.then(res => {
 				setIsBookmarked(bookmarked);
 				setLikes(res.likes);
@@ -147,7 +149,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 				setIsBookmarked(bookmarked);
 				setLikesLoading(false);
 			});
-	}, [selectedPoint]);
+	}, [selectedPoint, userEmail]);
 
 	const toggleLike = () => {
 		const prevLiked = isLiked;
@@ -156,15 +158,12 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		setIsLiked(newLikedState);
 		setLikes(prev => prev + (newLikedState ? 1 : -1));
 
-		fetch(`${BASE_API_URL}/api/likes/${selectedPoint.id}`, {
-			method: newLikedState ? 'POST' : 'DELETE',
-			credentials: "include",
-		}).then(res => {
-			if (!res.ok && res.status !== 409) {
-				setIsLiked(prevLiked);
-				setLikes(prevLikes);
-			}
-		}).catch(() => {
+		const request = newLikedState
+			? likesApi.addLike(selectedPoint.id!)
+			: likesApi.removeLike(selectedPoint.id!);
+		request.catch((err) => {
+			// 409 means already in the desired state — treat as success.
+			if (err instanceof ApiError && err.status === 409) return;
 			setIsLiked(prevLiked);
 			setLikes(prevLikes);
 		});
@@ -178,23 +177,12 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		onStatusChange?.(selectedPoint.id, newStatus);
 
 		const request = newStatus
-			? fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
-				method: "PUT",
-				credentials: "include",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ status: newStatus }),
-			})
-			: fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
-				method: "DELETE",
-				credentials: "include",
-			});
+			? pinStatusApi.setPinStatus(selectedPoint.id, newStatus)
+			: pinStatusApi.deletePinStatus(selectedPoint.id);
 
-		request.then(res => {
-			if (!res.ok && res.status !== 404) {
-				setUserStatus(prev);
-				onStatusChange?.(selectedPoint.id!, prev);
-			}
-		}).catch(() => {
+		request.catch((err) => {
+			// 404 means the status was already absent — treat as success.
+			if (err instanceof ApiError && err.status === 404) return;
 			setUserStatus(prev);
 			onStatusChange?.(selectedPoint.id!, prev);
 		});
@@ -202,7 +190,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 
 	const toggleBookmark = () => {
 		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
-		const email = localStorage.getItem("userEmail")!;
+		const email = userEmail;
 		const newSavedState = !isBookmarked;
 		setIsBookmarked(newSavedState);
 

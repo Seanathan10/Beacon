@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import * as usersApi from "@/services/users";
+import * as statsApi from "@/services/stats";
+import { ApiError } from "@/lib/api";
 import EditProfileModal from "../components/EditProfileModal";
 
 interface UserProfileData {
@@ -48,47 +50,38 @@ export default function UserProfile() {
         if (!userID) return;
         setLoading(true);
         setError(null);
-        fetch(`${BASE_API_URL}/api/users/${userID}`, { credentials: "include" })
-            .then((r) => {
-                if (r.status === 403) throw new Error("private");
-                if (!r.ok) throw new Error("not_found");
-                return r.json();
-            })
+        usersApi.getUser<UserProfileData>(userID)
             .then((data) => {
                 setProfile(data);
                 setLoading(false);
             })
             .catch((e) => {
-                setError(e.message === "private" ? "This profile is private." : "User not found.");
+                setError(e instanceof ApiError && e.status === 403 ? "This profile is private." : "User not found.");
                 setLoading(false);
             });
     }, [userID]);
 
     useEffect(() => {
         if (!userID || tab !== "pins") return;
-        fetch(`${BASE_API_URL}/api/users/${userID}/pins?page=${pinsPage}`, { credentials: "include" })
-            .then((r) => r.json())
+        usersApi.getUserPins<{ pins: Pin[]; hasMore: boolean }>(userID, pinsPage)
             .then((data) => {
                 setPins((prev) => pinsPage === 1 ? data.pins : [...prev, ...data.pins]);
                 setPinsHasMore(data.hasMore);
-            });
+            })
+            .catch(() => {});
     }, [userID, tab, pinsPage]);
 
     useEffect(() => {
         if (!profile?.isOwn || tab !== "activity") return;
-        fetch(`${BASE_API_URL}/api/me/activity`, { credentials: "include" })
-            .then((r) => r.json())
-            .then(setActivity);
+        statsApi.getMyActivity<{ type: string; summary: string; createdAt: string }[]>()
+            .then(setActivity)
+            .catch(() => {});
     }, [profile?.isOwn, tab]);
 
     async function toggleFollow() {
         if (!profile) return;
         setFollowLoading(true);
-        const method = profile.isFollowed ? "DELETE" : "POST";
-        await fetch(`${BASE_API_URL}/api/users/${profile.id}/follow`, {
-            method,
-            credentials: "include",
-        });
+        await (profile.isFollowed ? usersApi.unfollowUser(profile.id) : usersApi.followUser(profile.id));
         setProfile((p) =>
             p
                 ? {
