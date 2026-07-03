@@ -9,6 +9,8 @@ export interface PinInput {
     title?: string | null;
     address?: string | null;
     description?: string | null;
+    // The create endpoint accepts `message` as an alias for description.
+    message?: string | null;
     image?: string | null;
     latitude?: number;
     longitude?: number;
