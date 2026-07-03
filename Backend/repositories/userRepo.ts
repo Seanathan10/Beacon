@@ -21,6 +21,11 @@ export function findVisibility(targetID: number): { id: number; profileVisibilit
     return db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
 }
 
+/** True when an account with this id exists. */
+export function exists(id: number): boolean {
+    return db.query("SELECT id FROM account WHERE id = ?", [id]).length > 0;
+}
+
 /** True when `viewerID` follows `targetID`. */
 export function isFollowing(viewerID: number, targetID: number): boolean {
     return db.query(
