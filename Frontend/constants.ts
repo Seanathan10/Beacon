@@ -1,4 +1,4 @@
-import { CircleLayerSpecification, SymbolLayerSpecification } from "react-map-gl/mapbox";
+import type { CircleLayerSpecification, SymbolLayerSpecification } from "react-map-gl/mapbox";
 
 
 const API_URL_DEV = "http://localhost:3000";
