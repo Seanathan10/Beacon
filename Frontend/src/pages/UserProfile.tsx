@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { BASE_API_URL } from "../../constants";
-import AuthHook from "./AuthHook";
 import EditProfileModal from "../components/EditProfileModal";
 
 interface UserProfileData {
@@ -33,7 +32,6 @@ type Tab = "pins" | "bookmarks" | "activity";
 export default function UserProfile() {
     const { userID } = useParams<{ userID: string }>();
     const navigate = useNavigate();
-    const [,] = AuthHook();
 
     const [profile, setProfile] = useState<UserProfileData | null>(null);
     const [pins, setPins] = useState<Pin[]>([]);

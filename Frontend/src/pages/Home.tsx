@@ -15,7 +15,7 @@ import { reverseGeocode } from "@/utils/geocoding";
 import LocationPin from "@/components/LocationPin";
 import DetailedPinModal from "@/components/DetailedPinModal";
 import { useSearchParams } from "react-router";
-import AuthHook from "./AuthHook";
+import { useAuth } from "../context/AuthContext";
 import {
     BASE_API_URL,
     PIN_COLOR,
@@ -144,7 +144,7 @@ function HomePage() {
     const [savedPlaces, setSavedPlaces] = useState<SavedPin[]>([]);
 
     const [cursor, setCursor] = useState<string>("auto");
-    const [userEmail, userId, isLoggedIn, logout, authSuccess] = AuthHook();
+    const { userEmail, userId, isLoggedIn, logout, authSuccess } = useAuth();
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
     const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
     const [showTripPlanner, setShowTripPlanner] = useState<boolean>(false);

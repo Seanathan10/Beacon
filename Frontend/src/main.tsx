@@ -5,6 +5,7 @@ import { initializeTheme } from "./utils/theme";
 
 import Landing from "./pages/Landing";
 import { RouteBoundary } from "./components/RouteBoundary";
+import { AuthProvider } from "./context/AuthContext";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 
@@ -85,4 +86,8 @@ if (!root) {
     throw new Error("Root container missing in index.html");
 }
 
-ReactDOM.createRoot(root).render(<RouterProvider router={router} />);
+ReactDOM.createRoot(root).render(
+    <AuthProvider>
+        <RouterProvider router={router} />
+    </AuthProvider>
+);
