@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import * as db from "../database/db";
+import * as userRepo from "../repositories/userRepo";
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -76,10 +76,7 @@ export interface User {
 export async function login(req: Request, res: Response) {
     const { email, password } = req.body;
 
-    const user: any = db.query(
-        `SELECT id, email, name, password FROM account WHERE email = ?`,
-        [email],
-    )[0];
+    const user = userRepo.findByEmailWithPassword(email);
 
     if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -122,23 +119,14 @@ export async function register(req: Request, res: Response) {
     }
 
     // Check if user already exists
-    const existingUser = db.query(`SELECT id FROM account WHERE email = ?`, [
-        email,
-    ])[0];
-
-    if (existingUser) {
+    if (userRepo.existsByEmail(email)) {
         return res.status(409).json({ message: "Email already registered" });
     }
 
     try {
         const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-        db.query(
-            `INSERT INTO account (email, password, name) VALUES (?, ?, ?)`,
-            [email, hashedPassword, name || null],
-        );
-
-        const [{ id }] = db.query(`SELECT last_insert_rowid() as id`);
+        const id = userRepo.createAccount(email, hashedPassword, name || null);
 
         const accessToken = jwt.sign({ id }, process.env.SECRET as string, {
             expiresIn: "1h",

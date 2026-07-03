@@ -26,6 +26,22 @@ export function exists(id: number): boolean {
     return db.query("SELECT id FROM account WHERE id = ?", [id]).length > 0;
 }
 
+/** Account row incl. password hash, for login. Undefined if no such email. */
+export function findByEmailWithPassword(email: string): { id: number; email: string; name: string; password: string } | undefined {
+    return db.query("SELECT id, email, name, password FROM account WHERE email = ?", [email])[0];
+}
+
+/** True when an account already uses this email. */
+export function existsByEmail(email: string): boolean {
+    return db.query("SELECT id FROM account WHERE email = ?", [email]).length > 0;
+}
+
+/** Create an account and return its new id. */
+export function createAccount(email: string, hashedPassword: string, name: string | null): number {
+    db.query("INSERT INTO account (email, password, name) VALUES (?, ?, ?)", [email, hashedPassword, name]);
+    return db.query("SELECT last_insert_rowid() as id")[0].id;
+}
+
 /** True when `viewerID` follows `targetID`. */
 export function isFollowing(viewerID: number, targetID: number): boolean {
     return db.query(
