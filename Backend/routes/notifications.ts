@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
+import * as notificationRepo from "../repositories/notificationRepo";
 import { logError } from "../utils/logger";
 
 const MAX_CURSOR = 2_147_483_647; // upper bound for a notification ID cursor
@@ -21,25 +21,7 @@ export function getNotifications(req: Request, res: Response) {
         cursor = parsed;
     }
 
-    const rows: any[] = cursor
-        ? db.query(`
-            SELECT n.id, n.type, n.entityType, n.entityID, n.isRead, n.createdAt,
-                   n.actorID, a.name AS actorName, a.email AS actorEmail, a.avatar AS actorAvatar
-            FROM notification n
-            LEFT JOIN account a ON a.id = n.actorID
-            WHERE n.recipientID = ? AND n.id < ?
-            ORDER BY n.id DESC
-            LIMIT ?
-          `, [userID, cursor, PAGE_LIMIT + 1])
-        : db.query(`
-            SELECT n.id, n.type, n.entityType, n.entityID, n.isRead, n.createdAt,
-                   n.actorID, a.name AS actorName, a.email AS actorEmail, a.avatar AS actorAvatar
-            FROM notification n
-            LEFT JOIN account a ON a.id = n.actorID
-            WHERE n.recipientID = ?
-            ORDER BY n.id DESC
-            LIMIT ?
-          `, [userID, PAGE_LIMIT + 1]);
+    const rows = notificationRepo.findPage(userID, cursor, PAGE_LIMIT + 1);
 
     const hasMore = rows.length > PAGE_LIMIT;
     const items = rows.slice(0, PAGE_LIMIT).map((r) => ({ ...r, isRead: r.isRead === 1 }));
@@ -53,11 +35,7 @@ export function getNotifications(req: Request, res: Response) {
  */
 export function getUnreadCount(req: Request, res: Response) {
     const userID = req.user.id;
-    const row = db.query(
-        "SELECT COUNT(*) AS count FROM notification WHERE recipientID = ? AND isRead = 0",
-        [userID]
-    )[0];
-    res.json({ count: row?.count ?? 0 });
+    res.json({ count: notificationRepo.countUnread(userID) });
 }
 
 /**
@@ -77,18 +55,11 @@ export function markRead(req: Request, res: Response) {
             if (numericIds.length === 0) {
                 return res.json({ updated: 0 });
             }
-            const placeholders = numericIds.map(() => "?").join(", ");
-            const result = db.query(
-                `UPDATE notification SET isRead = 1 WHERE recipientID = ? AND id IN (${placeholders})`,
-                [userID, ...numericIds]
-            );
+            const result = notificationRepo.markReadByIds(userID, numericIds);
             return res.json({ updated: result.changes });
         }
 
-        const result = db.query(
-            "UPDATE notification SET isRead = 1 WHERE recipientID = ? AND isRead = 0",
-            [userID]
-        );
+        const result = notificationRepo.markAllRead(userID);
         res.json({ updated: result.changes });
     } catch (err) {
         logError(req, "Mark notifications read error", err);
