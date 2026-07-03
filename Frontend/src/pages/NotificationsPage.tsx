@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import { api, ApiError } from "@/lib/api";
 
 interface NotificationItem {
     id: number;
@@ -13,6 +13,12 @@ interface NotificationItem {
     actorName: string | null;
     actorEmail: string | null;
     actorAvatar: string | null;
+}
+
+interface NotificationsResult {
+    items: NotificationItem[];
+    nextCursor: number | null;
+    hasMore: boolean;
 }
 
 const TYPE_ICON: Record<string, string> = {
@@ -56,13 +62,14 @@ export default function NotificationsPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const navigate = useNavigate();
 
-    const load = useCallback(async (cursor: number | null, signal?: AbortSignal) => {
-        const url = cursor
-            ? `${BASE_API_URL}/api/notifications?cursor=${cursor}`
-            : `${BASE_API_URL}/api/notifications`;
-        const res = await fetch(url, { credentials: "include", signal });
-        if (res.status === 401) { navigate("/"); return null; }
-        return res.ok ? res.json() : null;
+    const load = useCallback(async (cursor: number | null, signal?: AbortSignal): Promise<NotificationsResult | null> => {
+        const path = cursor ? `/api/notifications?cursor=${cursor}` : `/api/notifications`;
+        try {
+            return await api.get<NotificationsResult>(path, { signal });
+        } catch (err) {
+            if (err instanceof ApiError && err.status === 401) navigate("/");
+            return null;
+        }
     }, [navigate]);
 
     // Initial load, then mark everything read so the bell badge clears.
@@ -76,12 +83,7 @@ export default function NotificationsPage() {
             setHasMore(data.hasMore);
             setLoading(false);
             // Mark all read (best-effort) without blocking render.
-            fetch(`${BASE_API_URL}/api/notifications/read`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
-            }).catch(() => {});
+            api.post("/api/notifications/read", {}).catch(() => {});
         })().catch(() => setLoading(false));
         return () => controller.abort();
     }, [load]);

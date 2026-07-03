@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import { api, ApiError } from "@/lib/api";
 
 interface TripSummary {
     origin: string | null;
@@ -15,6 +15,12 @@ interface TripItem {
     isPublic: boolean;
     createdAt: string;
     summary: TripSummary;
+}
+
+interface TripsPage {
+    items: TripItem[];
+    nextCursor: number | null;
+    hasMore: boolean;
 }
 
 function tripLabel(t: TripItem): string {
@@ -41,13 +47,14 @@ export default function MyTrips() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const load = useCallback(async (cursor: number | null, signal?: AbortSignal) => {
-        const url = cursor
-            ? `${BASE_API_URL}/api/me/trips?cursor=${cursor}`
-            : `${BASE_API_URL}/api/me/trips`;
-        const res = await fetch(url, { credentials: "include", signal });
-        if (res.status === 401) { navigate("/"); return null; }
-        return res.ok ? res.json() : null;
+    const load = useCallback(async (cursor: number | null, signal?: AbortSignal): Promise<TripsPage | null> => {
+        const path = cursor ? `/api/me/trips?cursor=${cursor}` : `/api/me/trips`;
+        try {
+            return await api.get<TripsPage>(path, { signal });
+        } catch (err) {
+            if (err instanceof ApiError && err.status === 401) navigate("/");
+            return null;
+        }
     }, [navigate]);
 
     useEffect(() => {
@@ -83,13 +90,10 @@ export default function MyTrips() {
         if (!window.confirm("Delete this trip? This cannot be undone.")) return;
         setDeletingId(id);
         try {
-            const res = await fetch(`${BASE_API_URL}/api/share/${id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
-            if (res.ok) {
-                setItems((prev) => prev.filter((t) => t.id !== id));
-            }
+            await api.delete(`/api/share/${id}`);
+            setItems((prev) => prev.filter((t) => t.id !== id));
+        } catch {
+            // leave the list unchanged if the delete fails
         } finally {
             setDeletingId(null);
         }
