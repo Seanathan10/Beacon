@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { BASE_API_URL } from "../../constants";
+import * as usersApi from "@/services/users";
+import { ApiError } from "@/lib/api";
 
 interface Props {
     currentBio: string | null;
@@ -20,25 +21,18 @@ export default function EditProfileModal({ currentBio, currentAvatar, currentVis
         setSaving(true);
         setError(null);
         try {
-            const res = await fetch(`${BASE_API_URL}/api/me`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    bio: bio.trim() || null,
-                    avatar: avatar.trim() || null,
-                    profileVisibility: visibility,
-                }),
+            const updated = await usersApi.updateMe<{ bio: string | null; avatar: string | null; profileVisibility: "public" | "friends" | "private" }>({
+                bio: bio.trim() || null,
+                avatar: avatar.trim() || null,
+                profileVisibility: visibility,
             });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                setError(data.message ?? "Failed to save");
-                return;
-            }
-            const updated = await res.json();
             onSaved(updated);
-        } catch {
-            setError("Network error");
+        } catch (e) {
+            if (e instanceof ApiError) {
+                setError(e.message || "Failed to save");
+            } else {
+                setError("Network error");
+            }
         } finally {
             setSaving(false);
         }

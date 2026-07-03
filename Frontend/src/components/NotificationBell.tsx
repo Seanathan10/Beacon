@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BASE_API_URL } from "../../constants";
+import * as notificationsApi from "@/services/notifications";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -18,12 +18,7 @@ export default function NotificationBell({ isLoggedIn }: { isLoggedIn: boolean }
 
         const poll = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/api/notifications/unread-count`, {
-                    credentials: "include",
-                    signal: controller.signal,
-                });
-                if (!res.ok) return;
-                const data = await res.json();
+                const data = await notificationsApi.getUnreadCount({ signal: controller.signal });
                 if (active) setUnread(data.count ?? 0);
             } catch {
                 // Best-effort polling; ignore transient/aborted errors.

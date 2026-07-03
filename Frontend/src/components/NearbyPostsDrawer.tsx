@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PostWithCoords } from '../types/comments';
-import { BASE_API_URL } from '../../constants';
+import * as postsApi from '@/services/posts';
 import './styles/NearbyPostsDrawer.css';
 
 interface NearbyPostsDrawerProps {
@@ -25,15 +25,7 @@ export function NearbyPostsDrawer({ mapBounds, onPostSelect, isOpen, onClose }: 
 
     try {
       const bbox = `${mapBounds.minLng},${mapBounds.minLat},${mapBounds.maxLng},${mapBounds.maxLat}`;
-      const response = await fetch(`${BASE_API_URL}/api/posts/nearby?bbox=${encodeURIComponent(bbox)}`, {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch nearby posts');
-      }
-
-      const data = await response.json();
+      const data = await postsApi.getNearbyPosts<PostWithCoords[]>(bbox);
       setPosts(data);
     } catch (err) {
       console.error('Error fetching nearby posts:', err);
