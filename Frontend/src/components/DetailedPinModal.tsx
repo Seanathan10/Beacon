@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import "./styles/DetailedPinModal.css";
-import { BASE_API_URL, PIN_COLOR } from '../../constants';
+import { PIN_COLOR } from '../../constants';
+import { ApiError } from "@/lib/api";
+import * as pinsApi from "@/services/pins";
+import * as commentsApi from "@/services/comments";
+import * as pinStatusApi from "@/services/pinStatus";
 import { EmojiReactionPicker } from "./EmojiReactionPicker";
 import ShareMenu from "./ShareMenu";
 import { track } from "@/utils/analytics";
@@ -99,23 +103,12 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
         onStatusChange?.(selectedPoint.id, newStatus);
 
         const request = newStatus
-            ? fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
-                method: "PUT",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus }),
-            })
-            : fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/status`, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            ? pinStatusApi.setPinStatus(selectedPoint.id, newStatus)
+            : pinStatusApi.deletePinStatus(selectedPoint.id);
 
-        request.then(res => {
-            if (!res.ok && res.status !== 404) {
-                setUserStatus(prev);
-                onStatusChange?.(selectedPoint.id!, prev);
-            }
-        }).catch(() => {
+        request.catch((err) => {
+            // 404 means the status was already absent — treat as success.
+            if (err instanceof ApiError && err.status === 404) return;
             setUserStatus(prev);
             onStatusChange?.(selectedPoint.id!, prev);
         });
@@ -158,8 +151,7 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
     useEffect(() => {
         if (!selectedPoint.id) return;
         const controller = new AbortController();
-        fetch(`${BASE_API_URL}/api/pins/${selectedPoint.id}/similar`, { credentials: "include", signal: controller.signal })
-            .then(r => r.ok ? r.json() : [])
+        pinsApi.getSimilarPins<SimilarPin>(selectedPoint.id, { signal: controller.signal })
             .then(data => setSimilarPins(Array.isArray(data) ? data : []))
             .catch((err) => { if (err?.name !== "AbortError") setSimilarPins([]); });
         return () => controller.abort();
@@ -170,17 +162,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
         setIsLoadingComments(true);
         try {
-            const response = await fetch(
-                `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                { credentials: "include", signal }
-            );
-
-            if (response.ok) {
-                const data = await response.json();
-                setComments(data);
-            } else {
-                console.error("Failed to fetch comments");
-            }
+            const data = await commentsApi.getPinComments(selectedPoint.id, { signal });
+            setComments(data);
         } catch (err) {
             if ((err as Error)?.name === "AbortError") return; // unmounted/superseded
             console.error("Error fetching comments:", err);
@@ -208,34 +191,17 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
         setIsSubmittingComment(true);
         try {
-            const response = await fetch(
-                `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ comment: newComment.trim() }),
-                }
-            );
-
-            if (response.ok) {
-                const newCommentData = await response.json();
-                track("Pin Comment Added");
-                setComments([newCommentData, ...comments]);
-                setNewComment("");
-            } else {
-                let errorMessage = "Failed to post comment";
-                try {
-                    const error = await response.json();
-                    errorMessage = error.message || errorMessage;
-                } catch {
-                    errorMessage = `Failed to post comment (${response.status})`;
-                }
-                alert(errorMessage);
-            }
+            const newCommentData = await commentsApi.createComment(selectedPoint.id, newComment.trim());
+            track("Pin Comment Added");
+            setComments([newCommentData, ...comments]);
+            setNewComment("");
         } catch (error) {
-            console.error("Error posting comment:", error);
-            alert("Failed to post comment. Please check your connection.");
+            if (error instanceof ApiError) {
+                alert(error.message || `Failed to post comment (${error.status})`);
+            } else {
+                console.error("Error posting comment:", error);
+                alert("Failed to post comment. Please check your connection.");
+            }
         } finally {
             setIsSubmittingComment(false);
         }
@@ -245,16 +211,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
         if (!confirm("Delete this comment?")) return;
 
         try {
-            const response = await fetch(
-                `${BASE_API_URL}/api/comments/${commentId}`,
-                { method: "DELETE", credentials: "include" }
-            );
-
-            if (response.ok) {
-                setComments(comments.filter(c => c.id !== commentId));
-            } else {
-                alert("Failed to delete comment");
-            }
+            await commentsApi.deleteComment(commentId);
+            setComments(comments.filter(c => c.id !== commentId));
         } catch (error) {
             console.error("Error deleting comment:", error);
             alert("Failed to delete comment");
@@ -292,36 +250,11 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 [commentId]: newReactions,
             }));
 
-            const response = await fetch(
-                `${BASE_API_URL}/api/comments/${commentId}/reactions`,
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ emoji }),
-                }
-            );
-
-            if (response.ok) {
-                // Refetch comments to get authoritative state
-                const commentsResponse = await fetch(
-                    `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                    { credentials: "include" }
-                );
-                if (commentsResponse.ok) {
-                    const updatedComments = await commentsResponse.json();
-                    setComments(updatedComments);
-                    setOptimisticReactions({});
-                }
-            } else {
-                // Revert optimistic update on failure
-                setOptimisticReactions(prev => {
-                    const updated = { ...prev };
-                    delete updated[commentId];
-                    return updated;
-                });
-            }
-            setShowReactionPicker(null);
+            await commentsApi.addCommentReaction(commentId, emoji);
+            // Refetch comments to get authoritative state
+            const updatedComments = await commentsApi.getPinComments(selectedPoint.id!);
+            setComments(updatedComments);
+            setOptimisticReactions({});
         } catch (error) {
             console.error("Error adding reaction:", error);
             // Revert optimistic update
@@ -330,6 +263,8 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 delete updated[commentId];
                 return updated;
             });
+        } finally {
+            setShowReactionPicker(null);
         }
     };
 
@@ -353,33 +288,11 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 [commentId]: newReactions,
             }));
 
-            const response = await fetch(
-                `${BASE_API_URL}/api/comments/${commentId}/reactions/${emoji}`,
-                {
-                    method: "DELETE",
-                    credentials: "include",
-                }
-            );
-
-            if (response.ok) {
-                // Refetch comments
-                const commentsResponse = await fetch(
-                    `${BASE_API_URL}/api/pins/${selectedPoint.id}/comments`,
-                    { credentials: "include" }
-                );
-                if (commentsResponse.ok) {
-                    const updatedComments = await commentsResponse.json();
-                    setComments(updatedComments);
-                    setOptimisticReactions({});
-                }
-            } else {
-                // Revert optimistic update
-                setOptimisticReactions(prev => {
-                    const updated = { ...prev };
-                    delete updated[commentId];
-                    return updated;
-                });
-            }
+            await commentsApi.removeCommentReaction(commentId, emoji);
+            // Refetch comments
+            const updatedComments = await commentsApi.getPinComments(selectedPoint.id!);
+            setComments(updatedComments);
+            setOptimisticReactions({});
         } catch (error) {
             console.error("Error removing reaction:", error);
             // Revert optimistic update
@@ -449,34 +362,24 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
                 }
             }
 
-            const response = await fetch(
-                `${BASE_API_URL}/api/pins/${selectedPoint.id}`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        description,
-                        image: finalImageUrl,
-                    }),
-                },
+            const updatedPin = await pinsApi.updatePin<{ description?: string; image?: string }>(
+                selectedPoint.id!,
+                { description, image: finalImageUrl },
             );
-
-            if (response.ok) {
-                const updatedPin = await response.json();
-                track("Pin Edited");
-                onUpdate?.({
-                    id: selectedPoint.id,
-                    description: updatedPin.description || description,
-                    image: updatedPin.image || finalImageUrl,
-                    color: PIN_COLOR,
-                });
-                setIsEditing(false);
-            } else {
+            track("Pin Edited");
+            onUpdate?.({
+                id: selectedPoint.id,
+                description: updatedPin.description || description,
+                image: updatedPin.image || finalImageUrl,
+                color: PIN_COLOR,
+            });
+            setIsEditing(false);
+        } catch (err) {
+            if (err instanceof ApiError) {
                 alert("Failed to save changes. Please try again.");
+            } else {
+                alert("Failed to save changes. Please check your connection and try again.");
             }
-        } catch {
-            alert("Failed to save changes. Please check your connection and try again.");
         } finally {
             setIsSaving(false);
         }
@@ -499,18 +402,10 @@ export default function DetailedPinModal({ selectedPoint, currentUserId: _curren
 
         setIsDeleting(true);
         try {
-            const response = await fetch(
-                `${BASE_API_URL}/api/pins/${selectedPoint.id}`,
-                { method: "DELETE", credentials: "include" }
-            );
-
-            if (response.ok) {
-                track("Pin Deleted");
-                onDelete?.(selectedPoint.id);
-                handleClose();
-            } else {
-                alert("Failed to delete pin");
-            }
+            await pinsApi.deletePin(selectedPoint.id);
+            track("Pin Deleted");
+            onDelete?.(selectedPoint.id);
+            handleClose();
         } catch (error) {
             console.error("Error deleting pin:", error);
             alert("Failed to delete pin");
