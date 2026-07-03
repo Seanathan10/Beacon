@@ -6,8 +6,10 @@ import './styles/NearbyPostsDrawer.css';
 interface NearbyPostsDrawerProps {
   mapBounds?: { minLng: number; minLat: number; maxLng: number; maxLat: number } | null;
   onPostSelect?: (post: PostWithCoords) => void;
-  isOpen: boolean;
-  onClose: () => void;
+  // Optional: Home gates mounting on mapBounds and omits these. When isOpen is
+  // omitted the drawer stays hidden (preserving existing behavior).
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export function NearbyPostsDrawer({ mapBounds, onPostSelect, isOpen, onClose }: NearbyPostsDrawerProps) {
@@ -70,7 +72,7 @@ export function NearbyPostsDrawer({ mapBounds, onPostSelect, isOpen, onClose }: 
             className="nearby-post-item"
             onClick={() => {
               onPostSelect?.(post);
-              onClose();
+              onClose?.();
             }}
           >
             {post.image && (

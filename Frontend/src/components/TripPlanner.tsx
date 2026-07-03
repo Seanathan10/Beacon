@@ -377,7 +377,7 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                                 updateStageStatus(update.stage, 'error', update.message);
                             } else if (update.stage === 'ready') {
                                 // Options are ready - show selection UI
-                                const options = update.data as TripOptionsData;
+                                const options = update.data as unknown as TripOptionsData;
                                 setOptionsData(options);
 
                                 setSelectionStep('transit');

@@ -429,9 +429,9 @@ function HomePage() {
             ? e.target.queryRenderedFeatures(e.point, { layers: ["clusters", "point"] })
             : e.target.queryRenderedFeatures(e.point, { layers: ["point"] });
 
-        if (features && features.length > 0 && features[0].layer.id === "clusters") {
+        if (features && features.length > 0 && features[0].layer?.id === "clusters") {
             const clusterId = features[0].properties?.cluster_id;
-            const coordinates = (features[0].geometry as { coordinates: [number, number] }).coordinates;
+            const coordinates = (features[0].geometry as unknown as { coordinates: [number, number] }).coordinates;
             if (typeof clusterId === "number") {
                 const source = e.target.getSource("my-data") as unknown as ClusterSource | undefined;
                 if (!source) return;
@@ -458,7 +458,7 @@ function HomePage() {
 
         if (features && features.length > 0) {
             const feature = features[0];
-            const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
+            const coords = (feature.geometry as unknown as { coordinates: [number, number] }).coordinates;
             setSelectedPoint({
                 id: feature.properties?.id,
                 creatorID: feature.properties?.creatorID,
@@ -494,6 +494,7 @@ function HomePage() {
 
         const handleMoveEnd = () => {
             const bounds = mapRef.current!.getBounds();
+            if (!bounds) return;
             setMapBounds({
                 minLng: bounds.getWest(),
                 minLat: bounds.getSouth(),
@@ -520,9 +521,9 @@ function HomePage() {
                     latitude: f.geometry.coordinates[1],
                     longitude: f.geometry.coordinates[0],
                     title: f.properties.title,
-                    message: f.properties.description,
-                    image: f.properties.image,
-                    color: f.properties.color,
+                    message: f.properties.description ?? "",
+                    image: f.properties.image ?? "",
+                    color: f.properties.color ?? PIN_COLOR,
                     email: f.properties.email
                 }))}
                 savedPlaces={savedPlaces.map((p) => ({
@@ -715,7 +716,7 @@ function HomePage() {
                             setPinData({
                                 lat: place.lat,
                                 lng: place.lng,
-                                address: place.address,
+                                address: place.address ?? "",
                                 isLoading: false,
                                 email: userEmail || "",
                             })
@@ -887,12 +888,12 @@ function HomePage() {
                     dragRotate={true}
                     touchZoomRotate={true}
                     attributionControl={false}
-                    transformRequest={(url) => {
+                    transformRequest={((url: string) => {
                         if (url.includes('events.mapbox.com')) {
                             return undefined;
                         }
                         return { url };
-                    }}
+                    }) as unknown as import("mapbox-gl").RequestTransformFunction}
                     onZoom={(e) => {
                         const zoom = e.viewState.zoom;
                         if (zoom < 8) {
@@ -949,8 +950,8 @@ function HomePage() {
                                             },
                                             properties: {
                                                 title: data.title,
-                                                location: typeof pinData.address === "object" ? pinData.address?.name : pinData.address,
-                                                description: data.description,
+                                                location: pinData.address,
+                                                description: (data as { description?: string }).description ?? "",
                                                 image: data.image || "",
                                                 color: localStorage.getItem("userEmail") === pinData.email ? USER_PIN_COLOR : PIN_COLOR,
                                                 email: userEmail,
@@ -1165,7 +1166,7 @@ function HomePage() {
                 <NearbyPostsDrawer
                     mapBounds={mapBounds}
                     onPostSelect={(post) => {
-                        if (post.latitude !== undefined && post.longitude !== undefined) {
+                        if (post.latitude != null && post.longitude != null) {
                             setSelectedPoint({
                                 id: post.id,
                                 creatorID: post.creatorID ?? undefined,
@@ -1177,7 +1178,7 @@ function HomePage() {
                                 color: post.color || PIN_COLOR,
                                 email: post.email || "",
                                 address: post.location || "Unknown Location",
-                                tags: post.tags,
+                                tags: post.tags as unknown as string,
                                 userStatus: null,
                             });
                             setShowDetailedModal(true);

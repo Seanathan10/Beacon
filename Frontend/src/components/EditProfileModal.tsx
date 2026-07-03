@@ -6,7 +6,7 @@ interface Props {
     currentAvatar: string | null;
     currentVisibility: "public" | "friends" | "private";
     onClose: () => void;
-    onSaved: (updated: { bio: string | null; avatar: string | null; profileVisibility: string }) => void;
+    onSaved: (updated: { bio: string | null; avatar: string | null; profileVisibility: "public" | "friends" | "private" }) => void;
 }
 
 export default function EditProfileModal({ currentBio, currentAvatar, currentVisibility, onClose, onSaved }: Props) {

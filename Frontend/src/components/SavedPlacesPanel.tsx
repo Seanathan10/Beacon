@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./styles/SavedPlacesPanel.css";
 import { PIN_COLOR, BASE_API_URL } from "../../constants";
-import type { Bookmark, BookmarkFolder } from "../../types/bookmarks";
+import type { Bookmark, BookmarkFolder } from "../types/bookmarks";
 
 type Tab = 'myPins' | 'bookmarked' | 'liked' | 'visited' | 'wishlist';
 
