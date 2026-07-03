@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
-import { visibilityFilter } from "../utils/visibility";
+import * as searchRepo from "../repositories/searchRepo";
 
 const MAX_QUERY_LENGTH = 200;
 const MAX_HISTORY_PER_USER = 50;
@@ -38,105 +37,10 @@ export function searchContent(req: Request, res: Response) {
     }
 
     const userID = req.user?.id ?? null;
-    const pinVis = visibilityFilter(userID, "a", "p.creatorID");
-    const postVis = visibilityFilter(userID, "a", "p.creatorID");
+    const searchParams = { userID, prefix: parsed.prefix, like: parsed.like, limit: parsed.limit };
 
-    const pins = db.query(`
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus,
-            CASE
-                WHEN p.title LIKE ? THEN 1
-                WHEN p.title LIKE ? THEN 2
-                WHEN p.tags LIKE ? THEN 3
-                WHEN p.address LIKE ? OR p.description LIKE ? THEN 4
-                ELSE 5
-            END AS rank
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE (
-            p.title LIKE ?
-            OR p.description LIKE ?
-            OR p.address LIKE ?
-            OR p.tags LIKE ?
-        )
-        AND ${pinVis.sql}
-        ORDER BY rank ASC, likes DESC, p.createdAt DESC
-        LIMIT ?
-    `, [
-        userID,
-        parsed.prefix,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        ...pinVis.params,
-        parsed.limit,
-    ]);
-
-    const posts = db.query(`
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.title,
-            p.location,
-            p.latitude,
-            p.longitude,
-            p.category,
-            p.tags,
-            p.message,
-            p.image,
-            p.createdAt,
-            (SELECT COUNT(*) FROM post_upvote WHERE postID = p.id) AS upvotes,
-            CASE
-                WHEN p.title LIKE ? THEN 1
-                WHEN p.title LIKE ? THEN 2
-                WHEN p.tags LIKE ? THEN 3
-                WHEN p.location LIKE ? OR p.message LIKE ? THEN 4
-                ELSE 5
-            END AS rank
-        FROM post p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE (
-            p.title LIKE ?
-            OR p.message LIKE ?
-            OR p.location LIKE ?
-            OR p.tags LIKE ?
-            OR p.category LIKE ?
-        )
-        AND ${postVis.sql}
-        ORDER BY rank ASC, upvotes DESC, p.createdAt DESC
-        LIMIT ?
-    `, [
-        parsed.prefix,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        parsed.like,
-        ...postVis.params,
-        parsed.limit,
-    ]).map((post: any) => ({
+    const pins = searchRepo.searchPins(searchParams);
+    const posts = searchRepo.searchPosts(searchParams).map((post: any) => ({
         ...post,
         tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
     }));
@@ -149,16 +53,7 @@ export function searchContent(req: Request, res: Response) {
 }
 
 export function getSearchHistory(req: Request, res: Response) {
-    const userID = req.user.id;
-    const results = db.query(
-        `SELECT id, query, createdAt
-         FROM search_history
-         WHERE accountID = ?
-         ORDER BY createdAt DESC, id DESC
-         LIMIT 10`,
-        [userID],
-    );
-    res.json(results);
+    res.json(searchRepo.getHistory(req.user.id));
 }
 
 export function addSearchHistory(req: Request, res: Response) {
@@ -175,40 +70,12 @@ export function addSearchHistory(req: Request, res: Response) {
     }
 
     // De-dupe: remove an existing identical query so the new one is the freshest.
-    db.query(
-        `DELETE FROM search_history WHERE accountID = ? AND query = ?`,
-        [userID, query],
-    );
-
-    db.query(
-        `INSERT INTO search_history (accountID, query, createdAt)
-         VALUES (?, ?, CURRENT_TIMESTAMP)`,
-        [userID, query],
-    );
-
+    searchRepo.deleteHistoryByQuery(userID, query);
+    searchRepo.insertHistory(userID, query);
     // Enforce retention cap: keep only the latest MAX_HISTORY_PER_USER per user.
-    db.query(
-        `DELETE FROM search_history
-         WHERE accountID = ?
-           AND id NOT IN (
-             SELECT id FROM search_history
-             WHERE accountID = ?
-             ORDER BY createdAt DESC, id DESC
-             LIMIT ?
-           )`,
-        [userID, userID, MAX_HISTORY_PER_USER],
-    );
+    searchRepo.trimHistory(userID, MAX_HISTORY_PER_USER);
 
-    const [row] = db.query(
-        `SELECT id, query, createdAt
-         FROM search_history
-         WHERE accountID = ? AND query = ?
-         ORDER BY createdAt DESC, id DESC
-         LIMIT 1`,
-        [userID, query],
-    );
-
-    res.status(201).json(row);
+    res.status(201).json(searchRepo.findLatestByQuery(userID, query));
 }
 
 export function deleteSearchHistoryEntry(req: Request, res: Response) {
@@ -219,10 +86,7 @@ export function deleteSearchHistoryEntry(req: Request, res: Response) {
         return res.status(400).json({ error: "Invalid history id" });
     }
 
-    const result = db.query(
-        `DELETE FROM search_history WHERE id = ? AND accountID = ?`,
-        [entryID, userID],
-    );
+    const result = searchRepo.deleteHistoryEntry(entryID, userID);
 
     if (!result.changes) {
         return res.status(404).json({ message: "Entry not found" });
@@ -232,7 +96,6 @@ export function deleteSearchHistoryEntry(req: Request, res: Response) {
 }
 
 export function clearSearchHistory(req: Request, res: Response) {
-    const userID = req.user.id;
-    db.query(`DELETE FROM search_history WHERE accountID = ?`, [userID]);
+    searchRepo.clearHistory(req.user.id);
     res.status(204).send();
 }
