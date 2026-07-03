@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db } from "../database/db";
+import * as challengeRepo from "../repositories/challengeRepo";
 import { logError } from "../utils/logger";
 
 /**
@@ -10,16 +10,7 @@ export function getMyChallenges(req: Request, res: Response) {
     const userID = req.user.id;
 
     try {
-        const rows = db.prepare(`
-            SELECT c.id, c.code, c.title, c.description, c.metric, c.goal, c.icon,
-                   COALESCE(cp.progress, 0) AS progress,
-                   cp.completedAt
-            FROM challenge c
-            LEFT JOIN challenge_progress cp
-                ON cp.challengeID = c.id AND cp.accountID = ?
-            WHERE c.active = 1
-            ORDER BY c.id ASC
-        `).all(userID) as {
+        const rows = challengeRepo.findActiveWithProgress(userID) as {
             id: number; code: string; title: string; description: string | null;
             metric: string; goal: number; icon: string | null;
             progress: number; completedAt: string | null;

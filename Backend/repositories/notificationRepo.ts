@@ -23,6 +23,21 @@ export function findPage(userID: number, cursor: number | null, limit: number): 
     return db.query(`${base} ORDER BY n.id DESC LIMIT ?`, [userID, limit]);
 }
 
+/** Insert a notification row. */
+export function insert(
+    recipientID: number,
+    actorID: number | null,
+    type: string,
+    entityType: string | null,
+    entityID: number | null,
+): void {
+    db.query(
+        `INSERT INTO notification (recipientID, actorID, type, entityType, entityID)
+         VALUES (?, ?, ?, ?, ?)`,
+        [recipientID, actorID, type, entityType, entityID],
+    );
+}
+
 /** Count of the viewer's unread notifications. */
 export function countUnread(userID: number): number {
     return db.query(

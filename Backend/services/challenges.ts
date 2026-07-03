@@ -6,7 +6,7 @@
  * progress updates must never break the originating request, so
  * `recordChallengeEvent` swallows and logs its own errors.
  */
-import { db } from "../database/db";
+import * as challengeRepo from "../repositories/challengeRepo";
 import { createNotification } from "./notifications";
 
 export type ChallengeMetric = "trips_saved" | "carbon_saved" | "places_visited";
@@ -21,27 +21,15 @@ export function recordChallengeEvent(accountID: number, metric: ChallengeMetric,
     if (!Number.isFinite(amount) || amount <= 0) return;
 
     try {
-        const challenges = db.prepare(
-            "SELECT id, goal FROM challenge WHERE metric = ? AND active = 1"
-        ).all(metric) as { id: number; goal: number }[];
+        const challenges = challengeRepo.findActiveByMetric(metric);
 
         for (const ch of challenges) {
-            db.prepare(`
-                INSERT INTO challenge_progress (challengeID, accountID, progress, updatedAt)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(challengeID, accountID) DO UPDATE SET
-                    progress = progress + excluded.progress,
-                    updatedAt = CURRENT_TIMESTAMP
-            `).run(ch.id, accountID, amount);
+            challengeRepo.addProgress(ch.id, accountID, amount);
 
-            const row = db.prepare(
-                "SELECT progress, completedAt FROM challenge_progress WHERE challengeID = ? AND accountID = ?"
-            ).get(ch.id, accountID) as { progress: number; completedAt: string | null } | undefined;
+            const row = challengeRepo.findProgress(ch.id, accountID);
 
             if (row && row.completedAt === null && row.progress >= ch.goal) {
-                db.prepare(
-                    "UPDATE challenge_progress SET completedAt = CURRENT_TIMESTAMP WHERE challengeID = ? AND accountID = ?"
-                ).run(ch.id, accountID);
+                challengeRepo.markCompleted(ch.id, accountID);
                 createNotification({
                     recipientID: accountID,
                     actorID: null,
