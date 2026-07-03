@@ -70,6 +70,26 @@ export function updateFolder(id: string, fields: Record<string, unknown>): { cha
     return db.query(`UPDATE bookmark_folder SET ${setClause} WHERE id = ?`, [...keys.map((k) => fields[k]), id]);
 }
 
+/** A folder by id regardless of owner (used to check public visibility), or undefined. */
+export function findFolderById(id: string): any | undefined {
+    return db.query("SELECT id, accountID, name, isPublic, createdAt FROM bookmark_folder WHERE id = ?", [id])[0];
+}
+
+/** All pins in a folder (joined with pin + author), newest first. */
+export function findFolderPins(folderID: string): any[] {
+    return db.query(`
+        SELECT
+            p.id, p.creatorID, a.email, p.latitude, p.longitude,
+            p.title, p.address, p.description, p.image, p.tags, p.createdAt,
+            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
+        FROM bookmark b
+        JOIN pin p ON p.id = b.pinID
+        JOIN account a ON a.id = p.creatorID
+        WHERE b.folderID = ?
+        ORDER BY b.createdAt DESC
+    `, [folderID]);
+}
+
 /**
  * Delete a folder and move its bookmarks to uncategorised (folderID = NULL) in a
  * single transaction, so bookmarks are never orphaned. Returns the delete result.

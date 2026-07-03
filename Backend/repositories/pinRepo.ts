@@ -243,6 +243,29 @@ export function findSimilar(pinID: string | number, userID: number | null): any[
     `, [pinID, pinID, ...vis.params]);
 }
 
+/**
+ * Pins in a bounding box for trip planning, flagged with whether each belongs to
+ * `userId` (own pins sort first). Pass a non-matching id when unauthenticated.
+ */
+export function findNearbyForTrip(
+    userId: number | null,
+    latMin: number,
+    latMax: number,
+    lngMin: number,
+    lngMax: number,
+): any[] {
+    return db.query(`
+        SELECT
+            id, title, description, latitude, longitude, tags, image, creatorID,
+            CASE WHEN creatorID = ? THEN 1 ELSE 0 END as isUserPin
+        FROM pin
+        WHERE latitude BETWEEN ? AND ?
+          AND longitude BETWEEN ? AND ?
+        ORDER BY isUserPin DESC, id ASC
+        LIMIT 30
+    `, [userId ?? -1, latMin, latMax, lngMin, lngMax]);
+}
+
 /** Pins within a lat/lng bounding box (a pre-filter; caller refines by distance). */
 export function findInBoundingBox(
     userID: number | null,

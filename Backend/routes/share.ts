@@ -1,9 +1,11 @@
 
 import express from 'express';
-import { db } from '../database/db';
+import * as itineraryRepo from '../repositories/itineraryRepo';
+import * as bookmarkRepo from '../repositories/bookmarkRepo';
 import { v4 as uuidv4 } from 'uuid';
 import { check } from './auth.ts';
 import { logError } from '../utils/logger';
+import { isOwner } from '../utils/ownership';
 import { deriveTripCarbon } from '../utils/tripCarbon';
 
 export const shareRouter = express.Router();
@@ -57,9 +59,8 @@ shareRouter.post('/', (req, res) => {
             ? title.replace(/<[^>]*>/g, '').trim().slice(0, 120) || null
             : null;
         const { carbonKg, savedKg } = deriveTripCarbon(settings);
-        const stmt = db.prepare('INSERT INTO itinerary (id, creatorID, title, data, isPublic, carbonKg, savedKg) VALUES (?, ?, ?, ?, 1, ?, ?)');
         const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id, 10) : (req.user?.id || null);
-        stmt.run(id, userId, cleanTitle, data, carbonKg, savedKg);
+        itineraryRepo.insertPublished(id, userId, cleanTitle, data, carbonKg, savedKg);
 
         res.status(201).json({ id });
     } catch (error) {
@@ -74,8 +75,7 @@ shareRouter.get('/:id', (req, res) => {
         const { id } = req.params;
         // Only published snapshots are publicly viewable; private drafts (isPublic = 0)
         // are reachable solely through the owner-authenticated /api/me/trips routes.
-        const stmt = db.prepare('SELECT data, createdAt FROM itinerary WHERE id = ? AND isPublic = 1');
-        const result = stmt.get(id) as { data: string, createdAt: string } | undefined;
+        const result = itineraryRepo.findPublicById(String(id));
 
         if (!result) {
             return res.status(404).json({ error: 'Itinerary not found' });
@@ -108,19 +108,17 @@ shareRouter.delete('/:id', check, (req, res) => {
             return res.status(401).json({ error: 'Authentication required' });
         }
 
-        const stmt = db.prepare('SELECT creatorID FROM itinerary WHERE id = ?');
-        const result = stmt.get(id) as { creatorID: number | null } | undefined;
+        const result = itineraryRepo.findCreator(id);
 
         if (!result) {
             return res.status(404).json({ error: 'Itinerary not found' });
         }
 
-        if (result.creatorID !== Number(userId)) {
+        if (!isOwner(result.creatorID, userId)) {
             return res.status(403).json({ error: 'Unauthorized to delete this itinerary' });
         }
 
-        const deleteStmt = db.prepare('DELETE FROM itinerary WHERE id = ?');
-        deleteStmt.run(id);
+        itineraryRepo.deleteById(id);
 
         res.status(200).json({ message: 'Itinerary deleted successfully' });
     } catch (error) {
@@ -135,12 +133,7 @@ shareRouter.get('/collection/:folderID', (req, res) => {
         const { folderID } = req.params;
 
         // Check if folder exists and is public
-        const folderStmt = db.prepare(`
-            SELECT id, accountID, name, isPublic, createdAt
-            FROM bookmark_folder
-            WHERE id = ?
-        `);
-        const folder = folderStmt.get(folderID) as any;
+        const folder = bookmarkRepo.findFolderById(String(folderID));
 
         if (!folder) {
             return res.status(404).json({ message: 'Collection not found' });
@@ -151,27 +144,7 @@ shareRouter.get('/collection/:folderID', (req, res) => {
         }
 
         // Get pins in this folder
-        const pinsStmt = db.prepare(`
-            SELECT
-                p.id,
-                p.creatorID,
-                a.email,
-                p.latitude,
-                p.longitude,
-                p.title,
-                p.address,
-                p.description,
-                p.image,
-                p.tags,
-                p.createdAt,
-                (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
-            FROM bookmark b
-            JOIN pin p ON p.id = b.pinID
-            JOIN account a ON a.id = p.creatorID
-            WHERE b.folderID = ?
-            ORDER BY b.createdAt DESC
-        `);
-        const pins = pinsStmt.all(folderID) as any[];
+        const pins = bookmarkRepo.findFolderPins(String(folderID));
 
         res.json({
             folder: {
