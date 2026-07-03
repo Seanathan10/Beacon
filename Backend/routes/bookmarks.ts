@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
+import * as bookmarkRepo from "../repositories/bookmarkRepo";
 import { randomUUID } from "crypto";
 import { logError } from "../utils/logger";
 import { isOwner } from "../utils/ownership";
@@ -12,30 +12,7 @@ export function getBookmarks(req: Request, res: Response) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
 
-	const results = db.query(`
-		SELECT
-			b.pinID,
-			b.folderID,
-			b.createdAt,
-			p.creatorID,
-			a.email,
-			p.latitude,
-			p.longitude,
-			p.title,
-			p.address,
-			p.description,
-			p.image,
-			p.tags,
-			p.createdAt as pinCreatedAt,
-			(SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
-		FROM bookmark b
-		JOIN pin p ON p.id = b.pinID
-		JOIN account a ON a.id = p.creatorID
-		WHERE b.accountID = ?
-		ORDER BY b.createdAt DESC
-	`, [req.user.id]);
-
-	res.json(results);
+	res.json(bookmarkRepo.findBookmarks(req.user.id));
 }
 
 /**
@@ -57,10 +34,7 @@ export function addBookmark(req: Request, res: Response) {
 	}
 
 	try {
-		const results = db.query(
-			`INSERT INTO bookmark (pinID, accountID, folderID) VALUES (?, ?, ?)`,
-			[pinID, req.user.id, folderID || null]
-		);
+		const results = bookmarkRepo.addBookmark(pinID, req.user.id, folderID || null);
 
 		if (results.changes === 0) {
 			return res.status(500).json({ message: "Failed to create bookmark" });
@@ -93,10 +67,7 @@ export function deleteBookmark(req: Request, res: Response) {
 		return res.status(400).json({ message: "Invalid pinID" });
 	}
 
-	const results = db.query(
-		`DELETE FROM bookmark WHERE pinID = ? AND accountID = ?`,
-		[Number(pinID), req.user.id]
-	);
+	const results = bookmarkRepo.deleteBookmark(Number(pinID), req.user.id);
 
 	if (results.changes === 0) {
 		return res.status(404).json({ message: "Bookmark not found" });
@@ -125,10 +96,7 @@ export function updateBookmark(req: Request, res: Response) {
 	}
 
 	try {
-		const results = db.query(
-			`UPDATE bookmark SET folderID = ? WHERE pinID = ? AND accountID = ?`,
-			[folderID || null, Number(pinID), req.user.id]
-		);
+		const results = bookmarkRepo.updateBookmarkFolder(Number(pinID), req.user.id, folderID || null);
 
 		if (results.changes === 0) {
 			return res.status(404).json({ message: "Bookmark not found" });
@@ -152,19 +120,7 @@ export function getFolders(req: Request, res: Response) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
 
-	const results = db.query(`
-		SELECT
-			bf.id,
-			bf.name,
-			bf.isPublic,
-			bf.createdAt,
-			(SELECT COUNT(*) FROM bookmark WHERE folderID = bf.id) AS pinCount
-		FROM bookmark_folder bf
-		WHERE bf.accountID = ?
-		ORDER BY bf.createdAt DESC
-	`, [req.user.id]);
-
-	res.json(results);
+	res.json(bookmarkRepo.findFolders(req.user.id));
 }
 
 /**
@@ -188,10 +144,7 @@ export function createFolder(req: Request, res: Response) {
 	const folderId = randomUUID();
 
 	try {
-		const results = db.query(
-			`INSERT INTO bookmark_folder (id, accountID, name, isPublic) VALUES (?, ?, ?, ?)`,
-			[folderId, req.user.id, name.trim(), isPublic ? 1 : 0]
-		);
+		const results = bookmarkRepo.insertFolder(folderId, req.user.id, name.trim(), isPublic ? 1 : 0);
 
 		if (results.changes === 0) {
 			return res.status(500).json({ message: "Failed to create folder" });
@@ -218,25 +171,21 @@ export function updateFolder(req: Request, res: Response) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
 
-	const { id } = req.params;
+	const id = String(req.params.id);
 	const { name, isPublic } = req.body;
 
 	// Verify user owns this folder
-	const folderCheck = db.query(
-		`SELECT accountID FROM bookmark_folder WHERE id = ?`,
-		[id]
-	);
+	const folder = bookmarkRepo.findFolderOwner(id);
 
-	if (folderCheck.length === 0) {
+	if (!folder) {
 		return res.status(404).json({ message: "Folder not found" });
 	}
 
-	if (!isOwner(folderCheck[0].accountID, req.user.id)) {
+	if (!isOwner(folder.accountID, req.user.id)) {
 		return res.status(403).json({ message: "Forbidden" });
 	}
 
-	const updates = [];
-	const params = [];
+	const fields: Record<string, unknown> = {};
 
 	if (name !== undefined) {
 		if (typeof name !== "string" || name.trim().length === 0) {
@@ -245,26 +194,19 @@ export function updateFolder(req: Request, res: Response) {
 		if (name.trim().length > 80) {
 			return res.status(400).json({ message: "Folder name must be 80 characters or less" });
 		}
-		updates.push("name = ?");
-		params.push(name.trim());
+		fields.name = name.trim();
 	}
 
 	if (isPublic !== undefined) {
-		updates.push("isPublic = ?");
-		params.push(isPublic ? 1 : 0);
+		fields.isPublic = isPublic ? 1 : 0;
 	}
 
-	if (updates.length === 0) {
+	if (Object.keys(fields).length === 0) {
 		return res.status(400).json({ message: "No fields to update" });
 	}
 
-	params.push(id);
-
 	try {
-		const results = db.query(
-			`UPDATE bookmark_folder SET ${updates.join(", ")} WHERE id = ?`,
-			params
-		);
+		const results = bookmarkRepo.updateFolder(id, fields);
 
 		if (results.changes === 0) {
 			return res.status(404).json({ message: "Folder not found" });
@@ -285,48 +227,26 @@ export function deleteFolder(req: Request, res: Response) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
 
-	const { id } = req.params;
+	const id = String(req.params.id);
 
 	// Verify user owns this folder
-	const folderCheck = db.query(
-		`SELECT accountID FROM bookmark_folder WHERE id = ?`,
-		[id]
-	);
+	const folder = bookmarkRepo.findFolderOwner(id);
 
-	if (folderCheck.length === 0) {
+	if (!folder) {
 		return res.status(404).json({ message: "Folder not found" });
 	}
 
-	if (!isOwner(folderCheck[0].accountID, req.user.id)) {
+	if (!isOwner(folder.accountID, req.user.id)) {
 		return res.status(403).json({ message: "Forbidden" });
 	}
 
 	try {
-		// Wrap both statements in a transaction so we never leave bookmarks
-		// orphaned (folder gone but folderID still set) if one statement fails.
-		db.query("BEGIN");
-		try {
-			// Move bookmarks in this folder to uncategorized (folderID = NULL)
-			db.query(
-				`UPDATE bookmark SET folderID = NULL WHERE folderID = ?`,
-				[id]
-			);
+		// Reassigns this folder's bookmarks to uncategorized and deletes the
+		// folder atomically, so bookmarks are never left orphaned.
+		const results = bookmarkRepo.deleteFolderWithReassign(id, req.user.id);
 
-			// Delete the folder
-			const results = db.query(
-				`DELETE FROM bookmark_folder WHERE id = ? AND accountID = ?`,
-				[id, req.user.id]
-			);
-
-			if (results.changes === 0) {
-				db.query("ROLLBACK");
-				return res.status(404).json({ message: "Folder not found" });
-			}
-
-			db.query("COMMIT");
-		} catch (txErr) {
-			db.query("ROLLBACK");
-			throw txErr;
+		if (results.changes === 0) {
+			return res.status(404).json({ message: "Folder not found" });
 		}
 
 		res.status(204).send();
