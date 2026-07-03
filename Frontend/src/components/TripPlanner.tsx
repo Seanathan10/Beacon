@@ -5,6 +5,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import './styles/TripPlanner.css';
 import { DatePicker } from './DatePicker';
 import { BASE_API_URL } from '../../constants';
+import * as tripsApi from '@/services/trips';
 import mapboxgl from 'mapbox-gl';
 import { track } from '@/utils/analytics';
 
@@ -440,26 +441,15 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                 ? optionsData.ecoHotels?.[selectedHotelIndex]
                 : undefined;
 
-            const response = await fetch(`${BASE_API_URL}/api/trip/generate-itinerary`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    destination: optionsData.destination,
-                    itineraryType: optionsData.itineraryType,
-                    durationDays: optionsData.durationDays,
-                    selectedTransit: selectedTransitOption,
-                    selectedHotel: selectedHotelOption,
-                    // Filter pins to only include user-selected ones
-                    localPins: optionsData.localPins.filter(pin => selectedPinIds.has(pin.id)),
-                }),
+            const data = await tripsApi.generateItinerary<{ itinerary: TripPlanResult["itinerary"] }>({
+                destination: optionsData.destination,
+                itineraryType: optionsData.itineraryType,
+                durationDays: optionsData.durationDays,
+                selectedTransit: selectedTransitOption,
+                selectedHotel: selectedHotelOption,
+                // Filter pins to only include user-selected ones
+                localPins: optionsData.localPins.filter(pin => selectedPinIds.has(pin.id)),
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to generate itinerary');
-            }
-
-            const data = await response.json();
 
             // Combine options data with the generated itinerary
             const tripResult: TripPlanResult = {
@@ -484,21 +474,12 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         setIsAskingAI(true);
 
         try {
-            const response = await fetch(`${BASE_API_URL}/api/trip/ask`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    question: aiQuestion,
-                    origin: startCity,
-                    destination: endCity,
-                    itineraryType,
-                }),
+            const data = await tripsApi.askQuestion<{ answer: string }>({
+                question: aiQuestion,
+                origin: startCity,
+                destination: endCity,
+                itineraryType,
             });
-
-            if (!response.ok) throw new Error('Failed to get answer');
-
-            const data = await response.json();
             setAiAnswer(data.answer);
         } catch {
             setAiAnswer('Sorry, I could not get an answer at this time.');
@@ -512,31 +493,22 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         setIsSharing(true);
 
         try {
-            const response = await fetch(`${BASE_API_URL}/api/share`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            const data = await tripsApi.shareTrip({
+                itinerary: result.itinerary,
+                itineraryType: result.itineraryType,
+                settings: {
+                    origin: result.origin,
+                    destination: result.destination,
+                    durationDays: result.durationDays,
+                    transitOptions: result.transitOptions,
+                    ecoHotels: result.ecoHotels,
+                    localPins: result.localPins,
+                    carbonStats: result.carbonStats,
+                    originCoords: result.originCoords,
+                    destCoords: result.destCoords,
                 },
-                body: JSON.stringify({
-                    itinerary: result.itinerary,
-                    itineraryType: result.itineraryType,
-                    settings: {
-                        origin: result.origin,
-                        destination: result.destination,
-                        durationDays: result.durationDays,
-                        transitOptions: result.transitOptions,
-                        ecoHotels: result.ecoHotels,
-                        localPins: result.localPins,
-                        carbonStats: result.carbonStats,
-                        originCoords: result.originCoords,
-                        destCoords: result.destCoords,
-                    }
-                }),
             });
 
-            if (!response.ok) throw new Error('Failed to share itinerary');
-
-            const data = await response.json();
             const url = `${window.location.origin}/shared/${data.id}`;
             setShareUrl(url);
             track("Itinerary Shared");
@@ -554,32 +526,24 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
         setIsSaving(true);
 
         try {
-            const response = await fetch(`${BASE_API_URL}/api/trip/save`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    // Re-saving updates the same draft instead of creating duplicates.
-                    id: savedTripId ?? undefined,
-                    itinerary: result.itinerary,
-                    itineraryType: result.itineraryType,
-                    settings: {
-                        origin: result.origin,
-                        destination: result.destination,
-                        durationDays: result.durationDays,
-                        transitOptions: result.transitOptions,
-                        ecoHotels: result.ecoHotels,
-                        localPins: result.localPins,
-                        carbonStats: result.carbonStats,
-                        originCoords: result.originCoords,
-                        destCoords: result.destCoords,
-                    },
-                }),
+            const data = await tripsApi.saveTrip({
+                // Re-saving updates the same draft instead of creating duplicates.
+                id: savedTripId ?? undefined,
+                itinerary: result.itinerary,
+                itineraryType: result.itineraryType,
+                settings: {
+                    origin: result.origin,
+                    destination: result.destination,
+                    durationDays: result.durationDays,
+                    transitOptions: result.transitOptions,
+                    ecoHotels: result.ecoHotels,
+                    localPins: result.localPins,
+                    carbonStats: result.carbonStats,
+                    originCoords: result.originCoords,
+                    destCoords: result.destCoords,
+                },
             });
 
-            if (!response.ok) throw new Error('Failed to save trip');
-
-            const data = await response.json();
             setSavedTripId(data.id);
             track("Trip Saved");
         } catch (err) {
@@ -678,35 +642,24 @@ export default function TripPlanner({ isOpen, onClose, onPlanComplete, onWideMod
                     ? `${optionsData.destAirportCode} Airport`
                     : undefined;
 
-                const response = await fetch(`${BASE_API_URL}/api/trip/local-route`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        // Pass addresses for transit search (more reliable)
-                        originAddress: airportAddress,
-                        destAddress: hotel.address,
-                        // Also include coordinates as fallback for driving route
-                        originLat: optionsData.destAirportCoords?.lat,
-                        originLng: optionsData.destAirportCoords?.lng,
-                        destLat: hotel.location?.lat,
-                        destLng: hotel.location?.lng,
-                        departureTime: departureTimeStr
-                    }),
+                const routeData = await tripsApi.getLocalRoute<RouteData>({
+                    // Pass addresses for transit search (more reliable)
+                    originAddress: airportAddress,
+                    destAddress: hotel.address,
+                    // Also include coordinates as fallback for driving route
+                    originLat: optionsData.destAirportCoords?.lat,
+                    originLng: optionsData.destAirportCoords?.lng,
+                    destLat: hotel.location?.lat,
+                    destLng: hotel.location?.lng,
+                    departureTime: departureTimeStr,
                 });
 
-                if (response.ok) {
-                    const routeData = await response.json();
-                    // Notify parent with full route data including segments
-                    onHotelSelected?.(optionsData.destAirportCoords, hotel.location, {
-                        mode: routeData.mode,
-                        polyline: routeData.polyline,
-                        segments: routeData.segments,
-                    });
-                } else {
-                    // Fallback to straight line if no route found
-                    onHotelSelected?.(optionsData.destAirportCoords, hotel.location);
-                }
+                // Notify parent with full route data including segments
+                onHotelSelected?.(optionsData.destAirportCoords, hotel.location, {
+                    mode: routeData.mode,
+                    polyline: routeData.polyline,
+                    segments: routeData.segments,
+                });
             } catch (error) {
                 console.error('Failed to fetch local route:', error);
                 // Fallback to straight line
