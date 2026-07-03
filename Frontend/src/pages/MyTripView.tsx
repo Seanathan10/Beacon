@@ -3,8 +3,18 @@ import { useParams, useNavigate } from 'react-router';
 import TripPlanner, { TripPlanResult } from '../components/TripPlanner';
 import mapboxgl from 'mapbox-gl';
 import '../components/styles/TripPlanner.css';
-import { BASE_API_URL } from '../../constants';
+import * as tripsApi from '@/services/trips';
+import { ApiError } from '@/lib/api';
 import ShareMenu from '../components/ShareMenu';
+
+// The stored itinerary blob: a partial TripPlanResult under `settings` plus the
+// raw itinerary text and publish flag.
+type StoredTrip = {
+    itinerary: TripPlanResult["itinerary"];
+    itineraryType?: string;
+    isPublic?: boolean;
+    settings?: Partial<TripPlanResult>;
+};
 
 /**
  * Owner-scoped read view of a saved trip. Unlike SharedItinerary (which loads
@@ -23,10 +33,7 @@ export default function MyTripView() {
     useEffect(() => {
         const fetchTrip = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/api/me/trips/${id}`, { credentials: 'include' });
-                if (res.status === 401) { navigate('/'); return; }
-                if (!res.ok) throw new Error('Failed to load trip');
-                const data = await res.json();
+                const data = await tripsApi.getMyTrip<StoredTrip>(id!);
 
                 // Backend stores { itinerary, itineraryType, settings }; flatten to TripPlanResult.
                 const tripResult: TripPlanResult = {
@@ -52,6 +59,7 @@ export default function MyTripView() {
                 setIsPublic(!!data.isPublic);
                 setItineraryData(tripResult);
             } catch (err) {
+                if (err instanceof ApiError && err.status === 401) { navigate('/'); return; }
                 setError(err instanceof Error ? err.message : 'Unknown error');
             } finally {
                 setLoading(false);

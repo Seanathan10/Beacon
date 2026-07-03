@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 export const getMyTrips = <T = unknown>(cursor?: number | null) =>
     api.get<T>(`/api/me/trips${cursor ? `?cursor=${cursor}` : ""}`);
 export const getMyTrip = <T = unknown>(id: string) => api.get<T>(`/api/me/trips/${id}`);
-export const getCarbonStats = <T = unknown>() => api.get<T>("/api/me/carbon-stats");
+export const getCarbonStats = <T = unknown>(opts?: RequestInit) => api.get<T>("/api/me/carbon-stats", opts);
 
 export const askQuestion = <T = unknown>(body: Record<string, unknown>) => api.post<T>("/api/trip/ask", body);
 export const generateItinerary = <T = unknown>(body: Record<string, unknown>) =>

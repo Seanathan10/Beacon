@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import * as tripsApi from "@/services/trips";
+import * as challengesApi from "@/services/challenges";
+import { ApiError } from "@/lib/api";
 
 interface MonthPoint {
     month: string;
@@ -107,19 +109,23 @@ export default function SustainabilityPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const fetchJson = useCallback(async (path: string, signal?: AbortSignal) => {
-        const res = await fetch(`${BASE_API_URL}${path}`, { credentials: "include", signal });
-        if (res.status === 401) { navigate("/"); return null; }
-        return res.ok ? res.json() : null;
+    const loadOrNull = useCallback(async <T,>(p: Promise<T>): Promise<T | null> => {
+        try {
+            return await p;
+        } catch (err) {
+            if (err instanceof ApiError && err.status === 401) navigate("/");
+            return null;
+        }
     }, [navigate]);
 
     useEffect(() => {
         const controller = new AbortController();
+        const signal = controller.signal;
         (async () => {
             const [statsData, challengeData, leaderData] = await Promise.all([
-                fetchJson("/api/me/carbon-stats", controller.signal),
-                fetchJson("/api/me/challenges", controller.signal),
-                fetchJson("/api/leaderboard", controller.signal),
+                loadOrNull(tripsApi.getCarbonStats<CarbonStats>({ signal })),
+                loadOrNull(challengesApi.getMyChallenges<{ items: Challenge[] }>({ signal })),
+                loadOrNull(challengesApi.getLeaderboard<{ items: LeaderRow[] }>({ signal })),
             ]);
             if (statsData) setStats(statsData);
             if (challengeData) setChallenges(challengeData.items);
@@ -127,7 +133,7 @@ export default function SustainabilityPage() {
             setLoading(false);
         })().catch(() => setLoading(false));
         return () => controller.abort();
-    }, [fetchJson]);
+    }, [loadOrNull]);
 
     return (
         <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>

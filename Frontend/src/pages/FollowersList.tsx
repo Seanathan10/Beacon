@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import * as usersApi from "@/services/users";
 
 interface UserSummary {
     id: number;
@@ -21,22 +21,23 @@ function UserList({ userID, type }: { userID: string; type: ListType }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${BASE_API_URL}/api/users/${userID}/${type}?page=${page}`, { credentials: "include" })
-            .then((r) => r.json())
+        const fetchList = type === "followers" ? usersApi.getUserFollowers : usersApi.getUserFollowing;
+        fetchList<{ followers?: UserSummary[]; following?: UserSummary[]; hasMore: boolean }>(userID!, page)
             .then((data) => {
                 const list = data[type] ?? data.followers ?? data.following ?? [];
                 setUsers((prev) => page === 1 ? list : [...prev, ...list]);
                 setHasMore(data.hasMore);
                 setLoading(false);
-            });
+            })
+            .catch(() => setLoading(false));
     }, [userID, type, page]);
 
     async function toggleFollow(target: UserSummary) {
-        const method = target.isFollowed ? "DELETE" : "POST";
-        await fetch(`${BASE_API_URL}/api/users/${target.id}/follow`, {
-            method,
-            credentials: "include",
-        });
+        try {
+            await (target.isFollowed ? usersApi.unfollowUser(target.id) : usersApi.followUser(target.id));
+        } catch {
+            return;
+        }
         setUsers((prev) =>
             prev.map((u) =>
                 u.id === target.id
