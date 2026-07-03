@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 import { randomUUID } from "crypto";
 import { logError } from "../utils/logger";
+import { isOwner } from "../utils/ownership";
 
 /**
  * GET /api/bookmarks - List all bookmarked pins for the authenticated user
@@ -230,7 +231,7 @@ export function updateFolder(req: Request, res: Response) {
 		return res.status(404).json({ message: "Folder not found" });
 	}
 
-	if (folderCheck[0].accountID !== req.user.id) {
+	if (!isOwner(folderCheck[0].accountID, req.user.id)) {
 		return res.status(403).json({ message: "Forbidden" });
 	}
 
@@ -296,7 +297,7 @@ export function deleteFolder(req: Request, res: Response) {
 		return res.status(404).json({ message: "Folder not found" });
 	}
 
-	if (folderCheck[0].accountID !== req.user.id) {
+	if (!isOwner(folderCheck[0].accountID, req.user.id)) {
 		return res.status(403).json({ message: "Forbidden" });
 	}
 

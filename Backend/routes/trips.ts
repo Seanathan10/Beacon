@@ -5,6 +5,7 @@ import { logError } from "../utils/logger";
 import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 import { deriveTripCarbon } from "../utils/tripCarbon";
 import { calculateOffsetCost } from "../utils/carbon";
+import { isOwner } from "../utils/ownership";
 import { recordChallengeEvent } from "../services/challenges";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
@@ -106,7 +107,7 @@ export function getMyTrip(req: Request, res: Response) {
             "SELECT id, creatorID, title, data, isPublic, createdAt FROM itinerary WHERE id = ?"
         ).get(id) as { id: string; creatorID: number | null; title: string | null; data: string; isPublic: number; createdAt: string } | undefined;
 
-        if (!row || row.creatorID !== Number(userID)) {
+        if (!row || !isOwner(row.creatorID, userID)) {
             return res.status(404).json({ message: "Trip not found" });
         }
 
@@ -219,7 +220,7 @@ export function saveTrip(req: Request, res: Response) {
                 "SELECT creatorID, isPublic FROM itinerary WHERE id = ?"
             ).get(tripId) as { creatorID: number | null; isPublic: number } | undefined;
 
-            if (!existing || existing.creatorID !== Number(userID)) {
+            if (!existing || !isOwner(existing.creatorID, userID)) {
                 return res.status(404).json({ message: "Trip not found" });
             }
             if (existing.isPublic === 1) {

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as pinRepo from "../repositories/pinRepo";
 import { logError } from "../utils/logger";
 import { stripHtml } from "../utils/sanitize";
+import { isOwner } from "../utils/ownership";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
@@ -181,7 +182,7 @@ export function updatePin(req: Request, res: Response) {
     const { title, address, description, image } = req.body;
 
     const owner = pinRepo.findOwner(pinID);
-    if (!owner || Number(owner.creatorID) !== Number(userID)) {
+    if (!owner || !isOwner(owner.creatorID, userID)) {
         return res.status(404).json({ message: "Pin not found" });
     }
 
@@ -239,7 +240,7 @@ export function deletePin(req: Request, res: Response) {
     const userID = req.user.id;
 
     const owner = pinRepo.findOwner(pinID);
-    if (!owner || Number(owner.creatorID) !== Number(userID)) {
+    if (!owner || !isOwner(owner.creatorID, userID)) {
         return res.status(404).send();
     }
 

@@ -4,6 +4,7 @@ import { geocodeLocation } from "../utils/geocoding";
 import { logError } from "../utils/logger";
 import { visibilityFilter } from "../utils/visibility";
 import { stripHtml } from "../utils/sanitize";
+import { isOwner } from "../utils/ownership";
 import { createNotification } from "../services/notifications";
 
 const MAX_TITLE_LENGTH = 300;
@@ -166,7 +167,7 @@ export async function updatePost(req: Request, res: Response) {
     }
 
     // Null creatorID means no owner — no one can edit it
-    if (post.creatorID === null || Number(post.creatorID) !== Number(userID)) {
+    if (!isOwner(post.creatorID, userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -259,7 +260,7 @@ export function deletePost(req: Request, res: Response) {
     }
 
     // Null creatorID means no owner — no one can delete it
-    if (post.creatorID === null || Number(post.creatorID) !== Number(userID)) {
+    if (!isOwner(post.creatorID, userID)) {
         return res.status(403).json({ message: "Unauthorized" });
     }
 

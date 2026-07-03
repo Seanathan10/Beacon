@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as db from "../database/db";
 import { logError } from "../utils/logger";
 import { stripHtml } from "../utils/sanitize";
+import { isOwner } from "../utils/ownership";
 import { createNotification } from "../services/notifications";
 
 // Get all comments for a specific pin with reactions and badges
@@ -168,7 +169,7 @@ export function deleteComment(req: Request, res: Response) {
     
     const comment = commentList[0];
 
-    if (Number(comment.accountID) !== Number(userID)) {
+    if (!isOwner(comment.accountID, userID)) {
         res.status(403).json({ message: "Unauthorized to delete this comment" });
         return;
     }
@@ -211,7 +212,7 @@ export function updateComment(req: Request, res: Response) {
         return;
     }
 
-    if (Number(existingComment.accountID) !== Number(userID)) {
+    if (!isOwner(existingComment.accountID, userID)) {
         res.status(403).json({ message: "Unauthorized to update this comment" });
         return;
     }
