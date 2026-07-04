@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as postRepo from "../repositories/postRepo";
 import { geocodeLocation } from "../utils/geocoding";
 import { logError } from "../utils/logger";
-import { stripHtml } from "../utils/sanitize";
+import { stripHtml, isValidUrl } from "../utils/sanitize";
 import { isOwner } from "../utils/ownership";
 import { createNotification } from "../services/notifications";
 
@@ -10,15 +10,6 @@ const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_LENGTH = 500;
 const MAX_MESSAGE_LENGTH = 10000;
 const MAX_CATEGORY_LENGTH = 50;
-
-function isValidUrl(url: string): boolean {
-    try {
-        const urlObj = new URL(url);
-        return ['http:', 'https:'].includes(urlObj.protocol);
-    } catch {
-        return false;
-    }
-}
 
 // Posts store tags as a comma-separated string; the API returns them as an array.
 function mapPost(post: any) {

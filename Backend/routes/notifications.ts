@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as notificationRepo from "../repositories/notificationRepo";
 import { logError } from "../utils/logger";
+import { parseCursor } from "../utils/pagination";
 
 const MAX_CURSOR = 2_147_483_647; // upper bound for a notification ID cursor
 const PAGE_LIMIT = 20;
@@ -12,13 +13,9 @@ const PAGE_LIMIT = 20;
 export function getNotifications(req: Request, res: Response) {
     const userID = req.user.id;
 
-    let cursor: number | null = null;
-    if (req.query.cursor !== undefined) {
-        const parsed = parseInt(req.query.cursor as string, 10);
-        if (isNaN(parsed) || parsed < 1 || parsed > MAX_CURSOR) {
-            return res.status(400).json({ message: "Invalid cursor" });
-        }
-        cursor = parsed;
+    const cursor = parseCursor(req.query.cursor, MAX_CURSOR);
+    if (cursor === "invalid") {
+        return res.status(400).json({ message: "Invalid cursor" });
     }
 
     const rows = notificationRepo.findPage(userID, cursor, PAGE_LIMIT + 1);

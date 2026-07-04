@@ -6,6 +6,7 @@ import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 import { deriveTripCarbon } from "../utils/tripCarbon";
 import { calculateOffsetCost } from "../utils/carbon";
 import { isOwner } from "../utils/ownership";
+import { parseCursor } from "../utils/pagination";
 import { recordChallengeEvent } from "../services/challenges";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
@@ -49,13 +50,9 @@ function summarize(data: string): TripSummary {
 export function getMyTrips(req: Request, res: Response) {
     const userID = req.user.id;
 
-    let cursor: number | null = null;
-    if (req.query.cursor !== undefined) {
-        const parsed = parseInt(req.query.cursor as string, 10);
-        if (isNaN(parsed) || parsed < 1 || parsed > MAX_CURSOR) {
-            return res.status(400).json({ message: "Invalid cursor" });
-        }
-        cursor = parsed;
+    const cursor = parseCursor(req.query.cursor, MAX_CURSOR);
+    if (cursor === "invalid") {
+        return res.status(400).json({ message: "Invalid cursor" });
     }
 
     try {

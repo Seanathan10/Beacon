@@ -10,4 +10,3 @@ export const addSearchHistory = <T = unknown>(query: string) =>
     api.post<T>("/api/search/history", { query });
 export const deleteSearchHistoryEntry = (id: number | string) =>
     api.delete(`/api/search/history/${id}`);
-export const clearSearchHistory = () => api.delete("/api/search/history");

@@ -332,7 +332,6 @@ export async function planTripStream(req: Request, res: Response) {
         })();
 
         // Show geocoding for minimum time, then transition to flights
-        //await stageDelay();
         sendSSE(res, {
             stage: 'flights',
             message: 'Searching for flights...',
@@ -357,8 +356,6 @@ export async function planTripStream(req: Request, res: Response) {
                 console.error("Transit search error:", err);
                 return [] as TransitResult[];
             });
-
-        //await stageDelay();
         sendSSE(res, {
             stage: 'transit',
             message: 'Checking train and bus routes...',
@@ -381,8 +378,6 @@ export async function planTripStream(req: Request, res: Response) {
                 console.error("Driving search error:", err);
                 return null;
             });
-
-        //await stageDelay();
         sendSSE(res, {
             stage: 'driving',
             message: 'Calculating driving route...',
@@ -405,8 +400,6 @@ export async function planTripStream(req: Request, res: Response) {
                 console.error("Eco hotel search error:", err);
                 return [] as EcoHotel[];
             });
-
-        //await stageDelay();
         sendSSE(res, {
             stage: 'hotels',
             message: 'Finding eco-friendly accommodations...',
@@ -423,7 +416,6 @@ export async function planTripStream(req: Request, res: Response) {
         });
 
         // Stage 6: Get nearby pins (65%)
-        //await stageDelay();
         sendSSE(res, {
             stage: 'pins',
             message: 'Discovering local recommendations...',
@@ -439,8 +431,6 @@ export async function planTripStream(req: Request, res: Response) {
             progress: 65,
             data: { pinsFound: localPins.length },
         });
-
-        //await stageDelay();
 
         // Build transit options (before itinerary generation)
         const transitOptions: TransitOption[] = [];

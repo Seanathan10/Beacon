@@ -80,10 +80,7 @@ export function insert(pin: NewPin): { id: number } {
  * object is a no-op. Column names come only from trusted call sites.
  */
 export function update(id: string | number, fields: Record<string, unknown>): void {
-    const keys = Object.keys(fields);
-    if (keys.length === 0) return;
-    const setClause = keys.map((k) => `${k} = ?`).join(", ");
-    db.query(`UPDATE pin SET ${setClause} WHERE id = ?`, [...keys.map((k) => fields[k]), id]);
+    db.updateById("pin", fields, "id", id);
 }
 
 /** Delete a pin by id. Returns the raw run result (has `.changes`). */

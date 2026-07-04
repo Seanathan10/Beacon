@@ -132,7 +132,7 @@ describe('GET /api/pins — rating (likes) filter', () => {
         const user = await createTestUser('rating1@example.com', 'pass123', 'Rater');
 
         const popularPin = createTestPin(user.userId, { title: 'Popular Pin' });
-        const quietPin = createTestPin(user.userId, { title: 'Quiet Pin' });
+        createTestPin(user.userId, { title: 'Quiet Pin' });
 
         addLikes(popularPin, 5);
 
@@ -168,7 +168,7 @@ describe('GET /api/pins — rating (likes) filter', () => {
     it('handles minRating and maxRating together', async () => {
         const user = await createTestUser('rating3@example.com', 'pass123', 'Rater3');
 
-        const lowPin = createTestPin(user.userId, { title: 'Low Likes' });
+        createTestPin(user.userId, { title: 'Low Likes' });
         const midPin = createTestPin(user.userId, { title: 'Mid Likes' });
         const highPin = createTestPin(user.userId, { title: 'High Likes' });
 

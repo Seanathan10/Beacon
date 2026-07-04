@@ -24,11 +24,6 @@ export function query(sql: string, params: any[] = []): any {
     }
 }
 
-/**
- * Run `fn` inside a single SQLite transaction. Commits if it returns,
- * rolls back and rethrows if it throws. Use for multi-statement writes that
- * must stay consistent (e.g. an insert plus a denormalized counter update).
- */
 export function transaction<T>(fn: () => T): T {
     db.exec("BEGIN");
     try {
@@ -39,6 +34,18 @@ export function transaction<T>(fn: () => T): T {
         db.exec("ROLLBACK");
         throw err;
     }
+}
+
+export function updateById(
+    table: string,
+    fields: Record<string, unknown>,
+    idColumn: string,
+    id: unknown,
+): { changes: number } {
+    const keys = Object.keys(fields);
+    if (keys.length === 0) return { changes: 0 };
+    const setClause = keys.map((k) => `${k} = ?`).join(", ");
+    return query(`UPDATE ${table} SET ${setClause} WHERE ${idColumn} = ?`, [...keys.map((k) => fields[k]), id]);
 }
 
 function initPostsTable() {
@@ -79,15 +86,13 @@ function runMigrations() {
         ).all() as { name: string }[];
         const tableNames = new Set(existingTables.map(t => t.name));
 
-        // ── Legacy migrations (backward compat) ──────────────────────────────
-
         if (tableNames.has('pin')) {
             const columns = db.prepare("PRAGMA table_info(pin)").all() as { name: string }[];
             if (!columns.some(c => c.name === 'createdAt')) {
                 db.exec(`ALTER TABLE pin ADD COLUMN createdAt DATETIME`);
                 console.log("Migrated: added pin.createdAt");
             }
-            // Backfill any pins with NULL createdAt (e.g. seeded before the column had a default)
+
             const nullCount = (db.prepare("SELECT COUNT(*) as n FROM pin WHERE createdAt IS NULL").get() as { n: number }).n;
             if (nullCount > 0) {
                 db.exec(`UPDATE pin SET createdAt = datetime('now', '-30 days') WHERE createdAt IS NULL`);
@@ -146,8 +151,6 @@ function runMigrations() {
             );
         `);
 
-        // ── Fix account: VARCHAR sizes + CHECK constraint ─────────────────────
-        // prod DB was created with VARCHAR(20) for name/email/password and no CHECK
         if (tableNames.has('account')) {
             const { sql } = db.prepare(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='account'"
@@ -174,8 +177,6 @@ function runMigrations() {
             }
         }
 
-        // ── Fix likes: add PRIMARY KEY + ON DELETE CASCADE ───────────────────
-        // prod DB was missing the PRIMARY KEY, allowing duplicate likes
         if (tableNames.has('likes')) {
             const likesCols = db.prepare("PRAGMA table_info(likes)").all() as any[];
             if (!likesCols.some((c: any) => c.pk > 0)) {
@@ -197,7 +198,7 @@ function runMigrations() {
             }
         }
 
-        // ── Fix pin: ON DELETE CASCADE on FK ─────────────────────────────────
+
         if (tableNames.has('pin')) {
             const { sql } = db.prepare(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='pin'"
@@ -228,7 +229,7 @@ function runMigrations() {
             }
         }
 
-        // ── Fix comment: ON DELETE CASCADE on FKs ────────────────────────────
+
         if (tableNames.has('comment')) {
             const { sql } = db.prepare(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='comment'"
@@ -255,7 +256,7 @@ function runMigrations() {
             }
         }
 
-        // ── Fix post: ON DELETE CASCADE + latitude/longitude columns ─────────
+
         if (tableNames.has('post')) {
             const { sql } = db.prepare(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='post'"
@@ -266,7 +267,7 @@ function runMigrations() {
             const needsLatLng = !postColNames.has('latitude') || !postColNames.has('longitude');
 
             if (needsCascade) {
-                // Recreate table; bake in lat/lng regardless so schema is always correct
+
                 db.exec(`PRAGMA foreign_keys = OFF`);
                 db.exec(`
                     CREATE TABLE post_new (
@@ -306,7 +307,7 @@ function runMigrations() {
             }
         }
 
-        // ── Add tables missing from prod ──────────────────────────────────────
+
 
         db.exec(`
             CREATE TABLE IF NOT EXISTS post_upvote (
@@ -332,16 +333,10 @@ function runMigrations() {
             );
         `);
 
-        // ── Extend itinerary for My Trips / drafts (Stage 3) ─────────────────
-        // Older prod DBs created the table without title/isPublic. Add them and
-        // backfill: every pre-existing row was created via /api/share, i.e. a
-        // public shared snapshot, so mark those public.
+
         if (tableNames.has('itinerary')) {
             const itinCols = db.prepare("PRAGMA table_info(itinerary)").all() as { name: string }[];
             const itinColNames = new Set(itinCols.map(c => c.name));
-            // Very old itinerary tables predate creatorID entirely; without it every
-            // My-Trips / save / carbon-stats / leaderboard query throws and the
-            // idx_itinerary_creator index can't be created.
             if (!itinColNames.has('creatorID')) {
                 db.exec(`ALTER TABLE itinerary ADD COLUMN creatorID INTEGER`);
                 console.log("Migrated: added itinerary.creatorID");
@@ -355,7 +350,7 @@ function runMigrations() {
                 db.exec(`UPDATE itinerary SET isPublic = 1`);
                 console.log("Migrated: added itinerary.isPublic (backfilled existing rows as public)");
             }
-            // Stage 4: per-trip carbon for the sustainability dashboard.
+
             if (!itinColNames.has('carbonKg')) {
                 db.exec(`ALTER TABLE itinerary ADD COLUMN carbonKg REAL`);
                 console.log("Migrated: added itinerary.carbonKg");
@@ -450,9 +445,7 @@ function runMigrations() {
     }
 }
 
-// Default eco-challenges. Idempotent: keyed by the UNIQUE `code`, so re-running
-// on every startup never duplicates. Keep in sync with the seed block in
-// database/create.sql (used by the test harness).
+
 function seedChallenges() {
     const defaults: [string, string, string, string, number, string][] = [
         ['eco_explorer', 'Eco Explorer', 'Plan 5 low-carbon trips', 'trips_saved', 5, '🌍'],
@@ -472,34 +465,34 @@ function seedChallenges() {
 function createIndexes() {
     try {
         const indexStatements = [
-            { table: 'pin',              sql: 'CREATE INDEX IF NOT EXISTS idx_pin_creatorID ON pin(creatorID)' },
-            { table: 'pin',              sql: 'CREATE INDEX IF NOT EXISTS idx_pin_createdAt ON pin(createdAt)' },
-            { table: 'pin',              sql: 'CREATE INDEX IF NOT EXISTS idx_pin_coordinates ON pin(latitude, longitude)' },
-            { table: 'pin',              sql: 'CREATE INDEX IF NOT EXISTS idx_pin_title ON pin(title)' },
-            { table: 'pin',              sql: 'CREATE INDEX IF NOT EXISTS idx_pin_tags ON pin(tags)' },
-            { table: 'comment',          sql: 'CREATE INDEX IF NOT EXISTS idx_comment_pinID ON comment(pinID)' },
-            { table: 'comment',          sql: 'CREATE INDEX IF NOT EXISTS idx_comment_accountID ON comment(accountID)' },
-            { table: 'likes',            sql: 'CREATE INDEX IF NOT EXISTS idx_likes_pinID ON likes(pinID)' },
-            { table: 'likes',            sql: 'CREATE INDEX IF NOT EXISTS idx_likes_accountID ON likes(accountID)' },
-            { table: 'post',             sql: 'CREATE INDEX IF NOT EXISTS idx_post_creatorID ON post(creatorID)' },
-            { table: 'post',             sql: 'CREATE INDEX IF NOT EXISTS idx_post_coords ON post(latitude, longitude)' },
-            { table: 'post',             sql: 'CREATE INDEX IF NOT EXISTS idx_post_title ON post(title)' },
-            { table: 'post',             sql: 'CREATE INDEX IF NOT EXISTS idx_post_tags ON post(tags)' },
-            { table: 'post_upvote',      sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_postID ON post_upvote(postID)' },
-            { table: 'post_upvote',      sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID)' },
-            { table: 'account',          sql: 'CREATE INDEX IF NOT EXISTS idx_account_email ON account(email)' },
-            { table: 'pin_status',       sql: 'CREATE INDEX IF NOT EXISTS idx_pin_status_accountID ON pin_status(accountID)' },
-            { table: 'search_history',   sql: 'CREATE INDEX IF NOT EXISTS idx_search_history_user_time ON search_history(accountID, createdAt DESC)' },
-            { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_follower ON user_follow(followerID)' },
-            { table: 'user_follow',      sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
-            { table: 'notification',     sql: 'CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC)' },
-            { table: 'itinerary',        sql: 'CREATE INDEX IF NOT EXISTS idx_itinerary_creator ON itinerary(creatorID, createdAt DESC)' },
+            { table: 'pin',                sql: 'CREATE INDEX IF NOT EXISTS idx_pin_creatorID ON pin(creatorID)' },
+            { table: 'pin',                sql: 'CREATE INDEX IF NOT EXISTS idx_pin_createdAt ON pin(createdAt)' },
+            { table: 'pin',                sql: 'CREATE INDEX IF NOT EXISTS idx_pin_coordinates ON pin(latitude, longitude)' },
+            { table: 'pin',                sql: 'CREATE INDEX IF NOT EXISTS idx_pin_title ON pin(title)' },
+            { table: 'pin',                sql: 'CREATE INDEX IF NOT EXISTS idx_pin_tags ON pin(tags)' },
+            { table: 'comment',            sql: 'CREATE INDEX IF NOT EXISTS idx_comment_pinID ON comment(pinID)' },
+            { table: 'comment',            sql: 'CREATE INDEX IF NOT EXISTS idx_comment_accountID ON comment(accountID)' },
+            { table: 'likes',              sql: 'CREATE INDEX IF NOT EXISTS idx_likes_pinID ON likes(pinID)' },
+            { table: 'likes',              sql: 'CREATE INDEX IF NOT EXISTS idx_likes_accountID ON likes(accountID)' },
+            { table: 'post',               sql: 'CREATE INDEX IF NOT EXISTS idx_post_creatorID ON post(creatorID)' },
+            { table: 'post',               sql: 'CREATE INDEX IF NOT EXISTS idx_post_coords ON post(latitude, longitude)' },
+            { table: 'post',               sql: 'CREATE INDEX IF NOT EXISTS idx_post_title ON post(title)' },
+            { table: 'post',               sql: 'CREATE INDEX IF NOT EXISTS idx_post_tags ON post(tags)' },
+            { table: 'post_upvote',        sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_postID ON post_upvote(postID)' },
+            { table: 'post_upvote',        sql: 'CREATE INDEX IF NOT EXISTS idx_post_upvote_accountID ON post_upvote(accountID)' },
+            { table: 'account',            sql: 'CREATE INDEX IF NOT EXISTS idx_account_email ON account(email)' },
+            { table: 'pin_status',         sql: 'CREATE INDEX IF NOT EXISTS idx_pin_status_accountID ON pin_status(accountID)' },
+            { table: 'search_history',     sql: 'CREATE INDEX IF NOT EXISTS idx_search_history_user_time ON search_history(accountID, createdAt DESC)' },
+            { table: 'user_follow',        sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_follower ON user_follow(followerID)' },
+            { table: 'user_follow',        sql: 'CREATE INDEX IF NOT EXISTS idx_user_follow_following ON user_follow(followingID)' },
+            { table: 'notification',       sql: 'CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipientID, isRead, createdAt DESC)' },
+            { table: 'itinerary',          sql: 'CREATE INDEX IF NOT EXISTS idx_itinerary_creator ON itinerary(creatorID, createdAt DESC)' },
             { table: 'challenge_progress', sql: 'CREATE INDEX IF NOT EXISTS idx_challenge_progress_account ON challenge_progress(accountID)' },
-            { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC)' },
-            { table: 'bookmark_folder',  sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_public ON bookmark_folder(isPublic)' },
-            { table: 'bookmark',         sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC)' },
-            { table: 'comment_reaction', sql: 'CREATE INDEX IF NOT EXISTS idx_comment_reaction_comment ON comment_reaction(commentID)' },
-            { table: 'comment_reaction', sql: 'CREATE INDEX IF NOT EXISTS idx_comment_reaction_account ON comment_reaction(accountID)' },
+            { table: 'bookmark_folder',    sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_user ON bookmark_folder(accountID, createdAt DESC)' },
+            { table: 'bookmark_folder',    sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_folder_public ON bookmark_folder(isPublic)' },
+            { table: 'bookmark',           sql: 'CREATE INDEX IF NOT EXISTS idx_bookmark_user_folder ON bookmark(accountID, folderID, createdAt DESC)' },
+            { table: 'comment_reaction',   sql: 'CREATE INDEX IF NOT EXISTS idx_comment_reaction_comment ON comment_reaction(commentID)' },
+            { table: 'comment_reaction',   sql: 'CREATE INDEX IF NOT EXISTS idx_comment_reaction_account ON comment_reaction(accountID)' },
         ];
 
         const existingTables = db.prepare(

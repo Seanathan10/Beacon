@@ -21,6 +21,8 @@ export const CARBON_FACTORS = {
     BUS_URBAN: 0.089,
     BUS_COACH: 0.027,
     FERRY: 0.019,
+    CABLE_CAR: 0.020,        // aerial: cable car / gondola / funicular
+    TRANSIT_OTHER: 0.060,    // fallback for unclassified transit modes
 
     // Road
     CAR_AVERAGE: 0.21,

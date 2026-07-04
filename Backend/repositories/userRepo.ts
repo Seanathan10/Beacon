@@ -52,10 +52,7 @@ export function isFollowing(viewerID: number, targetID: number): boolean {
 
 /** Apply a partial update to an account. Column names come from trusted callers. */
 export function updateAccount(userID: number, fields: Record<string, unknown>): void {
-    const keys = Object.keys(fields);
-    if (keys.length === 0) return;
-    const setClause = keys.map((k) => `${k} = ?`).join(", ");
-    db.query(`UPDATE account SET ${setClause} WHERE id = ?`, [...keys.map((k) => fields[k]), userID]);
+    db.updateById("account", fields, "id", userID);
 }
 
 /** The editable profile fields for an account (used after updateMe). */

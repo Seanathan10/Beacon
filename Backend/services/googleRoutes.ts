@@ -4,6 +4,7 @@
  */
 
 import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+import { CARBON_FACTORS, calculateCarCarbon } from "../utils/carbon";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
@@ -68,18 +69,19 @@ export interface TransitResult {
 }
 
 /**
- * Carbon estimates per passenger-km by mode (kg CO2)
+ * Google Routes transit `vehicle.type` → carbon factor (kg CO2/passenger-km),
+ * sourced from the single CARBON_FACTORS table in utils/carbon.
  */
 const CARBON_PER_KM: Record<string, number> = {
-    RAIL: 0.041,
-    SUBWAY: 0.029,
-    TRAM: 0.029,
-    BUS: 0.089,
-    FERRY: 0.019,
-    CABLE_CAR: 0.020,
-    GONDOLA: 0.020,
-    FUNICULAR: 0.020,
-    OTHER: 0.060,
+    RAIL: CARBON_FACTORS.TRAIN_ELECTRIC,
+    SUBWAY: CARBON_FACTORS.SUBWAY,
+    TRAM: CARBON_FACTORS.TRAM,
+    BUS: CARBON_FACTORS.BUS_URBAN,
+    FERRY: CARBON_FACTORS.FERRY,
+    CABLE_CAR: CARBON_FACTORS.CABLE_CAR,
+    GONDOLA: CARBON_FACTORS.CABLE_CAR,
+    FUNICULAR: CARBON_FACTORS.CABLE_CAR,
+    OTHER: CARBON_FACTORS.TRANSIT_OTHER,
 };
 
 function estimateTransitCarbon(distanceKm: number, mode: string): number {
@@ -162,18 +164,6 @@ export async function searchTransit(
 
     const data = await response.json();
     const routes: Route[] = data.routes || [];
-
-    // Avoid logging origin/destination coordinates (user location) to server logs.
-    console.log("[searchTransit] API Response:", {
-        routeCount: routes.length,
-        firstRouteInfo: routes[0] ? {
-            duration: routes[0].duration,
-            distanceMeters: routes[0].distanceMeters,
-            hasPolyline: !!routes[0].polyline?.encodedPolyline,
-            legCount: routes[0].legs?.length,
-            stepCount: routes[0].legs?.[0]?.steps?.length,
-        } : "No routes returned",
-    });
 
     return routes.map((route) => {
         const durationSeconds = parseDuration(route.duration);
@@ -293,8 +283,7 @@ export async function searchDriving(
     const distanceKm = route.distanceMeters / 1000;
     const durationSeconds = parseDuration(route.duration);
 
-    // Average car: ~0.21 kg CO2/km
-    const carbonEstimateKg = Math.round(distanceKm * 0.21 * 100) / 100;
+    const carbonEstimateKg = calculateCarCarbon(distanceKm);
 
     return {
         distanceKm: Math.round(distanceKm * 10) / 10,

@@ -5,14 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import '../components/styles/TripPlanner.css';
 import * as tripsApi from '@/services/trips';
 import ShareMenu from '../components/ShareMenu';
-
-// The stored itinerary blob: a partial TripPlanResult under `settings` plus the
-// raw itinerary text.
-type StoredTrip = {
-    itinerary: TripPlanResult["itinerary"];
-    itineraryType?: string;
-    settings?: Partial<TripPlanResult>;
-};
+import { toTripPlanResult, type StoredTrip } from '@/lib/trip';
 
 export default function SharedItinerary() {
     const { id } = useParams();
@@ -25,30 +18,7 @@ export default function SharedItinerary() {
         const fetchItinerary = async () => {
             try {
                 const data = await tripsApi.getSharedTrip<StoredTrip>(id!);
-
-                // Transform backend data to TripPlanResult structure
-                // The backend stores: { itinerary, itineraryType, settings }
-                const tripResult: TripPlanResult = {
-                    itinerary: data.itinerary,
-                    itineraryType: data.itineraryType || 'Adventure',
-                    origin: data.settings?.origin || 'Unknown',
-                    destination: data.settings?.destination || 'Unknown',
-                    durationDays: data.settings?.durationDays || 7,
-                    transitOptions: data.settings?.transitOptions || [],
-                    ecoHotels: data.settings?.ecoHotels || [],
-                    localPins: data.settings?.localPins || [],
-                    carbonStats: data.settings?.carbonStats || {
-                        bestOption: { mode: 'unknown', carbonKg: 0 },
-                        worstOption: { mode: 'unknown', carbonKg: 0 },
-                        typicalTouristKg: 0,
-                        savingsVsTypical: 0,
-                        offsetCostUsd: 0
-                    },
-                    originCoords: data.settings?.originCoords,
-                    destCoords: data.settings?.destCoords,
-                    routePolylines: data.settings?.routePolylines || [],
-                };
-                setItineraryData(tripResult);
+                setItineraryData(toTripPlanResult(data));
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Unknown error');
             } finally {
