@@ -1,14 +1,11 @@
 import { Request, Response } from "express";
 import * as searchRepo from "../repositories/searchRepo";
+import { stripHtml } from "../utils/sanitize";
 
 const MAX_QUERY_LENGTH = 200;
 const MAX_HISTORY_PER_USER = 50;
 const DEFAULT_CONTENT_LIMIT = 5;
 const MAX_CONTENT_LIMIT = 20;
-
-function stripHtml(str: string): string {
-    return str.replace(/<[^>]*>/g, '');
-}
 
 function parseContentSearch(req: Request): { query: string; like: string; prefix: string; limit: number } | null {
     const raw = req.query.q;

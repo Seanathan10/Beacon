@@ -6,15 +6,7 @@ import '../components/styles/TripPlanner.css';
 import * as tripsApi from '@/services/trips';
 import { ApiError } from '@/lib/api';
 import ShareMenu from '../components/ShareMenu';
-
-// The stored itinerary blob: a partial TripPlanResult under `settings` plus the
-// raw itinerary text and publish flag.
-type StoredTrip = {
-    itinerary: TripPlanResult["itinerary"];
-    itineraryType?: string;
-    isPublic?: boolean;
-    settings?: Partial<TripPlanResult>;
-};
+import { toTripPlanResult, type StoredTrip } from '@/lib/trip';
 
 /**
  * Owner-scoped read view of a saved trip. Unlike SharedItinerary (which loads
@@ -34,30 +26,8 @@ export default function MyTripView() {
         const fetchTrip = async () => {
             try {
                 const data = await tripsApi.getMyTrip<StoredTrip>(id!);
-
-                // Backend stores { itinerary, itineraryType, settings }; flatten to TripPlanResult.
-                const tripResult: TripPlanResult = {
-                    itinerary: data.itinerary,
-                    itineraryType: data.itineraryType || 'Adventure',
-                    origin: data.settings?.origin || 'Unknown',
-                    destination: data.settings?.destination || 'Unknown',
-                    durationDays: data.settings?.durationDays || 7,
-                    transitOptions: data.settings?.transitOptions || [],
-                    ecoHotels: data.settings?.ecoHotels || [],
-                    localPins: data.settings?.localPins || [],
-                    carbonStats: data.settings?.carbonStats || {
-                        bestOption: { mode: 'unknown', carbonKg: 0 },
-                        worstOption: { mode: 'unknown', carbonKg: 0 },
-                        typicalTouristKg: 0,
-                        savingsVsTypical: 0,
-                        offsetCostUsd: 0
-                    },
-                    originCoords: data.settings?.originCoords,
-                    destCoords: data.settings?.destCoords,
-                    routePolylines: data.settings?.routePolylines || [],
-                };
                 setIsPublic(!!data.isPublic);
-                setItineraryData(tripResult);
+                setItineraryData(toTripPlanResult(data));
             } catch (err) {
                 if (err instanceof ApiError && err.status === 401) { navigate('/'); return; }
                 setError(err instanceof Error ? err.message : 'Unknown error');

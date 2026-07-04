@@ -65,9 +65,7 @@ export function findFolderOwner(id: string): { accountID: number } | undefined {
 
 /** Apply a partial update to a folder. Column names come from trusted callers. */
 export function updateFolder(id: string, fields: Record<string, unknown>): { changes: number } {
-    const keys = Object.keys(fields);
-    const setClause = keys.map((k) => `${k} = ?`).join(", ");
-    return db.query(`UPDATE bookmark_folder SET ${setClause} WHERE id = ?`, [...keys.map((k) => fields[k]), id]);
+    return db.updateById("bookmark_folder", fields, "id", id);
 }
 
 /** A folder by id regardless of owner (used to check public visibility), or undefined. */

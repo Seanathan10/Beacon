@@ -79,10 +79,7 @@ export function insert(post: NewPost): any {
 
 /** Apply a partial update. Column names come only from trusted call sites. */
 export function update(postID: string | number, fields: Record<string, unknown>): void {
-    const keys = Object.keys(fields);
-    if (keys.length === 0) return;
-    const setClause = keys.map((k) => `${k} = ?`).join(", ");
-    db.query(`UPDATE post SET ${setClause} WHERE id = ?`, [...keys.map((k) => fields[k]), postID]);
+    db.updateById("post", fields, "id", postID);
 }
 
 /** Delete a post; returns the run result (has `.changes`). */

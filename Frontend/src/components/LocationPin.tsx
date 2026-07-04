@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import * as likesApi from "@/services/likes";
 import * as pinStatusApi from "@/services/pinStatus";
+import { getSavedPins, setSavedPins } from "@/lib/savedPins";
 import { SelectedPoint } from "@/pages/Home";
 import { useEffect, useState } from "react";
 
@@ -132,10 +133,10 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 
 	useEffect(() => {
 		// Check if pin is bookmarked
-		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
+		const saved = getSavedPins();
 		const email = userEmail;
 		const userSavedPins = saved[email] || [];
-		const bookmarked = userSavedPins.includes(selectedPoint.id);
+		const bookmarked = userSavedPins.includes(selectedPoint.id!);
 
 		// Fetch likes, then update all state in callbacks
 		likesApi.getLikes(selectedPoint.id!)
@@ -189,7 +190,7 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 	};
 
 	const toggleBookmark = () => {
-		const saved = (() => { try { return JSON.parse(localStorage.getItem("savedPins") ?? '{}'); } catch { return {}; } })();
+		const saved = getSavedPins();
 		const email = userEmail;
 		const newSavedState = !isBookmarked;
 		setIsBookmarked(newSavedState);
@@ -199,14 +200,14 @@ export default function LocationPin({ selectedPoint, setSelectedPoint, onShowDet
 		}
 
 		if (newSavedState) {
-			if (!saved[email].includes(selectedPoint.id)) {
-				saved[email].push(selectedPoint.id);
+			if (!saved[email].includes(selectedPoint.id!)) {
+				saved[email].push(selectedPoint.id!);
 			}
 		} else {
 			saved[email] = saved[email].filter((id: number) => id !== selectedPoint.id);
 		}
 
-		localStorage.setItem("savedPins", JSON.stringify(saved));
+		setSavedPins(saved);
 		onBookmarkChange?.(selectedPoint.id!, newSavedState);
 	};
 

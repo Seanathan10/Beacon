@@ -55,6 +55,7 @@ import * as pinsApi from "@/services/pins";
 import * as authApi from "@/services/auth";
 
 import { ApiError } from "@/lib/api";
+import { getSavedPins } from "@/lib/savedPins";
 
 import { GeoJSON } from "../types/express/index";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -395,15 +396,7 @@ function HomePage() {
 				setAllPins(geojson);
 
 				if (isLoggedIn) {
-					const savedPinsData = (() => {
-						try {
-							return JSON.parse(
-								localStorage.getItem("savedPins") || "{}",
-							);
-						} catch {
-							return {};
-						}
-					})();
+					const savedPinsData = getSavedPins();
 
 					const email = userEmail;
 					const savedPinIDs = (email && savedPinsData[email]) || [];
@@ -1172,22 +1165,13 @@ function HomePage() {
 								);
 							}}
 							onBookmarkChange={(_pinId, _isBookmarked) => {
-								const savedPins = (() => {
-									try {
-										return JSON.parse(
-											localStorage.getItem("savedPins") ||
-												"{}",
-										);
-									} catch {
-										return {};
-									}
-								})();
+								const savedPins = getSavedPins();
 								const email = userEmail;
 								const savedPinIDs = savedPins[email] || [];
 
 								const saved = allPins.features
 									.filter((f) =>
-										savedPinIDs.includes(f.properties.id),
+										savedPinIDs.includes(f.properties.id!),
 									)
 									.map((f) => ({
 										id: f.properties.id,

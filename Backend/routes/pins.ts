@@ -1,22 +1,13 @@
 import { Request, Response } from "express";
 import * as pinRepo from "../repositories/pinRepo";
 import { logError } from "../utils/logger";
-import { stripHtml } from "../utils/sanitize";
+import { stripHtml, isValidUrl } from "../utils/sanitize";
 import { isOwner } from "../utils/ownership";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_TAGS_LENGTH = 200;
-
-function isValidUrl(url: string): boolean {
-    try {
-        const urlObj = new URL(url);
-        return ['http:', 'https:'].includes(urlObj.protocol);
-    } catch {
-        return false;
-    }
-}
 
 export function splitTags(tags: string | null): string[] {
     if (!tags) return [];

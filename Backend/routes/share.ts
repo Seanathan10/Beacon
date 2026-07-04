@@ -6,34 +6,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { check } from './auth.ts';
 import { logError } from '../utils/logger';
 import { isOwner } from '../utils/ownership';
+import { sanitizeDeep } from '../utils/sanitize';
 import { deriveTripCarbon } from '../utils/tripCarbon';
 
 export const shareRouter = express.Router();
 
 const MAX_SHARE_PAYLOAD_BYTES = 512 * 1024; // 512 KB
-
-/**
- * Recursively strip HTML tags from every string in an AI-generated payload before
- * persisting it. The itinerary blob comes from Gemini and is later rendered on the
- * client; stripping tags here removes any injected <script>/HTML as a stored-XSS
- * defense regardless of how the frontend renders it.
- */
-function sanitizeDeep(value: unknown): unknown {
-    if (typeof value === 'string') {
-        return value.replace(/<[^>]*>/g, '');
-    }
-    if (Array.isArray(value)) {
-        return value.map(sanitizeDeep);
-    }
-    if (value && typeof value === 'object') {
-        const out: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(value)) {
-            out[k] = sanitizeDeep(v);
-        }
-        return out;
-    }
-    return value;
-}
 
 shareRouter.post('/', (req, res) => {
     try {

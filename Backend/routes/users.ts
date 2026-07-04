@@ -2,15 +2,7 @@ import { Request, Response } from "express";
 import * as userRepo from "../repositories/userRepo";
 import * as pinRepo from "../repositories/pinRepo";
 import { canViewProfile } from "../utils/visibility";
-
-function isValidUrl(url: string): boolean {
-    try {
-        const urlObj = new URL(url);
-        return ['http:', 'https:'].includes(urlObj.protocol);
-    } catch {
-        return false;
-    }
-}
+import { isValidUrl } from "../utils/sanitize";
 
 const MAX_PAGE = 10_000; // cap pagination so a huge `page` can't force a giant OFFSET scan
 

@@ -7,8 +7,6 @@ import { api } from "@/lib/api";
  * JSON, not a stream).
  */
 
-export const getMyTrips = <T = unknown>(cursor?: number | null) =>
-    api.get<T>(`/api/me/trips${cursor ? `?cursor=${cursor}` : ""}`);
 export const getMyTrip = <T = unknown>(id: string) => api.get<T>(`/api/me/trips/${id}`);
 export const getCarbonStats = <T = unknown>(opts?: RequestInit) => api.get<T>("/api/me/carbon-stats", opts);
 
@@ -21,6 +19,5 @@ export const saveTrip = <T = { id: string }>(body: Record<string, unknown>) => a
 // Sharing (published, immutable snapshots)
 export const shareTrip = <T = { id: string }>(body: Record<string, unknown>) => api.post<T>("/api/share", body);
 export const getSharedTrip = <T = unknown>(id: string) => api.get<T>(`/api/share/${id}`);
-export const deleteSharedTrip = (id: string) => api.delete(`/api/share/${id}`);
 export const getPublicCollection = <T = unknown>(folderID: string) =>
     api.get<T>(`/api/share/collection/${folderID}`);

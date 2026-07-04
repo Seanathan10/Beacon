@@ -6,6 +6,15 @@ export function stripHtml(str: string): string {
     return str.replace(/<[^>]*>/g, "");
 }
 
+/** True if `url` is a valid http(s) URL. */
+export function isValidUrl(url: string): boolean {
+    try {
+        return ["http:", "https:"].includes(new URL(url).protocol);
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Recursively strip HTML tags from every string in a nested value (object,
  * array, or primitive) before persisting it. Used for AI-generated itinerary
