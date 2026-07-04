@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
+import * as pinRepo from "../repositories/pinRepo";
 import { logError } from "../utils/logger";
-import { visibilityFilter } from "../utils/visibility";
 import { stripHtml } from "../utils/sanitize";
+import { isOwner } from "../utils/ownership";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
@@ -50,76 +50,18 @@ export function getAllPins(req: Request, res: Response) {
         return res.status(401).json({ error: "Authentication required for bookmarkStatus filter" });
     }
 
-    // Build WHERE clause dynamically; params[0] is always userID for the userStatus subquery
-    const conditions: string[] = [];
-    const params: any[] = [userID];
-
-    if (tags.length > 0) {
-        conditions.push(`(${tags.map(() => "p.tags LIKE ?").join(" OR ")})`);
-        tags.forEach(t => params.push(`%${t}%`));
-    }
-
-    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    if (minDate && DATE_RE.test(minDate)) {
-        conditions.push("p.createdAt >= ?");
-        params.push(minDate);
-    }
-    if (maxDate && DATE_RE.test(maxDate)) {
-        conditions.push("p.createdAt <= ?");
-        params.push(maxDate + " 23:59:59");
-    }
-
-    if (creatorID !== null) {
-        conditions.push("p.creatorID = ?");
-        params.push(creatorID);
-    }
-
-    if (bookmarkStatus === 'bookmarked') {
-        conditions.push("EXISTS (SELECT 1 FROM bookmark WHERE pinID = p.id AND accountID = ?)");
-        params.push(userID);
-    } else if (bookmarkStatus === 'visited' || bookmarkStatus === 'wishlist') {
-        conditions.push("EXISTS (SELECT 1 FROM pin_status WHERE pinID = p.id AND accountID = ? AND status = ?)");
-        params.push(userID, bookmarkStatus);
-    }
-
-    // Only return pins whose creator's profileVisibility allows this viewer.
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    conditions.push(vis.sql);
-    params.push(...vis.params);
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-    let sql = `
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        ${whereClause}
-    `;
-
-    // Wrap in outer query to filter by the computed likes count (minRating / maxRating)
-    const validMin = minRating !== null && !isNaN(minRating);
-    const validMax = maxRating !== null && !isNaN(maxRating);
-    if (validMin || validMax) {
-        const ratingConds: string[] = [];
-        if (validMin) { ratingConds.push("likes >= ?"); params.push(minRating); }
-        if (validMax) { ratingConds.push("likes <= ?"); params.push(maxRating); }
-        sql = `SELECT * FROM (${sql}) WHERE ${ratingConds.join(" AND ")}`;
-    }
-
-    const results: any[] = db.query(sql, params);
+    // Data access (dynamic WHERE building + SQL) lives in the repository; the
+    // controller only parses the request and does the JS distance sort below.
+    const results: any[] = pinRepo.search({
+        userID,
+        tags,
+        minDate,
+        maxDate,
+        minRating,
+        maxRating,
+        bookmarkStatus,
+        creatorID,
+    });
 
     if (sort === "distance") {
         const lat = parseFloat(req.query.lat as string);
@@ -150,57 +92,17 @@ export function getTrendingPins(req: Request, res: Response) {
 
     // trendingScore = likes + 3 * max(0, 1 - age_days / days)
     // Pins outside the window still appear but with recencyScore 0.
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    const results = db.query(`
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus,
-            ((SELECT COUNT(*) FROM likes WHERE pinID = p.id)
-                + 3.0 * MAX(
-                    0.0,
-                    1.0 - (julianday('now') - julianday(p.createdAt)) / CAST(? AS REAL)
-                )
-            ) AS trendingScore
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE ${vis.sql}
-        ORDER BY trendingScore DESC, p.createdAt DESC
-        LIMIT 20;
-    `, [userID, days, ...vis.params]);
-
-    res.json(results);
+    res.json(pinRepo.findTrending(userID, days));
 }
 
 export function getUserPins(req: Request, res: Response) {
     const userID = req.user.id;
-    const results = db.query(`
-        SELECT
-            id, creatorID, latitude, longitude, title, address, description, image, likes, tags
-        FROM pin
-        WHERE creatorID = ?;`, [
-        userID,
-    ]);
-    res.json(results);
+    res.json(pinRepo.findByCreator(userID));
 }
 
 export function getPin(req: Request, res: Response) {
-    const pinID = req.params.id;
-    const results = db.query(`
-        SELECT
-            id, creatorID, latitude, longitude, title, address, description, image, likes, tags
-        FROM pin
-        WHERE id = ?`, [pinID]);
+    const pinID = String(req.params.id);
+    const results = pinRepo.findById(pinID);
     if (results.length === 0) {
         return res.status(404).json({ message: "Pin not found" });
     }
@@ -256,24 +158,18 @@ export function createPin(req: Request, res: Response) {
     }
 
     try {
-        const results = db.query(`
-		INSERT INTO pin(creatorID, latitude, longitude, title, address, description, image, tags, likes)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, 0)
-		RETURNING id;
-	`,
-            [
-                req.user.id,
-                lat,
-                lng,
-                title,
-                address,
-                descriptionStr,
-                image,
-                tags,
-            ],
-        );
+        const created = pinRepo.insert({
+            creatorID: req.user.id,
+            latitude: lat,
+            longitude: lng,
+            title,
+            address,
+            description: descriptionStr,
+            image,
+            tags,
+        });
 
-        res.status(201).json(results[0]);
+        res.status(201).json(created);
     } catch (e) {
         logError(req, 'Create Pin Error', e);
         res.status(400).json({ error: "Failed to create pin" });
@@ -281,28 +177,23 @@ export function createPin(req: Request, res: Response) {
 }
 
 export function updatePin(req: Request, res: Response) {
-    const pinID = req.params.id;
+    const pinID = String(req.params.id);
     const userID = req.user.id;
     const { title, address, description, image } = req.body;
 
-    const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0) {
-        return res.status(404).json({ message: "Pin not found" });
-    }
-    if (Number(pinResult[0].creatorID) !== Number(userID)) {
+    const owner = pinRepo.findOwner(pinID);
+    if (!owner || !isOwner(owner.creatorID, userID)) {
         return res.status(404).json({ message: "Pin not found" });
     }
 
-    const updates: string[] = [];
-    const params: any[] = [];
+    const fields: Record<string, unknown> = {};
 
     if (description !== undefined) {
         const descStr = stripHtml(String(description).trim());
         if (descStr.length > MAX_DESCRIPTION_LENGTH) {
             return res.status(400).json({ error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less` });
         }
-        updates.push("description");
-        params.push(descStr);
+        fields.description = descStr;
     }
 
     if (title !== undefined) {
@@ -310,8 +201,7 @@ export function updatePin(req: Request, res: Response) {
         if (titleStr.length > MAX_TITLE_LENGTH) {
             return res.status(400).json({ error: `Title must be ${MAX_TITLE_LENGTH} characters or less` });
         }
-        updates.push("title");
-        params.push(titleStr);
+        fields.title = titleStr;
     }
 
     if (image !== undefined) {
@@ -320,11 +210,9 @@ export function updatePin(req: Request, res: Response) {
             if (!isValidUrl(imageStr)) {
                 return res.status(400).json({ error: "Invalid image URL" });
             }
-            updates.push("image");
-            params.push(imageStr);
+            fields.image = imageStr;
         } else {
-            updates.push("image");
-            params.push(null);
+            fields.image = null;
         }
     }
 
@@ -333,22 +221,12 @@ export function updatePin(req: Request, res: Response) {
         if (addressStr.length > MAX_ADDRESS_LENGTH) {
             return res.status(400).json({ error: `Address must be ${MAX_ADDRESS_LENGTH} characters or less` });
         }
-        updates.push("address");
-        params.push(addressStr);
+        fields.address = addressStr;
     }
 
-    if (updates.length > 0) {
-        const updateClauses = updates.map((field) => `${field} = ?`).join(', ');
-        params.push(pinID);
-        const sql = `UPDATE pin SET ${updateClauses} WHERE id = ?`;
-        db.query(sql, params);
-    }
+    pinRepo.update(pinID, fields);
 
-    const updatedPin = db.query(`
-        SELECT
-            id, creatorID, latitude, longitude, title, address, description, image, likes, tags
-        FROM pin
-        WHERE id = ?`, [pinID])[0];
+    const updatedPin = pinRepo.findById(pinID)[0];
 
     if (!updatedPin) {
         return res.status(404).json({ message: "Pin not found" });
@@ -358,18 +236,15 @@ export function updatePin(req: Request, res: Response) {
 }
 
 export function deletePin(req: Request, res: Response) {
-    const pinID = req.params.id;
+    const pinID = String(req.params.id);
     const userID = req.user.id;
 
-    const pinResult = db.query("SELECT creatorID FROM pin WHERE id = ?", [pinID]);
-    if (pinResult.length === 0) {
-        return res.status(404).send();
-    }
-    if (Number(pinResult[0].creatorID) !== Number(userID)) {
+    const owner = pinRepo.findOwner(pinID);
+    if (!owner || !isOwner(owner.creatorID, userID)) {
         return res.status(404).send();
     }
 
-    const result = db.query("DELETE FROM pin WHERE id = ?", [pinID]);
+    const result = pinRepo.deleteById(pinID);
     if (result.changes === 0) {
         return res.status(404).send();
     }
@@ -398,32 +273,14 @@ function distBetweenCoordinates(lat1: number, lon1: number, lat2: number, lon2: 
 }
 
 export function getSimilarPins(req: Request, res: Response) {
-    const pinID = req.params.id;
+    const pinID = String(req.params.id);
     const userID = req.user?.id ?? null;
 
-    const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID])[0];
-    if (!pin) return res.status(404).json({ message: "Pin not found" });
+    if (!pinRepo.existsById(pinID)) return res.status(404).json({ message: "Pin not found" });
 
     // Find pins that users who liked this pin also liked, respecting the
     // creator's profileVisibility (private/friends honoured for this viewer).
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
-    const results = db.query(`
-        SELECT
-            p.id, p.creatorID, a.email, p.latitude, p.longitude,
-            p.title, p.address, p.description, p.image, p.tags, p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            COUNT(*) AS sharedLikers
-        FROM likes l1
-        JOIN likes l2 ON l2.accountID = l1.accountID AND l2.pinID != ?
-        JOIN pin p ON p.id = l2.pinID
-        JOIN account a ON a.id = p.creatorID
-        WHERE l1.pinID = ? AND ${vis.sql}
-        GROUP BY p.id
-        ORDER BY sharedLikers DESC, likes DESC
-        LIMIT 10
-    `, [pinID, pinID, ...vis.params]);
-
-    res.json(results);
+    res.json(pinRepo.findSimilar(pinID, userID));
 }
 
 export function getPinsNearCoordinate(req: Request, res: Response) {
@@ -443,38 +300,13 @@ export function getPinsNearCoordinate(req: Request, res: Response) {
     // Bounding box pre-filter to avoid loading all pins into memory
     const latDelta = MAX_RADIUS_KM / 111.0;
     const lngDelta = MAX_RADIUS_KM / (111.0 * Math.cos(latitude * Math.PI / 180));
-    const vis = visibilityFilter(userID, "a", "p.creatorID");
 
-    const results: any[] = db.query(
-        `
-        SELECT
-            p.id,
-            p.creatorID,
-            COALESCE(a.email, '') AS email,
-            p.latitude,
-            p.longitude,
-            p.title,
-            p.address,
-            p.description,
-            p.image,
-            p.tags,
-            p.createdAt,
-            (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes,
-            (SELECT status FROM pin_status WHERE pinID = p.id AND accountID = ?) AS userStatus
-        FROM pin p
-        LEFT JOIN account a ON a.id = p.creatorID
-        WHERE p.latitude BETWEEN ? AND ?
-          AND p.longitude BETWEEN ? AND ?
-          AND ${vis.sql}
-        `,
-        [
-            userID,
-            latitude - latDelta,
-            latitude + latDelta,
-            longitude - lngDelta,
-            longitude + lngDelta,
-            ...vis.params,
-        ]
+    const results: any[] = pinRepo.findInBoundingBox(
+        userID,
+        latitude - latDelta,
+        latitude + latDelta,
+        longitude - lngDelta,
+        longitude + lngDelta,
     );
 
     const filtered = results

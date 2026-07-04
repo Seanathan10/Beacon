@@ -1,45 +1,25 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { PostCard, Post } from "@/components/Post";
-// import NewPostModal from "@/components/NewPostModal";
+import { PostCard, Post, mapApiPost } from "@/components/Post";
+import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import "./PostsPage.css";
-import { BASE_API_URL } from '../../constants';
 
 export function PostsPage() {
     const navigate = useNavigate();
+    const { userId: currentUserId } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const currentUserId = Number(localStorage.getItem("userId"));
 
     const fetchPosts = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${BASE_API_URL}/api/posts`, {
-                credentials: "include",
-            });
-            
-            if (response.status === 401) {
-                // navigate("/login");
-                return;
-            }
-            
-            if (!response.ok) {
-                throw new Error("Failed to fetch posts");
-            }
-            
-            const data = await response.json();
-            // Backend returns posts without comments array, so we add empty comments
-            const postsWithComments = data.map((post: Record<string, unknown>) => ({
-                ...post,
-                description: post.message,
-                address: post.location,
-                tags: Array.isArray(post.tags) ? post.tags : [],
-                comments: post.comments || [],
-            }));
-            setPosts(postsWithComments);
+            const data = await api.get<Record<string, unknown>[]>("/api/posts");
+            setPosts(data.map(mapApiPost));
         } catch (err) {
+            if (err instanceof ApiError && err.status === 401) return;
             console.error("Error fetching posts:", err);
             setError("Failed to load posts. Please try again.");
         } finally {
@@ -53,58 +33,16 @@ export function PostsPage() {
 
     const handleBackClick = () => navigate("/home");
 
-    // const handleAddPost = async (newPostData: Omit<Post, "id" | "upvotes" | "comments">) => {
-    //     try {
-    //         const token = getAuthToken();
-    //         const response = await fetch(`${BASE_API_URL}/api/posts`, {
-    //             method: "POST",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 Authorization: `Bearer ${token}`,
-    //             },
-    //             body: JSON.stringify(newPostData),
-    //         });
-
-    //         if (response.status === 401) {
-    //             navigate("/login");
-    //             return;
-    //         }
-
-    //         if (!response.ok) {
-    //             throw new Error("Failed to create post");
-    //         }
-
-    //         const createdPost = await response.json();
-    //         setPosts((prev) => [{ ...createdPost, comments: [] }, ...prev]);
-    //     } catch (err) {
-    //         console.error("Error creating post:", err);
-    //         setError("Failed to create post. Please try again.");
-    //     }
-    // };
-
     const removePost = async (id: number) => {
         try {
-            const response = await fetch(`${BASE_API_URL}/api/posts/${id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
-
-            if (response.status === 401) {
-                // navigate("/login");
-                return;
-            }
-
-            if (!response.ok && response.status !== 403) {
-                throw new Error("Failed to delete post");
-            }
-
-            if (response.status === 403) {
+            await api.delete(`/api/posts/${id}`);
+            setPosts((prev) => prev.filter((p) => p.id !== id));
+        } catch (err) {
+            if (err instanceof ApiError && err.status === 401) return;
+            if (err instanceof ApiError && err.status === 403) {
                 setError("You can only delete your own posts.");
                 return;
             }
-
-            setPosts((prev) => prev.filter((p) => p.id !== id));
-        } catch (err) {
             console.error("Error deleting post:", err);
             setError("Failed to delete post. Please try again.");
         }
@@ -112,13 +50,6 @@ export function PostsPage() {
 
     return (
         <div className="posts-page">
-            {/* {isModalOpen && (
-                <NewPostModal
-                    onClose={() => setIsModalOpen(false)}
-                    // onSubmit={handleAddPost}
-                />
-            )} */}
-
             <div className="posts-content">
                 <div className="posts-header">
                     <button className="back-button" onClick={handleBackClick}>

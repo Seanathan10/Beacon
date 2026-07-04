@@ -19,7 +19,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: "Filename is required" });
         }
 
-        // Generate unique filename with timestamp
         const uniqueFilename = `pins/${Date.now()}-${filename}`;
 
         const blob = await put(uniqueFilename, req, {

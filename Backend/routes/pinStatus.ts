@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
+import * as pinStatusRepo from "../repositories/pinStatusRepo";
+import * as pinRepo from "../repositories/pinRepo";
 import { recordChallengeEvent } from "../services/challenges";
 
 const VALID_STATUSES = new Set(["visited", "wishlist"]);
@@ -16,27 +17,16 @@ export function setPinStatus(req: Request, res: Response) {
         return res.status(400).json({ error: "Invalid status. Expected 'visited' or 'wishlist'." });
     }
 
-    const pin = db.query("SELECT id FROM pin WHERE id = ?", [pinID]);
-    if (pin.length === 0) {
+    if (!pinRepo.existsById(pinID)) {
         return res.status(404).json({ message: "Pin not found" });
     }
 
     // Capture the prior status so we only credit a challenge the first time a
     // pin actually transitions into 'visited' (toggling back and forth or
     // re-saving 'visited' must not inflate progress).
-    const prior = db.query(
-        "SELECT status FROM pin_status WHERE pinID = ? AND accountID = ?",
-        [pinID, userID],
-    )[0] as { status: string } | undefined;
+    const prior = pinStatusRepo.findStatus(pinID, userID);
 
-    db.query(
-        `INSERT INTO pin_status (pinID, accountID, status, updatedAt)
-         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-         ON CONFLICT(pinID, accountID) DO UPDATE SET
-            status = excluded.status,
-            updatedAt = CURRENT_TIMESTAMP`,
-        [pinID, userID, status],
-    );
+    pinStatusRepo.upsertStatus(pinID, userID, status);
 
     if (status === "visited" && prior?.status !== "visited") {
         recordChallengeEvent(userID, "places_visited", 1);
@@ -53,10 +43,7 @@ export function deletePinStatus(req: Request, res: Response) {
         return res.status(400).json({ error: "Invalid pin id" });
     }
 
-    const result = db.query(
-        `DELETE FROM pin_status WHERE pinID = ? AND accountID = ?`,
-        [pinID, userID],
-    );
+    const result = pinStatusRepo.deleteStatus(pinID, userID);
 
     if (!result.changes) {
         return res.status(404).json({ message: "Status not set for this pin" });
@@ -67,9 +54,5 @@ export function deletePinStatus(req: Request, res: Response) {
 
 export function getUserPinStatuses(req: Request, res: Response) {
     const userID = req.user.id;
-    const results = db.query(
-        `SELECT pinID, status, updatedAt FROM pin_status WHERE accountID = ?`,
-        [userID],
-    );
-    res.json(results);
+    res.json(pinStatusRepo.findAllForUser(userID));
 }

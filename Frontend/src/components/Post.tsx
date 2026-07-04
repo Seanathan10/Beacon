@@ -22,6 +22,21 @@ interface Comment {
     avatar?: string;
 }
 
+/**
+ * Normalise a raw post from the API into the {@link Post} shape the UI expects.
+ * The backend stores the body as `message` and the place as `location`, and does
+ * not include a comments array, so map those here rather than in each caller.
+ */
+export function mapApiPost(raw: Record<string, unknown>): Post {
+    return {
+        ...(raw as unknown as Post),
+        description: (raw.message ?? "") as string,
+        address: (raw.location ?? "") as string,
+        tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
+        comments: (Array.isArray(raw.comments) ? raw.comments : []) as Comment[],
+    };
+}
+
 interface PostProps {
     content: Post;
 }

@@ -1,0 +1,491 @@
+<title>Beacon — Architecture Briefing</title>
+<style>
+  :root {
+    --paper: #eceff0;
+    --paper-2: #f6f8f7;
+    --card: #ffffff;
+    --ink: #14202c;
+    --ink-2: #3c4a56;
+    --ink-3: #6a7883;
+    --line: #d6dcdb;
+    --line-2: #e6eae9;
+    --teal: #0d7c86;
+    --teal-deep: #0a5960;
+    --teal-wash: #e0efef;
+    --good: #2f8f5b;
+    --good-wash: #e2f0e7;
+    --warn: #b9812a;
+    --warn-wash: #f6ecd8;
+    --bad: #c0492f;
+    --bad-wash: #f6e2dc;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --maxw: 74ch;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  .bleed { width: 100%; }
+
+  /* ---- Typographic scale ---- */
+  h1, h2, h3 { line-height: 1.15; text-wrap: balance; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(2rem, 5vw, 3.1rem); letter-spacing: -0.025em; }
+  h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); letter-spacing: -0.02em; }
+  h3 { font-size: 1.12rem; }
+  p { margin: 0; }
+  a { color: var(--teal-deep); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--teal-deep);
+    font-weight: 600;
+  }
+
+  /* ---- Header ---- */
+  header {
+    background:
+      radial-gradient(1200px 500px at 82% -20%, rgba(13,124,134,0.16), transparent 60%),
+      linear-gradient(180deg, #0e1a24 0%, #132633 100%);
+    color: #eaf1f0;
+    border-bottom: 1px solid #08131a;
+    position: relative;
+    overflow: hidden;
+  }
+  header .wrap { padding-top: 68px; padding-bottom: 56px; position: relative; z-index: 2; }
+  header .eyebrow { color: #63c6cf; }
+  header h1 { color: #f4f8f7; margin: 14px 0 0; }
+  header .thesis {
+    margin-top: 20px;
+    font-size: clamp(1.05rem, 2.4vw, 1.28rem);
+    line-height: 1.5;
+    color: #c4d2d3;
+    max-width: 62ch;
+  }
+  header .thesis b { color: #eaf3f2; font-weight: 600; }
+  .beam {
+    position: absolute; top: -140px; right: -80px; width: 520px; height: 520px; z-index: 1;
+    pointer-events: none; opacity: 0.5;
+  }
+  .metaline {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px;
+  }
+  .chip {
+    font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.02em;
+    padding: 5px 11px; border-radius: 999px;
+    border: 1px solid rgba(120,180,185,0.35);
+    color: #bcd6d7; background: rgba(255,255,255,0.03);
+  }
+
+  /* ---- Section rhythm ---- */
+  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
+  section.alt { background: var(--paper-2); }
+  .lede { color: var(--ink-2); font-size: 1.05rem; max-width: 66ch; margin-top: 14px; }
+  .section-head { margin-bottom: 34px; }
+
+  /* ---- Stat tiles ---- */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  .stat {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 18px 16px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat .num {
+    font-size: 2.05rem; font-weight: 680; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .stat .num small { font-size: 1rem; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+  .stat .lbl { font-size: 0.85rem; color: var(--ink-2); line-height: 1.35; }
+  .stat .tag { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-deep); margin-top: 6px; }
+
+  /* ---- Diagram card ---- */
+  .diagram {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px; overflow-x: auto;
+  }
+  .diagram svg { display: block; min-width: 620px; width: 100%; height: auto; }
+  figcaption { font-size: 0.86rem; color: var(--ink-3); margin-top: 12px; text-align: center; }
+
+  /* ---- Scorecard ---- */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .score {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 15px 16px; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: start;
+  }
+  .score h3 { font-size: 1rem; font-weight: 620; }
+  .score p { grid-column: 1 / -1; font-size: 0.9rem; color: var(--ink-2); }
+  .pill {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+    font-weight: 600; padding: 4px 9px; border-radius: 999px; white-space: nowrap; height: fit-content;
+  }
+  .pill.good { color: var(--good); background: var(--good-wash); }
+  .pill.warn { color: var(--warn); background: var(--warn-wash); }
+  .pill.bad  { color: var(--bad);  background: var(--bad-wash); }
+
+  /* ---- Before / after ---- */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .ba .col { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .ba .col > .hd {
+    padding: 12px 18px; font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--line-2);
+  }
+  .ba .col.now > .hd { color: var(--bad); background: var(--bad-wash); }
+  .ba .col.next > .hd { color: var(--teal-deep); background: var(--teal-wash); }
+  .layer-stack { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .layer {
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+    background: var(--paper-2);
+  }
+  .layer .t { font-weight: 600; font-size: 0.95rem; }
+  .layer .d { font-size: 0.82rem; color: var(--ink-3); margin-top: 2px; }
+  .layer.fused { background: var(--bad-wash); border-color: #eccabf; }
+  .layer.clean { background: var(--good-wash); border-color: #c4e0d0; }
+  .layer.keep  { background: var(--teal-wash); border-color: #b7dadb; }
+  .arrow { text-align: center; color: var(--ink-3); font-size: 0.8rem; margin: -2px 0; }
+
+  /* ---- Roadmap rail ---- */
+  .rail { display: flex; flex-direction: column; gap: 0; }
+  .phase {
+    display: grid; grid-template-columns: 64px 1fr; gap: 18px;
+    padding: 18px 0; border-top: 1px solid var(--line);
+  }
+  .phase:first-child { border-top: none; }
+  .phase .marker {
+    font-family: var(--mono); font-weight: 700; font-size: 1.1rem;
+    color: #fff; background: var(--teal); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; height: 48px;
+    letter-spacing: 0.02em;
+  }
+  .phase.opt .marker { background: var(--ink-3); }
+  .phase .body h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .phase .risk {
+    font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; font-weight: 600;
+  }
+  .risk.low { color: var(--good); background: var(--good-wash); }
+  .risk.med { color: var(--warn); background: var(--warn-wash); }
+  .risk.high{ color: var(--bad); background: var(--bad-wash); }
+  .phase .body p { font-size: 0.92rem; color: var(--ink-2); margin-top: 5px; }
+
+  /* ---- Quick wins ---- */
+  .wins { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+  .wins li {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 15px 13px 40px; font-size: 0.92rem; position: relative; color: var(--ink-2);
+  }
+  .wins li::before {
+    content: "→"; position: absolute; left: 15px; top: 12px; color: var(--teal); font-weight: 700;
+  }
+  .wins li b { color: var(--ink); font-weight: 600; }
+
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--line-2); padding: 1px 5px; border-radius: 4px; }
+
+  footer { padding: 34px 0 48px; color: var(--ink-3); font-size: 0.86rem; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer a { font-family: var(--mono); font-size: 0.82rem; }
+
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .cards, .ba, .wins { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .beam { animation: sweep 14s ease-in-out infinite alternate; }
+    @keyframes sweep { from { transform: rotate(-8deg); opacity: 0.35; } to { transform: rotate(6deg); opacity: 0.6; } }
+  }
+</style>
+
+<header>
+  <svg class="beam" viewBox="0 0 200 200" aria-hidden="true">
+    <defs>
+      <radialGradient id="g" cx="50%" cy="12%" r="70%">
+        <stop offset="0%" stop-color="#63c6cf" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#63c6cf" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <polygon points="100,20 40,190 160,190" fill="url(#g)"/>
+    <circle cx="100" cy="26" r="7" fill="#8fe0e6"/>
+  </svg>
+  <div class="wrap">
+    <div class="eyebrow">Architecture Briefing · for the incoming maintainer</div>
+    <h1>Beacon</h1>
+    <p class="thesis">A working, security-conscious travel app with clean external integrations — but its <b>domain logic and data access are fused into controllers on the backend and into components on the frontend.</b> That fusion is the central debt. This briefing maps it and charts the way out.</p>
+    <div class="metaline">
+      <span class="chip">React 19 · Vite 7</span>
+      <span class="chip">Express 5 · TypeScript</span>
+      <span class="chip">node:sqlite</span>
+      <span class="chip">Mapbox GL</span>
+      <span class="chip">Gemini 2.0 Flash</span>
+      <span class="chip">pnpm workspaces</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">At a glance</div>
+      <h2>Where the weight sits</h2>
+      <p class="lede">Four numbers that characterise the debt. Each points at a missing layer, not a bug.</p>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="num">100<small>+</small></div>
+        <div class="lbl">inline <code>db.query()</code> calls inside route handlers</div>
+        <div class="tag">no repository layer</div>
+      </div>
+      <div class="stat">
+        <div class="num">~28</div>
+        <div class="lbl">frontend files calling <code>fetch()</code> directly</div>
+        <div class="tag">no api client</div>
+      </div>
+      <div class="stat">
+        <div class="num">1389<small> LOC</small></div>
+        <div class="lbl">largest component (<code>TripPlanner</code>); 4 files &gt; 590</div>
+        <div class="tag">god components</div>
+      </div>
+      <div class="stat">
+        <div class="num">3×</div>
+        <div class="lbl">validation sources kept in sync by hand</div>
+        <div class="tag">openapi + handler + db</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">System overview</div>
+      <h2>One SPA, one Express instance, five external services</h2>
+      <p class="lede">A static React SPA on Vercel talks to a single-instance Express backend over cookie-auth <code>/api/*</code>. The backend fans out to travel and AI providers; SQLite is embedded in-process.</p>
+    </div>
+    <figure class="diagram" style="margin:0">
+      <svg viewBox="0 0 760 300" role="img" aria-label="System overview diagram">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#6a7883"/>
+          </marker>
+          <style>
+            .box{fill:#fff;stroke:#c9d2d1;stroke-width:1.5;rx:10;}
+            .lbl{font:600 14px var(--sans, system-ui);fill:#14202c;}
+            .sub{font:11px ui-monospace,monospace;fill:#6a7883;}
+            .edge{stroke:#6a7883;stroke-width:1.5;fill:none;marker-end:url(#ah);}
+            .edge.dash{stroke-dasharray:4 4;}
+            .accent{fill:#e0efef;stroke:#0d7c86;}
+          </style>
+        </defs>
+
+        <rect class="box" x="20" y="110" width="150" height="70" rx="10"/>
+        <text class="lbl" x="95" y="140" text-anchor="middle">React SPA</text>
+        <text class="sub" x="95" y="158" text-anchor="middle">Vercel · Mapbox</text>
+
+        <rect class="box accent" x="300" y="110" width="160" height="70" rx="10"/>
+        <text class="lbl" x="380" y="140" text-anchor="middle">Express API</text>
+        <text class="sub" x="380" y="158" text-anchor="middle">api.beaconapp.live</text>
+
+        <rect class="box" x="300" y="222" width="160" height="58" rx="10"/>
+        <text class="lbl" x="380" y="248" text-anchor="middle">SQLite</text>
+        <text class="sub" x="380" y="264" text-anchor="middle">node:sqlite · in-process</text>
+
+        <rect class="box" x="560" y="30" width="180" height="52" rx="10"/>
+        <text class="lbl" x="650" y="54" text-anchor="middle">Amadeus · Google</text>
+        <text class="sub" x="650" y="70" text-anchor="middle">flights · routes · places</text>
+
+        <rect class="box" x="560" y="110" width="180" height="52" rx="10"/>
+        <text class="lbl" x="650" y="134" text-anchor="middle">Gemini 2.0 Flash</text>
+        <text class="sub" x="650" y="150" text-anchor="middle">itinerary · Q&amp;A</text>
+
+        <rect class="box" x="560" y="190" width="180" height="52" rx="10"/>
+        <text class="lbl" x="650" y="214" text-anchor="middle">Geocoding · Blob</text>
+        <text class="sub" x="650" y="230" text-anchor="middle">LocationIQ · Nominatim</text>
+
+        <path class="edge" d="M170,145 L296,145"/>
+        <text class="sub" x="235" y="138" text-anchor="middle">/api/* cookie JWT</text>
+        <path class="edge" d="M380,180 L380,218"/>
+        <path class="edge" d="M460,140 L556,60"/>
+        <path class="edge" d="M460,145 L556,136"/>
+        <path class="edge" d="M460,160 L556,210"/>
+      </svg>
+      <figcaption>Single backend instance — the in-memory rate limiter and startup migrations both assume exactly one replica.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Separation of concerns</div>
+      <h2>The scorecard</h2>
+      <p class="lede">What is soundly separated, what leaks, and what is genuinely fused. Green is preserved as-is; red is the work.</p>
+    </div>
+    <div class="cards">
+      <div class="score"><h3>API contract</h3><span class="pill good">Sound</span><p>One <code>openapi.yml</code>, validated at the edge at runtime.</p></div>
+      <div class="score"><h3>External integrations</h3><span class="pill good">Sound</span><p>Amadeus / Google / Gemini isolated behind <code>services/</code>.</p></div>
+      <div class="score"><h3>Config</h3><span class="pill good">Sound</span><p><code>constants.ts</code> + env vars; base URL &amp; map styles centralised.</p></div>
+      <div class="score"><h3>Security middleware</h3><span class="pill warn">Leaky</span><p>Correct helmet/CSRF/bcrypt/rate-limit — but all wiring + every route in one 293-line file.</p></div>
+      <div class="score"><h3>Cross-cutting utils</h3><span class="pill warn">Leaky</span><p>Real reuse (<code>carbon</code>, <code>sanitize</code>, <code>visibility</code>) — yet ownership checks &amp; tag parsing are copy-pasted.</p></div>
+      <div class="score"><h3>Validation</h3><span class="pill bad">Fused</span><p>Duplicated across OpenAPI + handler code + DB constraints.</p></div>
+      <div class="score"><h3>Business logic · backend</h3><span class="pill bad">Fused</span><p>Rules interleaved with SQL &amp; HTTP inside handlers; no service layer.</p></div>
+      <div class="score"><h3>Data access · backend</h3><span class="pill bad">Fused</span><p>100+ raw SQL calls in controllers; no repository/model.</p></div>
+      <div class="score"><h3>Data fetching · frontend</h3><span class="pill bad">Fused</span><p>Raw <code>fetch()</code> in ~28 files; auth/401/errors re-implemented each time.</p></div>
+      <div class="score"><h3>State · frontend</h3><span class="pill bad">Fused</span><p><code>localStorage</code> read everywhere; no context, no server-state cache.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The target</div>
+      <h2>Before → after, by layer</h2>
+      <p class="lede">The end-state doesn't change the stack — it inserts the two missing layers on each side so each file has one job.</p>
+    </div>
+
+    <h3 style="margin-bottom:12px">Backend</h3>
+    <div class="ba">
+      <div class="col now">
+        <div class="hd">Today · fat controller</div>
+        <div class="layer-stack">
+          <div class="layer">HTTP middleware <span class="d">helmet · CORS · CSRF · rate limit</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer fused">route handler <span class="d">parse + validate + business rules + <b>raw SQL</b></span></div>
+          <div class="arrow">↓</div>
+          <div class="layer">db.query() <span class="d">+ migrations + seed in same file</span></div>
+        </div>
+      </div>
+      <div class="col next">
+        <div class="hd">Target · layered</div>
+        <div class="layer-stack">
+          <div class="layer">controller <span class="d">parse req → call service → shape res</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer clean">service <span class="d">business rules, ownership, counters, validation</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer clean">repository <span class="d">all SQL / query builder</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer keep">db (connection) · versioned migrations</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 12px">Frontend</h3>
+    <div class="ba">
+      <div class="col now">
+        <div class="hd">Today · god component</div>
+        <div class="layer-stack">
+          <div class="layer fused">component <span class="d">fetch + reshape + logic + render</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer fused">raw fetch() <span class="d">credentials + 401 + errors, re-done ~28×</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer">localStorage <span class="d">auth read directly, no context</span></div>
+        </div>
+      </div>
+      <div class="col next">
+        <div class="hd">Target · layered</div>
+        <div class="layer-stack">
+          <div class="layer clean">feature components <span class="d">small, render-only</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer clean">query hooks <span class="d">TanStack Query: cache · dedup · invalidate</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer clean">apiClient <span class="d">one fetch wrapper, typed from openapi.yml</span></div>
+          <div class="arrow">↓</div>
+          <div class="layer keep">AuthContext <span class="d">sole owner of localStorage</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The path</div>
+      <h2>Six phases, each shippable</h2>
+      <p class="lede">Numbered by dependency order, not preference. P0 makes every later move safe; backend (P1→P2) and frontend (P3→P4) can run in parallel after it. P5 is optional and deliberately last.</p>
+    </div>
+    <div class="rail">
+      <div class="phase">
+        <div class="marker">P0</div>
+        <div class="body">
+          <h3>Safety net <span class="risk low">Low risk</span></h3>
+          <p>Tighten <code>tsconfig</code>/ESLint, add tests around code about to move, delete dead code and stray <code>.bak</code>/DB-backup files.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="marker">P1</div>
+        <div class="body">
+          <h3>Backend repositories <span class="risk low">Low risk</span></h3>
+          <p>Move raw SQL out of handlers into <code>repositories/</code> with zero behaviour change. Add a shared <code>findOwned()</code>. Pilot on <code>pins.ts</code>.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="marker">P2</div>
+        <div class="body">
+          <h3>Backend services + DTOs <span class="risk med">Med risk</span></h3>
+          <p>Extract business rules into a service layer; controllers go thin. Generate DTO types from <code>openapi.yml</code> and collapse the triple validation.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="marker">P3</div>
+        <div class="body">
+          <h3>Frontend api client + auth <span class="risk med">Med risk</span></h3>
+          <p>Add <code>apiClient.ts</code>; migrate pages off raw <code>fetch</code> one at a time. Introduce <code>AuthContext</code> as the only <code>localStorage</code> owner.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="marker">P4</div>
+        <div class="body">
+          <h3>Frontend query + decompose <span class="risk med">Med risk</span></h3>
+          <p>Adopt TanStack Query for server state; split <code>TripPlanner</code>, <code>Home</code>, <code>DetailedPinModal</code> into <code>features/*</code>.</p>
+        </div>
+      </div>
+      <div class="phase opt">
+        <div class="marker">P5</div>
+        <div class="body">
+          <h3>Data layer, optional <span class="risk high">High risk</span></h3>
+          <p>Versioned migrations replacing startup <code>ALTER</code>; evaluate Postgres + query builder and an external rate limiter — only if multi-instance/scale is needed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Start here</div>
+      <h2>Quick wins</h2>
+      <p class="lede">High value, low effort — worth doing before the structural phases.</p>
+    </div>
+    <ul class="wins">
+      <li>Delete dead code, <b><code>*.css.bak</code></b> and DB backup files committed in the tree.</li>
+      <li>Extract the copy-pasted <b>ownership check</b> into one <code>utils/ownership.ts</code>.</li>
+      <li>Add <b><code>apiClient.ts</code></b> and move the simplest 3–4 pages onto it.</li>
+      <li>Replace the positional-tuple <code>AuthHook</code> with a typed <b><code>AuthContext</code></b>.</li>
+      <li>Turn on stricter <b><code>tsconfig</code>/ESLint</b> and fix the fallout.</li>
+      <li>Fix <code>PostsPage</code>'s inline field-remap by sharing a mapper — or correcting the API shape.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Beacon architecture briefing · grounded in the source tree, not the stale <code>CLAUDE.md</code>.</span>
+    <span>Full detail: <a href="./ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="./REMEDIATION.md">REMEDIATION.md</a></span>
+  </div>
+</footer>

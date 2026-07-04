@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import "./styles/NewPinModal.css";
-import { BASE_API_URL } from '../../constants';
+import * as pinsApi from '@/services/pins';
+import { ApiError } from '@/lib/api';
 import { CategoryBadge } from "./Post";
 import { track } from "@/utils/analytics";
 
@@ -256,26 +257,15 @@ export default function NewPinModal({
                 }
             }
 
-            const response = await fetch(`${BASE_API_URL}/api/pins`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    latitude: latitude,
-                    longitude: longitude,
-                    title: title,
-                    tags: JSON.stringify(selectedTags),
-                    message: message,
-                    image: imageUrl,
-                    address: address
-                }),
+            await pinsApi.createPin({
+                latitude,
+                longitude,
+                title,
+                tags: JSON.stringify(selectedTags),
+                message,
+                image: imageUrl,
+                address,
             });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                setUploadError(err.message || err.error || "Failed to create pin. Please try again.");
-                return;
-            }
 
             track("Pin Created", { tag_count: selectedTags.length, has_image: Boolean(imageUrl) });
             onSubmit({
@@ -291,8 +281,13 @@ export default function NewPinModal({
             setImagePreview(null);
             onClose();
         } catch (error) {
-            console.error("Error creating pin:", error);
-            setUploadError("An unexpected error occurred. Please check your connection.");
+            if (error instanceof ApiError) {
+                const body = error.body as { message?: string; error?: string } | undefined;
+                setUploadError(body?.message || body?.error || "Failed to create pin. Please try again.");
+            } else {
+                console.error("Error creating pin:", error);
+                setUploadError("An unexpected error occurred. Please check your connection.");
+            }
         } finally {
             setIsUploading(false);
         }

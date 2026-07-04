@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import "./styles/SavedPlacesPanel.css";
-import { PIN_COLOR, BASE_API_URL } from "../../constants";
-import type { Bookmark, BookmarkFolder } from "../../types/bookmarks";
+import { PIN_COLOR } from "../../constants";
+import * as pinsApi from "@/services/pins";
+import * as likesApi from "@/services/likes";
+import * as bookmarksApi from "@/services/bookmarks";
+import * as pinStatusApi from "@/services/pinStatus";
+import type { Bookmark, BookmarkFolder } from "../types/bookmarks";
 
 type Tab = 'myPins' | 'bookmarked' | 'liked' | 'visited' | 'wishlist';
 
@@ -46,38 +50,23 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
             try {
                 setIsLoading(true);
                 
-                // Fetch all endpoints in parallel
-                const [myPinsRes, bookmarkedRes, likedRes, foldersRes, pinStatusRes] = await Promise.all([
-                    fetch(`${BASE_API_URL}/api/pins/user`, { credentials: "include" }),
-                    fetch(`${BASE_API_URL}/api/bookmarks`, { credentials: "include" }),
-                    fetch(`${BASE_API_URL}/api/likes/user`, { credentials: "include" }),
-                    fetch(`${BASE_API_URL}/api/bookmarks/folders`, { credentials: "include" }),
-                    fetch(`${BASE_API_URL}/api/pin-status`, { credentials: "include" })
+                // Fetch all endpoints in parallel (each falls back to null on error).
+                const [myPinsData, bookmarkedData, likedData, foldersData, statusData] = await Promise.all([
+                    pinsApi.getUserPins<Pin[]>().catch(() => null),
+                    bookmarksApi.getBookmarks().catch(() => null),
+                    likesApi.getLikedPins<Pin[]>().catch(() => null),
+                    bookmarksApi.getFolders().catch(() => null),
+                    pinStatusApi.getUserPinStatuses<PinStatus[]>().catch(() => null),
                 ]);
 
-                if (myPinsRes.ok) {
-                    const data = await myPinsRes.json();
-                    setMyPins(data);
-                }
-
-                if (bookmarkedRes.ok) {
-                    const data = await bookmarkedRes.json();
-                    setBookmarked(data);
-                }
-
-                if (likedRes.ok) {
-                    const data = await likedRes.json();
-                    setLiked(data);
-                }
-
-                if (foldersRes.ok) {
-                    const data = await foldersRes.json();
-                    setFolders(data);
-                }
+                if (myPinsData) setMyPins(myPinsData);
+                if (bookmarkedData) setBookmarked(bookmarkedData);
+                if (likedData) setLiked(likedData);
+                if (foldersData) setFolders(foldersData);
 
                 // Handle pin statuses (visited/wishlist)
-                if (pinStatusRes.ok) {
-                    const statuses: PinStatus[] = await pinStatusRes.json();
+                if (statusData) {
+                    const statuses: PinStatus[] = statusData;
                     
                     // Group statuses by type
                     const visitedPinIds = statuses
@@ -96,11 +85,8 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                     // Fetch visited pins
                     for (const pinId of visitedPinIds) {
                         try {
-                            const res = await fetch(`${BASE_API_URL}/api/pins/${pinId}`, { credentials: "include" });
-                            if (res.ok) {
-                                const pin = await res.json();
-                                visitedPins.push(pin);
-                            }
+                            const pin = await pinsApi.getPin<Pin>(pinId);
+                            visitedPins.push(pin);
                         } catch (error) {
                             console.error(`Failed to fetch visited pin ${pinId}`, error);
                         }
@@ -109,11 +95,8 @@ function SavedPlacesPanel({ mapRef }: SavedPlacesPanelProps) {
                     // Fetch wishlist pins
                     for (const pinId of wishlistPinIds) {
                         try {
-                            const res = await fetch(`${BASE_API_URL}/api/pins/${pinId}`, { credentials: "include" });
-                            if (res.ok) {
-                                const pin = await res.json();
-                                wishlistPins.push(pin);
-                            }
+                            const pin = await pinsApi.getPin<Pin>(pinId);
+                            wishlistPins.push(pin);
                         } catch (error) {
                             console.error(`Failed to fetch wishlist pin ${pinId}`, error);
                         }

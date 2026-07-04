@@ -3,285 +3,299 @@ import { NavLink, useNavigate } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { BASE_API_URL } from "../../constants";
-import { getMapBoxStyleUrl, getSystemTheme, onThemeChange } from "@/utils/theme";
-
+import * as authApi from "@/services/auth";
+import {
+	getMapBoxStyleUrl,
+	getSystemTheme,
+	onThemeChange,
+} from "@/utils/theme";
 
 function Landing() {
-    const navigate = useNavigate();
-    const mapPreviewRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<mapboxgl.Map | null>(null);
-    const [mapStyle, setMapStyle] = useState<string>(getMapBoxStyleUrl(getSystemTheme()));
+	const navigate = useNavigate();
+	const mapPreviewRef = useRef<HTMLDivElement>(null);
+	const mapRef = useRef<mapboxgl.Map | null>(null);
+	const [mapStyle, setMapStyle] = useState<string>(
+		getMapBoxStyleUrl(getSystemTheme()),
+	);
 
-    useEffect(() => {
-        const heartbeat = async () => {
-            try {
-                await fetch(`${BASE_API_URL}/heartbeat`);
-            } catch {
-                // server unreachable on initial load — non-fatal
-            }
-        };
+	useEffect(() => {
+		const heartbeat = async () => {
+			try {
+				await authApi.heartbeat();
+			} catch {
+				console.log("failed to reach server");
+			}
+		};
 
-        heartbeat();
-    }, []);
+		heartbeat();
+	}, []);
 
-    // Listen for theme changes
-    useEffect(() => {
-        const unsubscribe = onThemeChange((theme) => {
-            const newStyle = getMapBoxStyleUrl(theme);
-            setMapStyle(newStyle);
-            
-            // Update map style if map is already loaded
-            if (mapRef.current) {
-                mapRef.current.setStyle(newStyle);
-            }
-        });
-        return unsubscribe;
-    }, []);
+	useEffect(() => {
+		const unsubscribe = onThemeChange((theme) => {
+			const newStyle = getMapBoxStyleUrl(theme);
+			setMapStyle(newStyle);
 
-    useEffect(() => {
-        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-        if (!token || !mapPreviewRef.current || mapRef.current) return;
+			if (mapRef.current) {
+				mapRef.current.setStyle(newStyle);
+			}
+		});
 
-        mapboxgl.accessToken = token;
+		return unsubscribe;
+	}, []);
 
-        mapRef.current = new mapboxgl.Map({
-            container: mapPreviewRef.current,
-            style: mapStyle,
-            center: [-122, 37],
-            zoom: 9,
-            interactive: false, // Disable interactions for preview
-            attributionControl: false,
-            transformRequest: (_url, _resourceType) => {
-                if (_url.includes("events.mapbox.com")) {
-                    return { url: "" };
-                }
-                return { url: _url };
-            },
-        });
+	useEffect(() => {
+		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+		if (!token || !mapPreviewRef.current || mapRef.current) return;
 
-        // Create a hidden map to preload tiles at different zoom levels
-        const preloaderContainer = document.createElement("div");
-        preloaderContainer.style.cssText =
-            "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;";
-        document.body.appendChild(preloaderContainer);
+		mapboxgl.accessToken = token;
 
-        const preloaderMap = new mapboxgl.Map({
-            container: preloaderContainer,
-            style: mapStyle,
-            center: [-122, 37],
-            zoom: 9,
-            interactive: false,
-            attributionControl: false,
-            transformRequest: (_url, _resourceType) => {
-                if (_url.includes("events.mapbox.com")) {
-                    return { url: "" };
-                }
-                return { url: _url };
-            },
-        });
+		mapRef.current = new mapboxgl.Map({
+			container: mapPreviewRef.current,
+			style: mapStyle,
+			center: [-122, 37],
+			zoom: 9,
+			interactive: false,
+			attributionControl: false,
+			transformRequest: (_url, _resourceType) => {
+				if (_url.includes("events.mapbox.com")) {
+					return { url: "" };
+				}
+				return { url: _url };
+			},
+		});
 
-        // Preload tiles at zoom levels the user might use on Home page
-        preloaderMap.on("load", () => {
-            const zoomLevels = [7, 8, 10, 11, 12];
-            let currentIndex = 0;
+		// Create a hidden map to preload tiles at different zoom levels
+		const preloaderContainer = document.createElement("div");
 
-            const preloadNextZoom = () => {
-                if (currentIndex >= zoomLevels.length) {
-                    // Clean up preloader after all zooms are cached
-                    preloaderMap.remove();
-                    preloaderContainer.remove();
-                    return;
-                }
+		preloaderContainer.style.cssText = `
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+			pointer-events: none;
+			overflow: hidden;
+		`;
 
-                preloaderMap.setZoom(zoomLevels[currentIndex]);
-                currentIndex++;
-                preloaderMap.once("idle", () =>
-                    setTimeout(preloadNextZoom, 50),
-                );
-            };
+		document.body.appendChild(preloaderContainer);
 
-            preloaderMap.once("idle", preloadNextZoom);
-        });
+		const preloaderMap = new mapboxgl.Map({
+			container: preloaderContainer,
+			style: mapStyle,
+			center: [-122, 37],
+			zoom: 9,
+			interactive: false,
+			attributionControl: false,
+			transformRequest: (_url, _resourceType) => {
+				if (_url.includes("events.mapbox.com")) {
+					return { url: "" };
+				}
+				return { url: _url };
+			},
+		});
 
-        return () => {
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
-        };
-    }, [mapStyle]);
+		preloaderMap.on("load", () => {
+			const zoomLevels = [7, 8, 10, 11, 12];
+			let currentIndex = 0;
 
-    const handleMapPreviewClick = () => {
-        navigate("/home");
-    };
+			const preloadNextZoom = () => {
+				if (currentIndex >= zoomLevels.length) {
+					preloaderMap.remove();
+					preloaderContainer.remove();
+					return;
+				}
 
-    return (
-        <div className="landing">
-            <header className="landing__header">
-                <div className="landing__brand">
-                    <span className="landing__brand-mark">Beacon</span>
-                    <span className="landing__brand-tag">
-                        Local gems, mapped together
-                    </span>
-                </div>
-                <nav className="landing__nav">
-                    <a href="#product">About</a>
-                    <NavLink
-                        to="/home"
-                        className="button button--primary"
-                        prefetch="intent"
-                    >
-                        Open Map
-                    </NavLink>
-                </nav>
-            </header>
+				preloaderMap.setZoom(zoomLevels[currentIndex]);
+				currentIndex++;
+				preloaderMap.once("idle", () =>
+					setTimeout(preloadNextZoom, 50),
+				);
+			};
 
-            <main>
-                <section className="hero">
-                    <div className="hero__content">
-                        <svg
-                            className="hero__mark"
-                            viewBox="0 0 80 80"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <circle
-                                cx="40"
-                                cy="40"
-                                r="36"
-                                stroke="var(--color-green)"
-                                strokeWidth="2"
-                                fill="var(--color-green-bg)"
-                            />
-                            <path
-                                d="M40 20C32 20 26 28 26 36C26 48 40 60 40 60C40 60 54 48 54 36C54 28 48 20 40 20Z"
-                                fill="var(--color-green)"
-                            />
-                            <circle cx="40" cy="35" r="6" fill="var(--color-bg)" />
-                        </svg>
-                        <h1>Map the world's local gems.</h1>
-                        <p>
-                            Beacon is a community-first travel assistant. Drop
-                            pins on hidden spots, attach a photo and story, and
-                            tag places that aren’t part of the corporate rat
-                            race.
-                        </p>
-                        <div className="hero__actions">
-                            <NavLink
-                                to="/home"
-                                className="button button--primary"
-                                prefetch="intent"
-                            >
-                                Open App
-                            </NavLink>
-                        </div>
-                        <div className="hero__meta">
-                            <span>Map-first excursions</span>
-                            <span>Carbon-neutral planning</span>
-                            <span>AI-guided tours</span>
-                        </div>
-                    </div>
-                    <div className="hero__visual">
-                        <div
-                            className="map-preview-window"
-                            onClick={handleMapPreviewClick}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) =>
-                                e.key === "Enter" && handleMapPreviewClick()
-                            }
-                        >
-                            <div className="map-preview-header">
-                                <div className="map-preview-dots">
-                                    <span className="dot dot--red" />
-                                    <span className="dot dot--yellow" />
-                                    <span className="dot dot--green" />
-                                </div>
-                                <span className="map-preview-title">
-                                    Beacon Map
-                                </span>
-                                {/* <span className="map-preview-badge">Live</span> */}
-                            </div>
-                            <div
-                                className="map-preview-container"
-                                ref={mapPreviewRef}
-                            />
-                            <div className="map-preview-overlay">
-                                <div className="map-preview-cta">
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                        <path
-                                            d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
-                                    <span>Click to explore</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+			preloaderMap.once("idle", preloadNextZoom);
+		});
 
-                <section className="highlight" id="product">
-                    <div className="highlight__content">
-                        <h2>One place for every local gem you love.</h2>
-                        <p>
-                            Upload photos, add notes about ethical practices,
-                            and keep a living map of the places that deserve the
-                            spotlight.
-                        </p>
-                        <ul>
-                            <li>
-                                Share pins with friends planning a group
-                                adventure.
-                            </li>
-                            <li>
-                                Automatically label independent, community-run
-                                businesses.
-                            </li>
-                            <li>See carbon-neutral routes across the city.</li>
-                        </ul>
-                    </div>
-                    <div className="highlight__panel">
-                        <div className="highlight__panel-card">
-                            <span className="highlight__panel-label">
-                                Today’s gem
-                            </span>
-                            <h3>Harbor Street Cafe</h3>
-                            <p>
-                                Solar-powered kitchen, zero-plastic policy,
-                                locally sourced menu.
-                            </p>
-                            <div className="highlight__panel-tags">
-                                <span>Green-certified</span>
-                                <span>Family-owned</span>
-                                <span>Walkable</span>
-                            </div>
-                            <div className="highlight__panel-photo">
-                                <img
-                                    src="https://images.unsplash.com/photo-1525610553991-2bede1a236e2?auto=format&fit=crop&q=80&w=1000"
-                                    alt="Harbor Street Cafe"
-                                    loading="lazy"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </main>
+		return () => {
+			if (mapRef.current) {
+				mapRef.current.remove();
+				mapRef.current = null;
+			}
+		};
+	}, [mapStyle]);
 
-            <footer className="footer">
+	const handleMapPreviewClick = () => {
+		navigate("/home");
+	};
 
-                <p>© 2026 Beacon. All rights reserved.</p>
-            </footer>
-        </div>
-    );
+	return (
+		<div className="landing">
+			<header className="landing__header">
+				<div className="landing__brand">
+					<span className="landing__brand-mark">Beacon</span>
+					<span className="landing__brand-tag">
+						Local gems, mapped together
+					</span>
+				</div>
+				<nav className="landing__nav">
+					<a href="#product">About</a>
+					<NavLink
+						to="/home"
+						className="button button--primary"
+						prefetch="intent"
+					>
+						Open Map
+					</NavLink>
+				</nav>
+			</header>
+
+			<main>
+				<section className="hero">
+					<div className="hero__content">
+						<svg
+							className="hero__mark"
+							viewBox="0 0 80 80"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<circle
+								cx="40"
+								cy="40"
+								r="36"
+								stroke="var(--color-green)"
+								strokeWidth="2"
+								fill="var(--color-green-bg)"
+							/>
+							<path
+								d="M40 20C32 20 26 28 26 36C26 48 40 60 40 60C40 60 54 48 54 36C54 28 48 20 40 20Z"
+								fill="var(--color-green)"
+							/>
+							<circle
+								cx="40"
+								cy="35"
+								r="6"
+								fill="var(--color-bg)"
+							/>
+						</svg>
+						<h1>Map the world's local gems.</h1>
+						<p>
+							Beacon is a community-first travel assistant. Drop
+							pins on hidden spots, attach a photo and story, and
+							tag places that aren't part of the corporate rat
+							race.
+						</p>
+						<div className="hero__actions">
+							<NavLink
+								to="/home"
+								className="button button--primary"
+								prefetch="intent"
+							>
+								Open App
+							</NavLink>
+						</div>
+						<div className="hero__meta">
+							<span>Map-first excursions</span>
+							<span>Carbon-neutral planning</span>
+							<span>AI-guided tours</span>
+						</div>
+					</div>
+					<div className="hero__visual">
+						<div
+							className="map-preview-window"
+							onClick={handleMapPreviewClick}
+							role="button"
+							tabIndex={0}
+							onKeyDown={(e) =>
+								e.key === "Enter" && handleMapPreviewClick()
+							}
+						>
+							<div className="map-preview-header">
+								<div className="map-preview-dots">
+									<span className="dot dot--red" />
+									<span className="dot dot--yellow" />
+									<span className="dot dot--green" />
+								</div>
+								<span className="map-preview-title">
+									Beacon Map
+								</span>
+								<span className="map-preview-badge">Live</span>
+							</div>
+							<div
+								className="map-preview-container"
+								ref={mapPreviewRef}
+							/>
+							<div className="map-preview-overlay">
+								<div className="map-preview-cta">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<path
+											d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+									</svg>
+									<span>Click to explore</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section className="highlight" id="product">
+					<div className="highlight__content">
+						<h2>One place for every local gem you love.</h2>
+						<p>
+							Upload photos, add notes about ethical practices,
+							and keep a living map of the places that deserve the
+							spotlight.
+						</p>
+						<ul>
+							<li>
+								Share pins with friends planning a group
+								adventure.
+							</li>
+							<li>
+								Automatically label independent, community-run
+								businesses.
+							</li>
+							<li>See carbon-neutral routes across the city.</li>
+						</ul>
+					</div>
+					<div className="highlight__panel">
+						<div className="highlight__panel-card">
+							<span className="highlight__panel-label">
+								Today's gem
+							</span>
+							<h3>Harbor Street Cafe</h3>
+							<p>
+								Solar-powered kitchen, zero-plastic policy,
+								locally sourced menu.
+							</p>
+							<div className="highlight__panel-tags">
+								<span>Green-certified</span>
+								<span>Family-owned</span>
+								<span>Walkable</span>
+							</div>
+							<div className="highlight__panel-photo">
+								<img
+									src="https://images.unsplash.com/photo-1525610553991-2bede1a236e2?auto=format&fit=crop&q=80&w=1000"
+									alt="Harbor Street Cafe"
+									loading="lazy"
+								/>
+							</div>
+						</div>
+					</div>
+				</section>
+			</main>
+
+			<footer className="footer">
+				<p>© 2026 Beacon. All rights reserved.</p>
+			</footer>
+		</div>
+	);
 }
 
 export default Landing;

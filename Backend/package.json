@@ -12,6 +12,7 @@
     "test:verbose": "node scripts/run-jest.mjs --verbose",
     "dev": "tsx watch index.ts",
     "start": "tsx index.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

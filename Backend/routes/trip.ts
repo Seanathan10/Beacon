@@ -15,7 +15,7 @@ import {
     calculateFlightCarbon,
     calculateCarCarbon,
 } from "../utils/carbon";
-import * as db from "../database/db";
+import * as pinRepo from "../repositories/pinRepo";
 
 export interface TripPlanRequest {
     startLocation: string;
@@ -84,29 +84,13 @@ function getNearbyPins(lat: number, lng: number, radiusKm: number = 50, userId?:
     const lngDeg = radiusKm / (111 * Math.max(Math.cos(lat * Math.PI / 180), 0.01));
 
     // Query nearby pins, marking whether they belong to the current user
-    const results = db.query(`
-        SELECT
-            id,
-            title,
-            description,
-            latitude,
-            longitude,
-            tags,
-            image,
-            creatorID,
-            CASE WHEN creatorID = ? THEN 1 ELSE 0 END as isUserPin
-        FROM pin
-        WHERE latitude BETWEEN ? AND ?
-          AND longitude BETWEEN ? AND ?
-        ORDER BY isUserPin DESC, id ASC
-        LIMIT 30
-    `, [
+    const results = pinRepo.findNearbyForTrip(
         userId ?? -1,  // Use -1 if no userId to ensure no matches
         lat - latDeg,
         lat + latDeg,
         lng - lngDeg,
         lng + lngDeg,
-    ]);
+    );
 
     return results.map((row: any) => ({
         id: row.id,

@@ -29,4 +29,9 @@ export interface PostWithCoords {
   image: string | null;
   upvotes: number;
   createdAt: string;
+  // Optional fields some consumers read with fallbacks (not always present on
+  // the nearby-posts payload).
+  description?: string;
+  color?: string;
+  email?: string;
 }

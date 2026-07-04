@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "./styles/Sidebar.css";
 import { PIN_COLOR } from "../../constants";
+import * as usersApi from "@/services/users";
 import TripPlanner, { TripPlanResult } from "./TripPlanner";
 import QuickStatsWidget from "./QuickStatsWidget";
 import NotificationBell from "./NotificationBell";
@@ -81,8 +82,7 @@ export default function Sidebar({ mapRef, allPins, savedPlaces, isLoggedIn, isSe
 
     useEffect(() => {
         if (!isLoggedIn) return;
-        fetch(`${import.meta.env.VITE_API_BASE ?? ""}/api/me/feed`, { credentials: "include" })
-            .then(r => r.ok ? r.json() : { items: [] })
+        usersApi.getFollowFeed<{ items: Array<{ creatorID?: number; creatorName?: string; creatorEmail?: string }> }>()
             .then(data => {
                 const seen = new Set<number>();
                 const users: FollowedUser[] = [];

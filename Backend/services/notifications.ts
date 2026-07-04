@@ -5,7 +5,7 @@
  * comment, upvote). Creation must never break the originating request, so
  * `createNotification` swallows and logs its own errors rather than throwing.
  */
-import * as db from "../database/db";
+import * as notificationRepo from "../repositories/notificationRepo";
 
 export type NotificationType =
     | "pin_like"
@@ -36,11 +36,7 @@ export function createNotification(args: CreateNotificationArgs): void {
     if (recipientID === actorID) return;
 
     try {
-        db.query(
-            `INSERT INTO notification (recipientID, actorID, type, entityType, entityID)
-             VALUES (?, ?, ?, ?, ?)`,
-            [recipientID, actorID, type, entityType, entityID]
-        );
+        notificationRepo.insert(recipientID, actorID, type, entityType, entityID);
     } catch (err) {
         // Notifications are best-effort; never let a failure surface to the caller.
         console.error("Failed to create notification:", err);

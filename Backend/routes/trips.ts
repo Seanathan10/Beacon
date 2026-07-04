@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { db } from "../database/db";
+import * as itineraryRepo from "../repositories/itineraryRepo";
 import { logError } from "../utils/logger";
 import { sanitizeDeep, stripHtml } from "../utils/sanitize";
 import { deriveTripCarbon } from "../utils/tripCarbon";
 import { calculateOffsetCost } from "../utils/carbon";
+import { isOwner } from "../utils/ownership";
 import { recordChallengeEvent } from "../services/challenges";
 
 const MAX_CURSOR = Number.MAX_SAFE_INTEGER; // safely covers any realistic rowid
@@ -58,21 +59,7 @@ export function getMyTrips(req: Request, res: Response) {
     }
 
     try {
-        const rows: any[] = cursor
-            ? db.prepare(`
-                SELECT rowid AS _rowid, id, title, isPublic, data, createdAt
-                FROM itinerary
-                WHERE creatorID = ? AND rowid < ?
-                ORDER BY rowid DESC
-                LIMIT ?
-              `).all(userID, cursor, PAGE_LIMIT + 1)
-            : db.prepare(`
-                SELECT rowid AS _rowid, id, title, isPublic, data, createdAt
-                FROM itinerary
-                WHERE creatorID = ?
-                ORDER BY rowid DESC
-                LIMIT ?
-              `).all(userID, PAGE_LIMIT + 1);
+        const rows = itineraryRepo.findByCreatorPaged(userID, cursor, PAGE_LIMIT + 1);
 
         const hasMore = rows.length > PAGE_LIMIT;
         const page = rows.slice(0, PAGE_LIMIT);
@@ -102,11 +89,9 @@ export function getMyTrip(req: Request, res: Response) {
     const id = String(req.params.id);
 
     try {
-        const row = db.prepare(
-            "SELECT id, creatorID, title, data, isPublic, createdAt FROM itinerary WHERE id = ?"
-        ).get(id) as { id: string; creatorID: number | null; title: string | null; data: string; isPublic: number; createdAt: string } | undefined;
+        const row = itineraryRepo.findById(id);
 
-        if (!row || row.creatorID !== Number(userID)) {
+        if (!row || !isOwner(row.creatorID, userID)) {
             return res.status(404).json({ message: "Trip not found" });
         }
 
@@ -139,24 +124,9 @@ export function getCarbonStats(req: Request, res: Response) {
     const userID = req.user.id;
 
     try {
-        const totals = db.prepare(`
-            SELECT COUNT(*) AS tripCount,
-                   COALESCE(SUM(carbonKg), 0) AS totalCarbonKg,
-                   COALESCE(SUM(savedKg), 0) AS totalSavedKg
-            FROM itinerary
-            WHERE creatorID = ? AND carbonKg IS NOT NULL
-        `).get(userID) as { tripCount: number; totalCarbonKg: number; totalSavedKg: number };
+        const totals = itineraryRepo.getCarbonTotals(userID);
 
-        const byMonth = (db.prepare(`
-            SELECT strftime('%Y-%m', createdAt) AS month,
-                   COUNT(*) AS count,
-                   COALESCE(SUM(carbonKg), 0) AS carbonKg,
-                   COALESCE(SUM(savedKg), 0) AS savedKg
-            FROM itinerary
-            WHERE creatorID = ? AND carbonKg IS NOT NULL
-            GROUP BY month
-            ORDER BY month ASC
-        `).all(userID) as { month: string; count: number; carbonKg: number; savedKg: number }[])
+        const byMonth = itineraryRepo.getCarbonByMonth(userID)
             .map((r) => ({
                 month: r.month,
                 count: r.count,
@@ -215,28 +185,22 @@ export function saveTrip(req: Request, res: Response) {
     try {
         if (id !== undefined && id !== null) {
             const tripId = String(id);
-            const existing = db.prepare(
-                "SELECT creatorID, isPublic FROM itinerary WHERE id = ?"
-            ).get(tripId) as { creatorID: number | null; isPublic: number } | undefined;
+            const existing = itineraryRepo.findOwnerAndPublic(tripId);
 
-            if (!existing || existing.creatorID !== Number(userID)) {
+            if (!existing || !isOwner(existing.creatorID, userID)) {
                 return res.status(404).json({ message: "Trip not found" });
             }
             if (existing.isPublic === 1) {
                 return res.status(409).json({ message: "Published trips are immutable" });
             }
 
-            db.prepare(
-                "UPDATE itinerary SET title = ?, data = ?, carbonKg = ?, savedKg = ? WHERE id = ? AND creatorID = ?"
-            ).run(cleanTitle, data, carbonKg, savedKg, tripId, Number(userID));
+            itineraryRepo.updateDraft(tripId, Number(userID), cleanTitle, data, carbonKg, savedKg);
 
             return res.status(200).json({ id: tripId, isPublic: false });
         }
 
         const newId = uuidv4();
-        db.prepare(
-            "INSERT INTO itinerary (id, creatorID, title, data, isPublic, carbonKg, savedKg) VALUES (?, ?, ?, ?, 0, ?, ?)"
-        ).run(newId, Number(userID), cleanTitle, data, carbonKg, savedKg);
+        itineraryRepo.insertDraft(newId, Number(userID), cleanTitle, data, carbonKg, savedKg);
 
         // Advance eco-challenges only when a new trip is created (not on updates).
         recordChallengeEvent(Number(userID), "trips_saved", 1);

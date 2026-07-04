@@ -3,8 +3,16 @@ import { useParams } from 'react-router';
 import TripPlanner, { TripPlanResult } from '../components/TripPlanner';
 import mapboxgl from 'mapbox-gl';
 import '../components/styles/TripPlanner.css';
-import { BASE_API_URL } from '../../constants';
+import * as tripsApi from '@/services/trips';
 import ShareMenu from '../components/ShareMenu';
+
+// The stored itinerary blob: a partial TripPlanResult under `settings` plus the
+// raw itinerary text.
+type StoredTrip = {
+    itinerary: TripPlanResult["itinerary"];
+    itineraryType?: string;
+    settings?: Partial<TripPlanResult>;
+};
 
 export default function SharedItinerary() {
     const { id } = useParams();
@@ -16,9 +24,7 @@ export default function SharedItinerary() {
     useEffect(() => {
         const fetchItinerary = async () => {
             try {
-                const res = await fetch(`${BASE_API_URL}/api/share/${id}`);
-                if (!res.ok) throw new Error('Failed to load itinerary');
-                const data = await res.json();
+                const data = await tripsApi.getSharedTrip<StoredTrip>(id!);
 
                 // Transform backend data to TripPlanResult structure
                 // The backend stores: { itinerary, itineraryType, settings }

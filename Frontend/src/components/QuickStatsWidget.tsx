@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BASE_API_URL } from "../../constants";
+import * as statsApi from "@/services/stats";
 
 interface Stats {
     pinsCreated: number;
@@ -18,9 +18,8 @@ export default function QuickStatsWidget() {
     const [stats, setStats] = useState<Stats | null>(null);
 
     useEffect(() => {
-        fetch(`${BASE_API_URL}/api/me/stats`, { credentials: "include" })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data) setStats(data); })
+        statsApi.getMyStats<Stats>()
+            .then(data => setStats(data))
             .catch(() => {});
     }, []);
 

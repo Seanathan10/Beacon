@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { BASE_API_URL } from "../../constants";
+import { api, ApiError } from "@/lib/api";
 
 interface ActivityItem {
     type: "pin_created" | "comment_added" | "place_visited";
@@ -27,13 +27,11 @@ export default function ActivityPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch(`${BASE_API_URL}/api/me/activity`, { credentials: "include" })
-            .then(r => {
-                if (r.status === 401) { navigate("/"); return null; }
-                return r.ok ? r.json() : null;
+        api.get<ActivityItem[]>("/api/me/activity")
+            .then(data => setActivity(data))
+            .catch((err) => {
+                if (err instanceof ApiError && err.status === 401) navigate("/");
             })
-            .then(data => { if (data) setActivity(data); })
-            .catch(() => {})
             .finally(() => setLoading(false));
     }, [navigate]);
 

@@ -5,8 +5,10 @@ const AVAILABLE_EMOJIS = ['👍', '❤️', '😂', '😮', '🔥'];
 
 interface EmojiReactionPickerProps {
   onEmojiSelect: (emoji: string) => void;
-  isOpen: boolean;
-  onClose: () => void;
+  // Optional: some call sites gate mounting themselves and omit these. When
+  // isOpen is omitted the picker stays hidden (preserving existing behavior).
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export function EmojiReactionPicker({ onEmojiSelect, isOpen, onClose }: EmojiReactionPickerProps) {
@@ -20,7 +22,7 @@ export function EmojiReactionPicker({ onEmojiSelect, isOpen, onClose }: EmojiRea
           className="emoji-button"
           onClick={() => {
             onEmojiSelect(emoji);
-            onClose();
+            onClose?.();
           }}
           title={`React with ${emoji}`}
         >

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import { reverseGeocode } from "@/utils/geocoding";
-import { BASE_API_URL } from "../../constants";
+import * as searchApi from "@/services/search";
 
 interface SearchBarProps {
     mapRef: React.MutableRefObject<mapboxgl.Map | null>;
@@ -79,13 +79,8 @@ export default function SearchBar({
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch(`${BASE_API_URL}/api/search/history`, {
-                credentials: "include",
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setHistory(Array.isArray(data) ? data : []);
-            }
+            const data = await searchApi.getSearchHistory<SearchHistoryEntry[]>();
+            setHistory(Array.isArray(data) ? data : []);
         } catch {
             // non-fatal
         }
@@ -97,19 +92,11 @@ export default function SearchBar({
 
     const recordHistory = async (query: string) => {
         try {
-            const res = await fetch(`${BASE_API_URL}/api/search/history`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query }),
+            const entry = await searchApi.addSearchHistory<SearchHistoryEntry>(query);
+            setHistory(prev => {
+                const filtered = prev.filter(h => h.query !== entry.query);
+                return [entry, ...filtered].slice(0, 10);
             });
-            if (res.ok) {
-                const entry = await res.json();
-                setHistory(prev => {
-                    const filtered = prev.filter(h => h.query !== entry.query);
-                    return [entry, ...filtered].slice(0, 10);
-                });
-            }
         } catch {
             // non-fatal
         }
@@ -118,10 +105,7 @@ export default function SearchBar({
     const deleteHistoryEntry = async (id: number) => {
         setHistory(prev => prev.filter(h => h.id !== id));
         try {
-            await fetch(`${BASE_API_URL}/api/search/history/${id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            await searchApi.deleteSearchHistoryEntry(id);
         } catch {
             // non-fatal
         }
@@ -152,19 +136,18 @@ export default function SearchBar({
                 const mapboxUrl = `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(
                     searchQuery,
                 )}&access_token=${token}&session_token=${sessionToken}${proximity ? `&proximity=${proximity}` : ""}&language=en&limit=5`;
-                const beaconUrl = `${BASE_API_URL}/api/search?q=${encodeURIComponent(searchQuery)}&limit=4`;
-
-                const [mapboxResp, beaconResp] = await Promise.all([
+                const [mapboxResp, beaconData] = await Promise.all([
                     fetch(mapboxUrl, { signal: controller.signal }),
-                    fetch(beaconUrl, { credentials: "include", signal: controller.signal }),
+                    searchApi
+                        .searchContent<{ pins?: BeaconPinResult[]; posts?: BeaconPostResult[] }>(searchQuery, { signal: controller.signal })
+                        .catch(() => null),
                 ]);
                 const mapboxData = await mapboxResp.json();
                 setSearchResults(mapboxData?.suggestions ?? []);
 
-                if (beaconResp.ok) {
-                    const beaconData = await beaconResp.json();
-                    setBeaconPins(Array.isArray(beaconData?.pins) ? beaconData.pins : []);
-                    setBeaconPosts(Array.isArray(beaconData?.posts) ? beaconData.posts : []);
+                if (beaconData) {
+                    setBeaconPins(Array.isArray(beaconData.pins) ? beaconData.pins : []);
+                    setBeaconPosts(Array.isArray(beaconData.posts) ? beaconData.posts : []);
                 } else {
                     setBeaconPins([]);
                     setBeaconPosts([]);

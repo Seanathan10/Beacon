@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import * as db from "../database/db";
+import * as userRepo from "../repositories/userRepo";
+import * as pinRepo from "../repositories/pinRepo";
 import { canViewProfile } from "../utils/visibility";
 
 function isValidUrl(url: string): boolean {
@@ -23,12 +24,7 @@ export function getUser(req: Request, res: Response) {
     const targetID = parseInt(String(req.params.userID), 10);
     const viewerID = req.user?.id ?? null;
 
-    const user = db.query(`
-        SELECT a.id, a.name, a.email, a.bio, a.avatar, a.profileVisibility,
-            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount,
-            (SELECT COUNT(*) FROM user_follow WHERE followerID = a.id) AS followingCount
-        FROM account a WHERE a.id = ?
-    `, [targetID])[0];
+    const user = userRepo.findProfile(targetID);
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -36,10 +32,7 @@ export function getUser(req: Request, res: Response) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
-    const isFollowed = viewerID ? db.query(
-        "SELECT 1 FROM user_follow WHERE followerID = ? AND followingID = ?",
-        [viewerID, targetID]
-    ).length > 0 : false;
+    const isFollowed = viewerID ? userRepo.isFollowing(viewerID, targetID) : false;
 
     res.json({
         id: user.id,
@@ -59,46 +52,37 @@ export function updateMe(req: Request, res: Response) {
     const userID = req.user.id;
     const { bio, avatar, profileVisibility } = req.body;
 
-    const updates: string[] = [];
-    const params: any[] = [];
+    const fields: Record<string, unknown> = {};
 
     if (bio !== undefined) {
         const bioStr = String(bio ?? '').trim();
         if (bioStr.length > 300) {
             return res.status(400).json({ message: "Bio must be 300 characters or less" });
         }
-        updates.push("bio = ?");
-        params.push(bioStr || null);
+        fields.bio = bioStr || null;
     }
 
     if (avatar !== undefined) {
         if (avatar && !isValidUrl(String(avatar))) {
             return res.status(400).json({ message: "Invalid avatar URL" });
         }
-        updates.push("avatar = ?");
-        params.push(avatar || null);
+        fields.avatar = avatar || null;
     }
 
     if (profileVisibility !== undefined) {
         if (!['public', 'friends', 'private'].includes(profileVisibility)) {
             return res.status(400).json({ message: "Invalid visibility option" });
         }
-        updates.push("profileVisibility = ?");
-        params.push(profileVisibility);
+        fields.profileVisibility = profileVisibility;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(fields).length === 0) {
         return res.status(400).json({ message: "No fields to update" });
     }
 
-    params.push(userID);
-    db.query(`UPDATE account SET ${updates.join(', ')} WHERE id = ?`, params);
+    userRepo.updateAccount(userID, fields);
 
-    const updated = db.query(
-        "SELECT id, name, email, bio, avatar, profileVisibility FROM account WHERE id = ?",
-        [userID]
-    )[0];
-    res.json(updated);
+    res.json(userRepo.findAccountBasic(userID));
 }
 
 export function getUserPins(req: Request, res: Response) {
@@ -108,21 +92,14 @@ export function getUserPins(req: Request, res: Response) {
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    const user = db.query("SELECT profileVisibility FROM account WHERE id = ?", [targetID])[0];
+    const user = userRepo.findVisibility(targetID);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.json({ pins: [], page, hasMore: false });
     }
 
-    const rows = db.query(`
-        SELECT p.id, p.creatorID, p.latitude, p.longitude, p.title, p.address,
-               p.description, p.image, p.tags, p.createdAt,
-               (SELECT COUNT(*) FROM likes WHERE pinID = p.id) AS likes
-        FROM pin p WHERE p.creatorID = ?
-        ORDER BY p.createdAt DESC
-        LIMIT ? OFFSET ?
-    `, [targetID, limit + 1, offset]);
+    const rows = pinRepo.findByCreatorPaged(targetID, limit + 1, offset);
 
     const hasMore = rows.length > limit;
     res.json({ pins: rows.slice(0, limit), page, hasMore });
@@ -135,26 +112,14 @@ export function getUserFollowers(req: Request, res: Response) {
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
 
-    const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
+    const user = userRepo.findVisibility(targetID);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
-    // Single query: the LEFT JOIN computes the viewer's mutual-follow status
-    // instead of firing one SELECT per returned user (N+1).
-    const rows = db.query(`
-        SELECT a.id, a.name, a.email, a.bio, a.avatar,
-            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount,
-            CASE WHEN vf.followerID IS NOT NULL THEN 1 ELSE 0 END AS isFollowedFlag
-        FROM user_follow uf
-        JOIN account a ON a.id = uf.followerID
-        LEFT JOIN user_follow vf ON vf.followingID = a.id AND vf.followerID = ?
-        WHERE uf.followingID = ?
-        ORDER BY uf.createdAt DESC
-        LIMIT ? OFFSET ?
-    `, [viewerID, targetID, limit + 1, offset]);
+    const rows = userRepo.findFollowers(viewerID, targetID, limit + 1, offset);
 
     const enriched = rows.slice(0, limit).map(({ isFollowedFlag, ...f }: any) => ({
         ...f,
@@ -171,25 +136,14 @@ export function getUserFollowing(req: Request, res: Response) {
     const offset = (page - 1) * limit;
     const viewerID = req.user?.id ?? null;
 
-    const user = db.query("SELECT id, profileVisibility FROM account WHERE id = ?", [targetID])[0];
+    const user = userRepo.findVisibility(targetID);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (!canViewProfile(viewerID, targetID, user.profileVisibility)) {
         return res.status(403).json({ message: "This profile is private" });
     }
 
-    // Single query with a LEFT JOIN for mutual-follow status (avoids N+1).
-    const rows = db.query(`
-        SELECT a.id, a.name, a.email, a.bio, a.avatar,
-            (SELECT COUNT(*) FROM user_follow WHERE followingID = a.id) AS followerCount,
-            CASE WHEN vf.followerID IS NOT NULL THEN 1 ELSE 0 END AS isFollowedFlag
-        FROM user_follow uf
-        JOIN account a ON a.id = uf.followingID
-        LEFT JOIN user_follow vf ON vf.followingID = a.id AND vf.followerID = ?
-        WHERE uf.followerID = ?
-        ORDER BY uf.createdAt DESC
-        LIMIT ? OFFSET ?
-    `, [viewerID, targetID, limit + 1, offset]);
+    const rows = userRepo.findFollowing(viewerID, targetID, limit + 1, offset);
 
     const enriched = rows.slice(0, limit).map(({ isFollowedFlag, ...f }: any) => ({
         ...f,

@@ -5,6 +5,7 @@ import { initializeTheme } from "./utils/theme";
 
 import Landing from "./pages/Landing";
 import { RouteBoundary } from "./components/RouteBoundary";
+import { AuthProvider } from "./context/AuthContext";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
 
@@ -21,68 +22,119 @@ const MyTrips = lazy(() => import("./pages/MyTrips"));
 const MyTripView = lazy(() => import("./pages/MyTripView"));
 const SustainabilityPage = lazy(() => import("./pages/SustainabilityPage"));
 
-// Initialize dark theme support
 initializeTheme();
 
 const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <Landing />,
-    },
-    {
-        path: "/home",
-        element: <RouteBoundary><Home /></RouteBoundary>,
-    },
-    {
-        path: '/explore',
-        element: <RouteBoundary><PostsPage /></RouteBoundary>,
-    },
-    {
-        path: '/shared/:id',
-        element: <RouteBoundary><SharedItinerary /></RouteBoundary>,
-    },
-    {
-        path: '/collection/:folderID',
-        element: <RouteBoundary><PublicCollection /></RouteBoundary>,
-    },
-    {
-        path: '/profile/:userID',
-        element: <RouteBoundary><UserProfile /></RouteBoundary>,
-    },
-    {
-        path: '/users/:userID/followers',
-        element: <RouteBoundary><FollowersList /></RouteBoundary>,
-    },
-    {
-        path: '/users/:userID/following',
-        element: <RouteBoundary><FollowingList /></RouteBoundary>,
-    },
-    {
-        path: '/activity',
-        element: <RouteBoundary><ActivityPage /></RouteBoundary>,
-    },
-    {
-        path: '/notifications',
-        element: <RouteBoundary><NotificationsPage /></RouteBoundary>,
-    },
-    {
-        path: '/my-trips',
-        element: <RouteBoundary><MyTrips /></RouteBoundary>,
-    },
-    {
-        path: '/my-trips/:id',
-        element: <RouteBoundary><MyTripView /></RouteBoundary>,
-    },
-    {
-        path: '/sustainability',
-        element: <RouteBoundary><SustainabilityPage /></RouteBoundary>,
-    },
+	{
+		path: "/",
+		element: <Landing />,
+	},
+	{
+		path: "/home",
+		element: (
+			<RouteBoundary>
+				<Home />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/explore",
+		element: (
+			<RouteBoundary>
+				<PostsPage />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/shared/:id",
+		element: (
+			<RouteBoundary>
+				<SharedItinerary />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/collection/:folderID",
+		element: (
+			<RouteBoundary>
+				<PublicCollection />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/profile/:userID",
+		element: (
+			<RouteBoundary>
+				<UserProfile />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/users/:userID/followers",
+		element: (
+			<RouteBoundary>
+				<FollowersList />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/users/:userID/following",
+		element: (
+			<RouteBoundary>
+				<FollowingList />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/activity",
+		element: (
+			<RouteBoundary>
+				<ActivityPage />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/notifications",
+		element: (
+			<RouteBoundary>
+				<NotificationsPage />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/my-trips",
+		element: (
+			<RouteBoundary>
+				<MyTrips />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/my-trips/:id",
+		element: (
+			<RouteBoundary>
+				<MyTripView />
+			</RouteBoundary>
+		),
+	},
+	{
+		path: "/sustainability",
+		element: (
+			<RouteBoundary>
+				<SustainabilityPage />
+			</RouteBoundary>
+		),
+	},
 ]);
 
 const root = document.getElementById("root");
 
 if (!root) {
-    throw new Error("Root container missing in index.html");
+	throw new Error("Root container missing in index.html");
 }
 
-ReactDOM.createRoot(root).render(<RouterProvider router={router} />);
+ReactDOM.createRoot(root).render(
+	<AuthProvider>
+		<RouterProvider router={router} />
+	</AuthProvider>,
+);
