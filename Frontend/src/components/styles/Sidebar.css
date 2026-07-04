@@ -233,11 +233,13 @@
     color: var(--color-text-secondary);
 }
 
-.slider-value {
+
+/*  for some reason commenting this out makes the text switch colours between L/D mode  */
+/*.slider-value {
     color: var(--color-green-light);
     font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
-}
+}*/
 
 .sidebar-range-input {
     -webkit-appearance: none;
@@ -245,8 +247,10 @@
     width: 100%;
     height: 4px;
     border-radius: 2px;
-    background: var(--color-border-secondary);
-    /* Fallback */
+
+    color: #6ee7b7;
+    background: #6ee7b7;
+
     outline: none;
     padding: 0;
     margin: 8px 0;
@@ -260,13 +264,12 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: var(--color-bg-primary);
-    border: 2px solid var(--color-green-light);
+    background: #6ee7b7;
+    border: 2px solid #6ee7b7;
     box-shadow: 0 2px 4px var(--color-shadow-sm);
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     margin-top: 0px;
-    /* Center thumb on track if needed */
 }
 
 .sidebar-range-input::-webkit-slider-thumb:hover {
@@ -290,7 +293,6 @@
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     border: none;
-    /* Reset */
 }
 
 .sidebar-range-input::-moz-range-thumb:hover {

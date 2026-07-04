@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, memo } from "react";
 import * as authApi from '@/services/auth';
 import { ApiError } from '@/lib/api';
 
+import './styles/AuthModal.css';
+
 type AuthMode = "login" | "register";
 interface AuthModalProps {
     isOpen: boolean;
@@ -9,8 +11,7 @@ interface AuthModalProps {
     onAuthSuccess: () => void;
 }
 
-// Memoized: the parent (Home) re-renders frequently while the map is mounted;
-// without this the modal's entrance animation restarts on every parent render.
+
 function AuthModal({
     isOpen,
     onClose,
@@ -104,7 +105,7 @@ function AuthModal({
                 <div className="auth-modal-header">
                     <div className="auth-brand">
                         <svg
-                            className="auth-logo"
+                            className="auth-modal-beacon-icon"
                             viewBox="0 0 80 80"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -131,15 +132,15 @@ function AuthModal({
                     </h2>
                 </div>
 
-                <div className="auth-tabs">
+                <div className="auth-login-or-signup-tabs">
                     <button
-                        className={`auth-tab ${authMode === "login" ? "active" : ""}`}
+                        className={`auth-tabs-buttons ${authMode === "login" ? "active" : ""}`}
                         onClick={() => setAuthMode("login")}
                     >
                         Login
                     </button>
                     <button
-                        className={`auth-tab ${authMode === "register" ? "active" : ""}`}
+                        className={`auth-tabs-buttons ${authMode === "register" ? "active" : ""}`}
                         onClick={() => setAuthMode("register")}
                     >
                         Sign Up
@@ -153,7 +154,8 @@ function AuthModal({
                         <div className="form-group">
                             <label htmlFor="name">Name (optional)</label>
                             <input
-                                type="text"
+								type="text"
+								className="email-password-box"
                                 id="name"
                                 name="name"
                                 value={credentials.name}
@@ -169,6 +171,7 @@ function AuthModal({
                         <label htmlFor="email">Email</label>
                         <input
                             type="email"
+							className="email-password-box"
                             id="email"
                             name="email"
                             value={credentials.email}
