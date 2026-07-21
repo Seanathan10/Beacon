@@ -149,3 +149,5 @@ vite.config.ts.timestamp-*
 .env.development
 
 __pycache__
+res.txt
+
